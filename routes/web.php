@@ -26,6 +26,10 @@ Route::get('/configuracion/usuarios', function () {
 Route::get('/ventas', function () {
     return view('ventasList');
 })->name('ventasList');
+
+Route::get('/ventas/productos', function () {
+    return view('ventas-productos');
+})->name('ventas.productos');
 // cotizaciones
 Route::get('/cotizaciones', function () {
     return view('cotizaciones');
@@ -49,6 +53,6 @@ Route::get('/clientes', function () {
 })->name('clientesList');
 
 // Empresas
-Route::get('/misEmpresas', function () {
+Route::get('/configuracion/empresa', function () {
     return view('misEmpresas');
 })->name('misEmpresas');

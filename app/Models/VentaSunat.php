@@ -1,98 +1,79 @@
 <?php
-class VentaSunat
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class VentaSunat extends Model
 {
-    private $id_venta;
-    private $hash;
-    private $nombre_xml;
-    private $conectar;
-    private $qr_data;
+    use HasFactory;
 
-    /**
-     * VentaSunat constructor.
-     */
-    public function __construct()
+    protected $table = 'ventas_sunat';
+    protected $primaryKey = 'id_venta_sunat';
+
+    protected $fillable = [
+        'id_venta',
+        'numero_documento',
+        'tipo_documento',
+        'serie',
+        'numero',
+        'xml_content',
+        'cdr_content',
+        'hash_cpe',
+        'codigo_respuesta_sunat',
+        'mensaje_respuesta_sunat',
+        'estado_sunat',
+        'intentos_envio',
+        'fecha_envio',
+        'fecha_respuesta',
+        'ticket_sunat',
+        'observaciones',
+    ];
+
+    protected $casts = [
+        'numero' => 'integer',
+        'intentos_envio' => 'integer',
+        'fecha_envio' => 'datetime',
+        'fecha_respuesta' => 'datetime',
+    ];
+
+    // Relaciones
+    public function venta(): BelongsTo
     {
-        $this->conectar = (new Conexion())->getConexion();
+        return $this->belongsTo(Venta::class, 'id_venta', 'id_venta');
     }
 
-    /**
-     * @return mixed
-     */
-    public function getIdVenta()
+    // Scopes
+    public function scopeAceptados($query)
     {
-        return $this->id_venta;
+        return $query->where('estado_sunat', '1');
     }
 
-    /**
-     * @return mixed
-     */
-    public function getQrData()
+    public function scopeRechazados($query)
     {
-        return $this->qr_data;
+        return $query->where('estado_sunat', '2');
     }
 
-    /**
-     * @param mixed $qr_data
-     */
-    public function setQrData($qr_data): void
+    public function scopePendientes($query)
     {
-        $this->qr_data = $qr_data;
+        return $query->where('estado_sunat', '0');
     }
 
-    /**
-     * @param mixed $id_venta
-     */
-    public function setIdVenta($id_venta)
+    // Accessors
+    public function getNumeroCompletoAttribute(): string
     {
-        $this->id_venta = $id_venta;
+        return $this->tipo_documento . '-' . $this->serie . '-' . str_pad($this->numero, 6, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * @return mixed
-     */
-    public function getHash()
+    public function getEstaAceptadoAttribute(): bool
     {
-        return $this->hash;
+        return $this->estado_sunat === '1';
     }
 
-    /**
-     * @param mixed $hash
-     */
-    public function setHash($hash)
+    public function getEstaRechazadoAttribute(): bool
     {
-        $this->hash = $hash;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getNombreXml()
-    {
-        return $this->nombre_xml;
-    }
-
-    /**
-     * @param mixed $nombre_xml
-     */
-    public function setNombreXml($nombre_xml)
-    {
-        $this->nombre_xml = $nombre_xml;
-    }
-
-    public function insertar()
-    {
-        $sql = "insert into ventas_sunat 
-        values ('$this->id_venta', '$this->hash', '$this->nombre_xml', '$this->qr_data')";
-        return $this->conectar->query($sql);
-    }
-
-    public function obtenerDatos()
-    {
-        $sql = "select * 
-        from ventas_sunat 
-        where id_venta = '$this->id_venta'";
-        $fila = $this->conectar->get_Row($sql);
-        $this->hash = $fila['hash'];
-        $this->nombre_xml = $fila['nombre_xml'];
+        return $this->estado_sunat === '2';
     }
 }

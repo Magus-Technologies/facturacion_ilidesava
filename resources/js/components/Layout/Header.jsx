@@ -11,7 +11,7 @@ import {
     Sun,
 } from "lucide-react";
 
-export default function Header({ toggleSidebar, isSidebarOpen }) {
+export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
     const [user, setUser] = useState(null);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [notifications, setNotifications] = useState(3);
@@ -45,7 +45,9 @@ export default function Header({ toggleSidebar, isSidebarOpen }) {
     };
 
     return (
-        <header className="bg-white border-b border-gray-200 h-16 fixed top-0 right-0 left-0 lg:left-64 z-30 transition-all duration-300">
+        <header className={`bg-white border-b border-gray-200 h-16 fixed top-0 right-0 z-30 transition-all duration-300 ${
+            isCollapsed ? 'left-0 lg:left-20' : 'left-0 lg:left-64'
+        }`}>
             <div className="h-full px-4 flex items-center justify-between">
                 {/* Left Side - Menu Toggle & Title */}
                 <div className="flex items-center gap-4">

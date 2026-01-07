@@ -3,16 +3,26 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 
 export default function MainLayout({ children, currentPath }) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile toggle
+    const [isCollapsed, setIsCollapsed] = useState(false); // Desktop collapse
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
 
+    const toggleCollapse = () => {
+        setIsCollapsed(!isCollapsed);
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Sidebar */}
-            <Sidebar isOpen={isSidebarOpen} currentPath={currentPath} />
+            <Sidebar 
+                isOpen={isSidebarOpen} 
+                isCollapsed={isCollapsed}
+                currentPath={currentPath}
+                toggleCollapse={toggleCollapse}
+            />
 
             {/* Overlay para mobile */}
             {isSidebarOpen && (
@@ -23,11 +33,14 @@ export default function MainLayout({ children, currentPath }) {
             )}
 
             {/* Main Content Area */}
-            <div className="lg:ml-64 transition-all duration-300">
+            <div className={`transition-all duration-300 ${
+                isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+            }`}>
                 {/* Header */}
                 <Header
                     toggleSidebar={toggleSidebar}
                     isSidebarOpen={isSidebarOpen}
+                    isCollapsed={isCollapsed}
                 />
 
                 {/* Page Content */}

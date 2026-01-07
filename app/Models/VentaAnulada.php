@@ -1,111 +1,66 @@
 <?php
 
-class VentaAnulada
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class VentaAnulada extends Model
 {
-    private $id_venta;
-    private $fecha;
-    private $motivo;
-    private $conectar;
+    use HasFactory;
 
-    /**
-     * VentaAnulada constructor.
-     */
-    public function __construct()
+    protected $table = 'ventas_anuladas';
+    protected $primaryKey = 'id_venta_anulada';
+
+    protected $fillable = [
+        'id_venta',
+        'id_usuario',
+        'motivo_anulacion',
+        'fecha_anulacion',
+        'tipo_documento',
+        'serie',
+        'numero',
+        'total_anulado',
+        'estado_comunicacion_baja',
+        'ticket_baja',
+        'codigo_respuesta_sunat',
+        'mensaje_respuesta_sunat',
+        'fecha_envio_sunat',
+    ];
+
+    protected $casts = [
+        'fecha_anulacion' => 'datetime',
+        'fecha_envio_sunat' => 'datetime',
+        'total_anulado' => 'decimal:2',
+        'numero' => 'integer',
+    ];
+
+    // Relaciones
+    public function venta(): BelongsTo
     {
-        $this->conectar = (new Conexion())->getConexion();
+        return $this->belongsTo(Venta::class, 'id_venta', 'id_venta');
     }
 
-    /**
-     * @return mixed
-     */
-    public function getIdVenta()
+    public function usuario(): BelongsTo
     {
-        return $this->id_venta;
+        return $this->belongsTo(User::class, 'id_usuario', 'id');
     }
 
-    /**
-     * @param mixed $id_venta
-     */
-    public function setIdVenta($id_venta)
+    // Scopes
+    public function scopeComunicadas($query)
     {
-        $this->id_venta = $id_venta;
+        return $query->where('estado_comunicacion_baja', '1');
     }
 
-    /**
-     * @return mixed
-     */
-    public function getFecha()
+    public function scopePendientesComunicar($query)
     {
-        return $this->fecha;
+        return $query->where('estado_comunicacion_baja', '0');
     }
 
-    /**
-     * @param mixed $fecha
-     */
-    public function setFecha($fecha)
+    // Accessors
+    public function getNumeroCompletoAttribute(): string
     {
-        $this->fecha = $fecha;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getMotivo()
-    {
-        return $this->motivo;
-    }
-
-    /**
-     * @param mixed $motivo
-     */
-    public function setMotivo($motivo)
-    {
-        $this->motivo = $motivo;
-    }
-
-    public function insertar()
-    {
-        $sql = "insert into ventas_anuladas 
-        values ('$this->id_venta', '$this->fecha', '$this->motivo')";
-        $resulta=  $this->conectar->query($sql);
-
-        // Obtener serie y número de la venta antes de procesar productos
-        $sqlVenta = "SELECT serie, numero FROM ventas WHERE id_venta = '$this->id_venta'";
-        $resultVenta = $this->conectar->query($sqlVenta);
-        $observacionBase = 'Anulación Venta ID: ' . $this->id_venta;
-        
-        if ($resultVenta && $rowVenta = $resultVenta->fetch_assoc()) {
-            $serie = $rowVenta['serie'];
-            $numero = $rowVenta['numero'];
-            $observacionBase = "Anulación {$serie}-{$numero}";
-        }
-
-        $sql="select * from productos_ventas where id_venta='$this->id_venta'";
-        $listaVP = $this->conectar->query($sql);
-
-        foreach ($listaVP as $item){
-            $sql="update productos set  cantidad= cantidad+'{$item['cantidad']}' where id_producto='{$item['id_producto']}' ";
-            //echo $sql;
-            $this->conectar->query($sql);
-
-            // ✅ Registrar en historial de stock con serie y número
-            $usuario = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : 'Sistema';
-            $sqlHistorial = "INSERT INTO historial_stock (id_producto, tipo_movimiento, cantidad, fecha_movimiento, usuario, observaciones) 
-                             VALUES ('{$item['id_producto']}', 'INGRESO', '{$item['cantidad']}', NOW(), '$usuario', '$observacionBase')";
-            $this->conectar->query($sqlHistorial);
-        }
-
-        return $resulta;
-    }
-
-    public function verFacturasAnuladas($id_empresa)
-    {
-        $sql = "select v.id_venta, v.fecha, va.fecha as fecha_anulado, ds.cod_sunat, ds.abreviatura, v.serie, v.numero, c.documento, c.datos, v.total, v.estado, v.id_tido, v.enviado_sunat, v.estado
-        from ventas_anuladas as va 
-            inner join ventas as v on v.id_venta = va.id_venta 
-            inner join documentos_sunat ds on v.id_tido = ds.id_tido
-            inner join clientes c on v.id_cliente = c.id_cliente 
-        where v.id_empresa = '$id_empresa' and v.fecha = '$this->fecha' and v.id_tido = 2 ";
-        return $this->conectar->get_Cursor($sql);
+        return $this->tipo_documento . '-' . $this->serie . '-' . str_pad($this->numero, 6, '0', STR_PAD_LEFT);
     }
 }

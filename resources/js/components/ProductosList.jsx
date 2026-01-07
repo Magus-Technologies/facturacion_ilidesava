@@ -254,7 +254,7 @@ export default function ProductosList() {
     if (loading) {
         return (
             <MainLayout currentPath="/productos">
-                <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex items-center justify-center min-h-400px">
                     <div className="text-center">
                         <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto mb-4" />
                         <p className="text-gray-600">Cargando productos...</p>
@@ -267,7 +267,7 @@ export default function ProductosList() {
     if (error) {
         return (
             <MainLayout currentPath="/productos">
-                <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex items-center justify-center min-h-400px">
                     <div className="text-center">
                         <div className="bg-red-100 text-red-700 px-6 py-4 rounded-lg">
                             <p className="font-semibold">Error</p>
@@ -331,7 +331,7 @@ export default function ProductosList() {
                     renderGridCard={(producto) => (
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-primary-600 transition-all duration-300 group h-full flex flex-col">
                             {/* Imagen del producto */}
-                            <div className="relative h-48 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <div className="relative h-48 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
                                 {producto.imagen ? (
                                     <img
                                         src={`/storage/${producto.imagen}`}
@@ -350,7 +350,7 @@ export default function ProductosList() {
                             <div className="p-4 flex flex-col flex-1">
                                 {/* Código */}
                                 <div className="flex items-center gap-2 mb-2">
-                                    <Tag className="h-3.5 w-3.5 text-primary-600 flex-shrink-0" />
+                                    <Tag className="h-3.5 w-3.5 text-primary-600 shrink-0" />
                                     <span className="text-sm font-mono text-gray-600 truncate">
                                         {producto.codigo || "N/A"}
                                     </span>

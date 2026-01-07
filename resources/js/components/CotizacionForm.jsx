@@ -10,6 +10,8 @@ import ProductMultipleSearch from './shared/ProductMultipleSearch';
 import ProductPriceSelector from './shared/ProductPriceSelector';
 import ClienteAutocomplete from './shared/ClienteAutocomplete';
 import PaymentSchedule from './shared/PaymentSchedule';
+import FormSidebar from "./shared/FormSidebar";
+
 
 export default function CotizacionForm({ cotizacionId = null }) {
     const isEditing = !!cotizacionId;

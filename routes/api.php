@@ -56,6 +56,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('cotizaciones', CotizacionController::class);
     Route::post('cotizaciones/{id}/estado', [CotizacionController::class, 'cambiarEstado']);
 
+    // Ventas
+    Route::get('ventas/proximo-numero', [\App\Http\Controllers\VentasController::class, 'proximoNumero']);
+    Route::post('ventas/{id}/anular', [\App\Http\Controllers\VentasController::class, 'anular']);
+    Route::apiResource('ventas', \App\Http\Controllers\VentasController::class);
+
     // Aquí agregarás más rutas protegidas
     // Route::apiResource('/conductores', ConductorController::class);
 });

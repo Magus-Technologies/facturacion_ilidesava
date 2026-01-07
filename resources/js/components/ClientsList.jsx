@@ -171,40 +171,40 @@ export default function ClientsList() {
                                 <span>{telefono}</span>
                             </div>
                         )}
-                        {direccion && (
+                        {/* {direccion && (
                             <div className="flex items-center gap-2 text-sm text-gray-500">
                                 <MapPin className="h-3 w-3 text-gray-400" />
                                 <span className="truncate max-w-200px">
                                     {direccion}
                                 </span>
                             </div>
-                        )}
+                        )} */}
                     </div>
                 );
             },
         },
-        {
-            accessorKey: "empresa",
-            header: "Empresa",
-            cell: ({ row }) => {
-                const empresa = row.original.empresa;
-                return empresa ? (
-                    <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-primary-600" />
-                        <div>
-                            <p className="text-sm font-medium text-gray-900">
-                                {empresa.comercial}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                RUC: {empresa.ruc}
-                            </p>
-                        </div>
-                    </div>
-                ) : (
-                    <span className="text-gray-400">N/A</span>
-                );
-            },
-        },
+        // {
+        //     accessorKey: "empresa",
+        //     header: "Empresa",
+        //     cell: ({ row }) => {
+        //         const empresa = row.original.empresa;
+        //         return empresa ? (
+        //             <div className="flex items-center gap-2">
+        //                 <Building2 className="h-4 w-4 text-primary-600" />
+        //                 <div>
+        //                     <p className="text-sm font-medium text-gray-900">
+        //                         {empresa.comercial}
+        //                     </p>
+        //                     <p className="text-xs text-gray-500">
+        //                         RUC: {empresa.ruc}
+        //                     </p>
+        //                 </div>
+        //             </div>
+        //         ) : (
+        //             <span className="text-gray-400">N/A</span>
+        //         );
+        //     },
+        // },
         {
             accessorKey: "total_venta",
             header: "Total Ventas",

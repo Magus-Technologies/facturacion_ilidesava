@@ -228,7 +228,7 @@ export default function MisEmpresas() {
 
     if (error) {
         return (
-            <MainLayout currentPath="/misEmpresas">
+            <MainLayout currentPath="/configuracion/empresa">
                 <div className="flex items-center justify-center min-h-[400px]">
                     <div className="text-center">
                         <div className="bg-red-100 text-red-700 px-6 py-4 rounded-lg">
@@ -245,7 +245,7 @@ export default function MisEmpresas() {
     }
 
     return (
-        <MainLayout currentPath="/misEmpresas">
+        <MainLayout currentPath="/configuracion/empresa">
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>

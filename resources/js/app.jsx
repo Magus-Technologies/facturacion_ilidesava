@@ -5,6 +5,7 @@ import UserList from "./components/UserList";
 import VentasList from "./components/VentasList";
 import CotizacionesList from "./components/CotizacionesList";
 import CotizacionForm from "./components/CotizacionForm";
+import VentaForm from "./components/VentaForm";
 import ClientsList from "./components/ClientsList";
 import MisEmpresas from "./components/MisEmpresas";
 import ProductosList from "./components/ProductosList";
@@ -21,6 +22,7 @@ const components = {
     VentasList,
     CotizacionesList,
     CotizacionForm,
+    VentaForm,
     ClientsList,
     MisEmpresas,
     ProductosList,
