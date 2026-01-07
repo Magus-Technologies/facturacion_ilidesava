@@ -1,0 +1,27 @@
+/* Estilos personalizados para los selects de Radix UI */
+
+/* Scroll más visible con fondo gris claro */
+[data-radix-select-viewport] {
+    scrollbar-width: thin;
+    scrollbar-color: #f97316 #f3f4f6;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar {
+    width: 8px;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar-thumb {
+    background: #f97316;
+    border-radius: 4px;
+}
+
+[data-radix-select-viewport]::-webkit-scrollbar-thumb:hover {
+    background: #ea580c;
+}
+
+

@@ -1,0 +1,119 @@
+{
+  "modules": [
+    {
+      "id": "dashboard",
+      "name": "Dashboard",
+      "icon": "LayoutDashboard",
+      "path": "/dashboard",
+      "active": true
+    },
+    {
+      "id": "facturacion",
+      "name": "Facturación",
+      "icon": "FileText",
+      "path": "#",
+      "submodules": [
+        {
+          "id": "ventas",
+          "name": "Ventas",
+          "icon": "ShoppingCart",
+          "path": "/ventas"
+        },
+        {
+          "id": "facturas",
+          "name": "Facturas",
+          "icon": "FileInvoice",
+          "path": "/facturas"
+        },
+        {
+          "id": "boletas",
+          "name": "Boletas",
+          "icon": "Receipt",
+          "path": "/boletas"
+        },
+        {
+          "id": "notas-credito",
+          "name": "Notas de Crédito",
+          "icon": "FileX",
+          "path": "/notas-credito"
+        },
+        {
+          "id": "guias-remision",
+          "name": "Guías de Remisión",
+          "icon": "Truck",
+          "path": "/guias-remision"
+        }
+      ]
+    },
+    {
+      "id": "clientes",
+      "name": "Clientes",
+      "icon": "Users",
+      "path": "/clientes"
+    },
+    {
+      "id": "cotizaciones",
+      "name": "Cotizaciones",
+      "icon": "FileText",
+      "path": "/cotizaciones"
+    },
+    {
+      "id": "productos",
+      "name": "Productos",
+      "icon": "Package",
+      "path": "/productos"
+    },
+    {
+      "id": "mis-empresas",
+      "name": "Mis Empresas",
+      "icon": "Building2",
+      "path": "/misEmpresas"
+    },
+    {
+      "id": "reportes",
+      "name": "Reportes",
+      "icon": "BarChart3",
+      "path": "#",
+      "submodules": [
+        {
+          "id": "reporte-ventas",
+          "name": "Reporte de Ventas",
+          "icon": "TrendingUp",
+          "path": "/reportes/ventas"
+        },
+        {
+          "id": "reporte-productos",
+          "name": "Reporte de Productos",
+          "icon": "Package",
+          "path": "/reportes/productos"
+        }
+      ]
+    },
+    {
+      "id": "configuracion",
+      "name": "Configuración",
+      "icon": "Settings",
+      "path": "#",
+      "submodules": [
+        {
+          "id": "empresa",
+          "name": "Datos de Empresa",
+          "icon": "Building2",
+          "path": "/configuracion/empresa"
+        },
+        {
+          "id": "usuarios",
+          "name": "Usuarios",
+          "icon": "UserCog",
+          "path": "/configuracion/usuarios"
+        },
+        {
+          "id": "sunat",
+          "name": "Configuración SUNAT",
+          "icon": "FileCheck",
+          "path": "/configuracion/sunat"
+        }
+      ]
+    }
+  ]
+}

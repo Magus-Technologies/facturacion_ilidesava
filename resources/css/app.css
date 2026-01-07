@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+@source '../**/*.jsx';
+
+@theme {
+    /* Fuentes */
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    
+    /* Colores del Sistema - elidesava */
+    
+    /* Azul Principal (Primary) - #2e217a */
+    --color-primary-50: #ed633e;
+    --color-primary-100: #ede9fe;
+    --color-primary-200: #ddd6fe;
+    --color-primary-300: #c4b5fd;
+    --color-primary-400: #a78bfa;
+    --color-primary-500: #F49F67;
+    --color-primary-600: #f28e1e;  /* Azul principal */
+    --color-primary-700: #EE7522;
+    --color-primary-800: #1d1448;
+    --color-primary-900: #150f30;
+    --color-primary-950: #0d0a1f;
+    
+    
+    /* Amarillo Vibrante (Accent) - #f4f750 */
+    --color-accent-50: #FEEAB9;
+    --color-accent-100: #FDDD8C;
+    --color-accent-200: #FCCF5F;
+    --color-accent-300: #FAB505;
+    --color-accent-400: #f7f989;
+    --color-accent-500: #fabd1e;  /* Amarillo principal */
+    --color-accent-600: #fabd1e;
+    --color-accent-700: #fabd1e;
+    --color-accent-800: #fabd1e;
+    --color-accent-900: #fabd1e;
+    --color-accent-950: #fabd1e;
+}
+
+/* Animaciones personalizadas para Loader */
+@keyframes fade {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+@keyframes progress {
+    0% { width: 0%; }
+    50% { width: 70%; }
+    100% { width: 100%; }
+}
