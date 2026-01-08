@@ -40,6 +40,7 @@ export function DataTable({
     onRowClick,
     gridView = false,
     renderGridCard,
+    onSearchChange,
 }) {
     const [sorting, setSorting] = useState([]);
     const [columnFilters, setColumnFilters] = useState([]);
@@ -56,6 +57,7 @@ export function DataTable({
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         onGlobalFilterChange: setGlobalFilter,
+        autoResetPageIndex: false, // No resetear la página cuando cambian los datos
         state: {
             sorting,
             columnFilters,
@@ -78,7 +80,10 @@ export function DataTable({
                         <Input
                             placeholder={searchPlaceholder}
                             value={globalFilter ?? ""}
-                            onChange={(e) => setGlobalFilter(e.target.value)}
+                            onChange={(e) => {
+                                setGlobalFilter(e.target.value);
+                                onSearchChange?.(e.target.value);
+                            }}
                             className="pl-9"
                         />
                     </div>

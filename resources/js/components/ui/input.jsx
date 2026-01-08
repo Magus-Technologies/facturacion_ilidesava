@@ -10,7 +10,7 @@ const inputVariants = cva(
                 underline:
                     "h-12 border-0 border-b border-gray-300 bg-transparent px-0 py-3 focus:border-primary-600 relative",
                 outlined:
-                    "h-11 rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-primary-600 focus:ring-1 focus:ring-primary-600",
+                    "h-11 rounded-lg border border-gray-200 bg-white px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500/20 hover:border-gray-300",
             },
         },
         defaultVariants: {
@@ -39,7 +39,6 @@ const Input = React.forwardRef(
                     }}
                     {...props}
                 />
-                {/* Línea animada que se desliza de izquierda a derecha */}
                 {variant === "underline" && (
                     <span
                         className={cn(

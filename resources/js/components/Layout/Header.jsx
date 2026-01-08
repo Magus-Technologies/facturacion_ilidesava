@@ -98,7 +98,7 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
                                     {user?.email || ""}
                                 </p>
                             </div>
-                            <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
+                            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
                                 {user?.name?.charAt(0) || "U"}
                             </div>
                             <ChevronDown className="h-4 w-4 text-gray-500 hidden sm:block" />

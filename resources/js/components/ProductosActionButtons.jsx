@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/sweetalert";
+import { loading } from "@/lib/sweetalert";
 import {
     Plus,
     FileSpreadsheet,
@@ -12,17 +13,55 @@ import {
 } from "lucide-react";
 import UnidadesModal from "./UnidadesModal";
 import CategoriasModal from "./CategoriasModal";
+import ImportarExcelModal from "./ImportarExcelModal";
 
-export default function ProductosActionButtons({ onNuevoProducto }) {
+export default function ProductosActionButtons({ onNuevoProducto, onRefresh, almacenActivo, busqueda }) {
     const [isUnidadesModalOpen, setIsUnidadesModalOpen] = useState(false);
     const [isCategoriasModalOpen, setIsCategoriasModalOpen] = useState(false);
+    const [isImportarExcelModalOpen, setIsImportarExcelModalOpen] = useState(false);
 
     const handleExcelBusqueda = () => {
-        toast.info("Función en desarrollo");
-    };
-    
-    const handleImportarExcel = () => {
-        toast.info("Función en desarrollo");
+        // Mostrar loader
+        loading.show("Generando Excel...");
+        
+        const token = localStorage.getItem("auth_token");
+        const url = `/api/productos/descargar-excel?almacen=${almacenActivo}&texto=${encodeURIComponent(busqueda || '')}`;
+        
+        // Agregar headers de autenticación
+        fetch(url, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al descargar el archivo');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `productos-almacen-${almacenActivo}-${new Date().toISOString().slice(0,10)}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Cerrar loader y mostrar éxito
+            loading.close();
+            setTimeout(() => {
+                toast.success("Excel descargado exitosamente");
+            }, 300);
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            loading.close();
+            setTimeout(() => {
+                toast.error("Error al descargar Excel");
+            }, 300);
+        });
     };
 
     const handleAumentarStock = () => {
@@ -59,7 +98,7 @@ export default function ProductosActionButtons({ onNuevoProducto }) {
                         variant="outline"
                         size="sm"
                         className="gap-2"
-                        onClick={handleImportarExcel}
+                        onClick={() => setIsImportarExcelModalOpen(true)}
                     >
                         <FileSpreadsheet className="h-4 w-4" />
                         <span className="hidden sm:inline">Importar Excel</span>
@@ -138,6 +177,11 @@ export default function ProductosActionButtons({ onNuevoProducto }) {
             <CategoriasModal
                 isOpen={isCategoriasModalOpen}
                 onClose={() => setIsCategoriasModalOpen(false)}
+            />
+            <ImportarExcelModal
+                isOpen={isImportarExcelModalOpen}
+                onClose={() => setIsImportarExcelModalOpen(false)}
+                onSuccess={onRefresh}
             />
         </>
     );

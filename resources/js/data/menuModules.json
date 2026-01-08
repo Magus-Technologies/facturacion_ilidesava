@@ -64,6 +64,12 @@
       "path": "/compras"
     },
     {
+      "id": "proveedores",
+      "name": "Proveedores",
+      "icon": "UserCog",
+      "path": "/proveedores"
+    },
+    {
       "id": "productos",
       "name": "Productos",
       "icon": "Package",

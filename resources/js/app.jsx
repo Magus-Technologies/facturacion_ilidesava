@@ -10,6 +10,9 @@ import ClientsList from "./components/ClientsList";
 import MisEmpresas from "./components/MisEmpresas";
 import ProductosList from "./components/ProductosList";
 import NotFound from "./components/NotFound";
+import Compras from "./components/Compras";
+import CompraForm from "./components/CompraForm";
+import ProveedoresList from "./components/ProveedoresList"
 import "../css/app.css";
 import "../css/select-custom.css";
 
@@ -26,6 +29,9 @@ const components = {
     ClientsList,
     MisEmpresas,
     ProductosList,
+    Compras,
+    CompraForm,
+    ProveedoresList,
 };
 
 // Monta cada elemento con atributo data-react-component

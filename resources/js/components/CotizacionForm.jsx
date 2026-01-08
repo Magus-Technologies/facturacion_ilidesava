@@ -2,15 +2,16 @@ import { useState, useEffect } from 'react';
 import { toast } from '@/lib/sweetalert';
 import MainLayout from './Layout/MainLayout';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { ArrowLeft, Plus } from 'lucide-react';
 
 // Componentes compartidos
 import ProductSearchInput from './shared/ProductSearchInput';
 import ProductMultipleSearch from './shared/ProductMultipleSearch';
 import ProductPriceSelector from './shared/ProductPriceSelector';
-import ClienteAutocomplete from './shared/ClienteAutocomplete';
 import PaymentSchedule from './shared/PaymentSchedule';
 import FormSidebar from "./shared/FormSidebar";
+import ProductosTable from "./shared/ProductosTable";
 
 
 export default function CotizacionForm({ cotizacionId = null }) {
@@ -391,7 +392,7 @@ export default function CotizacionForm({ cotizacionId = null }) {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
-                    <div className="bg-white rounded-lg shadow border p-6">
+                    <div className="bg-white rounded-lg shadow p-6">
                         <form onSubmit={handleAddProducto} className="space-y-4 mb-8">
                             <div>
                                 <label className="block text-sm font-medium mb-2">Buscar Producto</label>
@@ -408,21 +409,21 @@ export default function CotizacionForm({ cotizacionId = null }) {
 
                             <div>
                                 <label className="block text-sm font-medium mb-2">Descripción</label>
-                                <input type="text" value={productoActual.descripcion} readOnly 
-                                    className="w-full px-3 py-2 border rounded-lg bg-gray-50" />
+                                <Input type="text" value={productoActual.descripcion} readOnly 
+                                    variant="outlined" className="bg-gray-50" />
                             </div>
 
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Stock</label>
-                                    <input type="text" value={productoActual.stock} disabled 
-                                        className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-center" />
+                                    <Input type="text" value={productoActual.stock} disabled 
+                                        variant="outlined" className="bg-gray-100 text-center" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Cantidad</label>
-                                    <input type="number" step="0.01" value={productoActual.cantidad}
+                                    <Input type="number" step="0.01" value={productoActual.cantidad}
                                         onChange={(e) => setProductoActual({ ...productoActual, cantidad: e.target.value })}
-                                        className="w-full px-3 py-2 border rounded-lg text-center" />
+                                        variant="outlined" className="text-center" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">Precio</label>
@@ -439,10 +440,10 @@ export default function CotizacionForm({ cotizacionId = null }) {
                                             onChange={(e) => setFormData({ ...formData, precio_especial_activado: e.target.checked })}
                                             className="rounded" />
                                     </div>
-                                    <input type="number" step="0.01" value={productoActual.precioEspecial}
+                                    <Input type="number" step="0.01" value={productoActual.precioEspecial}
                                         onChange={(e) => setProductoActual({ ...productoActual, precioEspecial: e.target.value })}
                                         disabled={!formData.precio_especial_activado}
-                                        className="w-full px-3 py-2 border rounded-lg text-center disabled:bg-gray-100" />
+                                        variant="outlined" className="text-center disabled:bg-gray-100" />
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
@@ -451,10 +452,10 @@ export default function CotizacionForm({ cotizacionId = null }) {
                                             onChange={(e) => setFormData({ ...formData, descuento_activado: e.target.checked })}
                                             className="rounded" />
                                     </div>
-                                    <input type="number" step="0.01" value={formData.descuento_general}
+                                    <Input type="number" step="0.01" value={formData.descuento_general}
                                         onChange={(e) => setFormData({ ...formData, descuento_general: e.target.value })}
                                         disabled={!formData.descuento_activado}
-                                        className="w-full px-3 py-2 border rounded-lg text-center disabled:bg-gray-100" />
+                                        variant="outlined" className="text-center disabled:bg-gray-100" />
                                 </div>
                                 <div className="flex items-end">
                                     <Button type="submit" className="w-full">
@@ -467,175 +468,37 @@ export default function CotizacionForm({ cotizacionId = null }) {
 
                         <div>
                             <h4 className="text-lg font-semibold mb-4">Productos</h4>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 border-y">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left">#</th>
-                                            <th className="px-4 py-3 text-left">Código</th>
-                                            <th className="px-4 py-3 text-left">Producto</th>
-                                            <th className="px-4 py-3 text-center">Cant</th>
-                                            <th className="px-4 py-3 text-center">P.Unit</th>
-                                            <th className="px-4 py-3 text-center">Parcial</th>
-                                            <th className="px-4 py-3 text-center">P.Esp</th>
-                                            <th className="px-4 py-3 text-center">Acc</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {productos.map((item, index) => (
-                                            <tr key={index} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3 text-center">{index + 1}</td>
-                                                <td className="px-4 py-3">{item.codigo || '-'}</td>
-                                                <td className="px-4 py-3">{item.descripcion}</td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {item.editable ? (
-                                                        <input type="number" step="0.01" value={item.cantidad}
-                                                            onChange={(e) => handleUpdateProductField(index, 'cantidad', e.target.value)}
-                                                            className="w-20 px-2 py-1 border rounded text-center" />
-                                                    ) : item.cantidad}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {item.editable ? (
-                                                        <input type="number" step="0.01" value={item.precioVenta}
-                                                            onChange={(e) => handleUpdateProductField(index, 'precioVenta', e.target.value)}
-                                                            className="w-24 px-2 py-1 border rounded text-center" />
-                                                    ) : `${monedaSimbolo} ${parseFloat(item.precioVenta).toFixed(2)}`}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {monedaSimbolo} {(parseFloat(item.precioVenta) * parseFloat(item.cantidad)).toFixed(2)}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">{item.precioEspecial || '-'}</td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex gap-2 justify-center">
-                                                        <button onClick={() => handleEditarProducto(index)}
-                                                            className="p-1 text-yellow-600 hover:bg-yellow-50 rounded">
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                            </svg>
-                                                        </button>
-                                                        <button onClick={() => handleDeleteProduct(index)}
-                                                            className="p-1 text-red-600 hover:bg-red-50 rounded">
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {productos.length === 0 && (
-                                            <tr><td colSpan="8" className="px-4 py-8 text-center text-gray-500">Sin productos</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <ProductosTable
+                                productos={productos}
+                                monedaSimbolo={monedaSimbolo}
+                                onEdit={handleEditarProducto}
+                                onDelete={handleDeleteProduct}
+                                onUpdateField={handleUpdateProductField}
+                                showPrecioEspecial={true}
+                                subtotalLabel="Parcial"
+                            />
                         </div>
                     </div>
                 </div>
 
                 <div className="lg:col-span-4">
-                    <div className="bg-white rounded-lg shadow border p-6 space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Documento</label>
-                                <select value={formData.tipo_doc} onChange={(e) => setFormData({ ...formData, tipo_doc: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg">
-                                    <option value="1">BOLETA</option>
-                                    <option value="2">FACTURA</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Tipo Pago</label>
-                                <select value={formData.tipo_pago} onChange={(e) => setFormData({ ...formData, tipo_pago: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg">
-                                    <option value="1">Contado</option>
-                                    <option value="2">Crédito</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {formData.tipo_pago === '2' && (
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Cuotas</label>
-                                <div className="flex gap-2">
-                                    <input type="text" value={`${formData.cuotas.length} cuota(s)`} readOnly
-                                        onClick={() => setShowPaymentSchedule(true)}
-                                        className="flex-1 px-3 py-2 border rounded-lg bg-gray-50 cursor-pointer" />
-                                    <Button type="button" size="icon" onClick={() => setShowPaymentSchedule(true)}>
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Fecha</label>
-                                <input type="date" value={formData.fecha}
-                                    onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-2">N°</label>
-                                <div className="w-full px-3 py-2 border rounded-lg bg-gray-50 font-medium">
-                                    {formData.numero}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Moneda</label>
-                                <select value={formData.moneda} onChange={(e) => setFormData({ ...formData, moneda: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg">
-                                    <option value="1">SOLES</option>
-                                    <option value="2">DÓLARES</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-2">IGV</label>
-                                <select value={formData.aplicar_igv} onChange={(e) => setFormData({ ...formData, aplicar_igv: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg">
-                                    <option value="1">SÍ</option>
-                                    <option value="0">NO</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        {formData.moneda === '2' && (
-                            <div>
-                                <label className="block text-sm font-medium mb-2">T. Cambio</label>
-                                <input type="number" step="0.001" value={formData.tipo_cambio}
-                                    onChange={(e) => setFormData({ ...formData, tipo_cambio: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg" />
-                            </div>
-                        )}
-
-                        <div className="pt-4 border-t">
-                            <h3 className="text-sm font-semibold mb-3 text-center">Cliente</h3>
-                            <div className="space-y-3">
-                                <ClienteAutocomplete onClienteSelect={handleClienteSelect} value={formData.nom_cli} />
-                                <input type="text" value={formData.nom_cli}
-                                    onChange={(e) => setFormData({ ...formData, nom_cli: e.target.value })}
-                                    placeholder="Nombre" className="w-full px-3 py-2 border rounded-lg" />
-                                <input type="text" value={formData.dir_cli}
-                                    onChange={(e) => setFormData({ ...formData, dir_cli: e.target.value })}
-                                    placeholder="Dirección" className="w-full px-3 py-2 border rounded-lg" />
-                                <input type="text" value={formData.asunto}
-                                    onChange={(e) => setFormData({ ...formData, asunto: e.target.value })}
-                                    placeholder="Atención" className="w-full px-3 py-2 border rounded-lg" />
-                            </div>
-                        </div>
-
-                        <div className="bg-primary-600 rounded-lg p-4 text-center text-white mt-6">
-                            <div className="text-3xl font-bold mb-1">
-                                {monedaSimbolo} {calcularTotal().toFixed(2)}
-                            </div>
-                            <div className="text-sm uppercase">Suma Pedido</div>
-                        </div>
-                    </div>
+                    <FormSidebar
+                        formData={formData}
+                        onFormDataChange={setFormData}
+                        cliente={cliente}
+                        onClienteSelect={handleClienteSelect}
+                        totales={{
+                            subtotal: calcularSubtotal(),
+                            igv: calcularIGV(),
+                            total: calcularTotal(),
+                        }}
+                        monedaSimbolo={monedaSimbolo}
+                        showTipoPago={true}
+                        showAsunto={true}
+                        showCuotas={true}
+                        onOpenPaymentSchedule={() => setShowPaymentSchedule(true)}
+                        tipoDocumentoLabel="Documento"
+                    />
                 </div>
             </div>
 

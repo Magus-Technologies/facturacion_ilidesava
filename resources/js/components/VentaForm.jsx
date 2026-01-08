@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "@/lib/sweetalert";
 import MainLayout from "./Layout/MainLayout";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { ArrowLeft, Plus } from "lucide-react";
 
 // Componentes compartidos
@@ -10,6 +11,7 @@ import ProductMultipleSearch from "./shared/ProductMultipleSearch";
 import ProductPriceSelector from "./shared/ProductPriceSelector";
 import ClienteAutocomplete from "./shared/ClienteAutocomplete";
 import FormSidebar from "./shared/FormSidebar";
+import ProductosTable from "./shared/ProductosTable";
 
 export default function VentaForm({ ventaId = null }) {
     const isEditing = !!ventaId;
@@ -395,7 +397,7 @@ export default function VentaForm({ ventaId = null }) {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8">
-                    <div className="bg-white rounded-lg shadow border p-6">
+                    <div className="bg-white rounded-lg shadow p-6">
                         <form
                             onSubmit={handleAddProducto}
                             className="space-y-4 mb-8"
@@ -428,11 +430,12 @@ export default function VentaForm({ ventaId = null }) {
                                 <label className="block text-sm font-medium mb-2">
                                     Descripción
                                 </label>
-                                <input
+                                <Input
                                     type="text"
                                     value={productoActual.descripcion}
                                     readOnly
-                                    className="w-full px-3 py-2 border rounded-lg bg-gray-50"
+                                    variant="outlined"
+                                    className="bg-gray-50"
                                 />
                             </div>
 
@@ -441,18 +444,19 @@ export default function VentaForm({ ventaId = null }) {
                                     <label className="block text-sm font-medium mb-2">
                                         Stock
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={productoActual.stock}
                                         disabled
-                                        className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-center"
+                                        variant="outlined"
+                                        className="bg-gray-100 text-center"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2">
                                         Cantidad
                                     </label>
-                                    <input
+                                    <Input
                                         type="number"
                                         step="0.01"
                                         value={productoActual.cantidad}
@@ -462,7 +466,8 @@ export default function VentaForm({ ventaId = null }) {
                                                 cantidad: e.target.value,
                                             })
                                         }
-                                        className="w-full px-3 py-2 border rounded-lg text-center"
+                                        variant="outlined"
+                                        className="text-center"
                                     />
                                 </div>
                                 <div>
@@ -492,172 +497,14 @@ export default function VentaForm({ ventaId = null }) {
                             <h4 className="text-lg font-semibold mb-4">
                                 Productos
                             </h4>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 border-y">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left">
-                                                #
-                                            </th>
-                                            <th className="px-4 py-3 text-left">
-                                                Código
-                                            </th>
-                                            <th className="px-4 py-3 text-left">
-                                                Producto
-                                            </th>
-                                            <th className="px-4 py-3 text-center">
-                                                Cant
-                                            </th>
-                                            <th className="px-4 py-3 text-center">
-                                                P.Unit
-                                            </th>
-                                            <th className="px-4 py-3 text-center">
-                                                Subtotal
-                                            </th>
-                                            <th className="px-4 py-3 text-center">
-                                                Acc
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {productos.map((item, index) => (
-                                            <tr
-                                                key={index}
-                                                className="hover:bg-gray-50"
-                                            >
-                                                <td className="px-4 py-3 text-center">
-                                                    {index + 1}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {item.codigo || "-"}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {item.descripcion}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {item.editable ? (
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={
-                                                                item.cantidad
-                                                            }
-                                                            onChange={(e) =>
-                                                                handleUpdateProductField(
-                                                                    index,
-                                                                    "cantidad",
-                                                                    e.target
-                                                                        .value
-                                                                )
-                                                            }
-                                                            className="w-20 px-2 py-1 border rounded text-center"
-                                                        />
-                                                    ) : (
-                                                        item.cantidad
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {item.editable ? (
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={
-                                                                item.precioVenta
-                                                            }
-                                                            onChange={(e) =>
-                                                                handleUpdateProductField(
-                                                                    index,
-                                                                    "precioVenta",
-                                                                    e.target
-                                                                        .value
-                                                                )
-                                                            }
-                                                            className="w-24 px-2 py-1 border rounded text-center"
-                                                        />
-                                                    ) : (
-                                                        `${monedaSimbolo} ${parseFloat(
-                                                            item.precioVenta
-                                                        ).toFixed(2)}`
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-center font-semibold text-orange-600">
-                                                    {monedaSimbolo}{" "}
-                                                    {(
-                                                        parseFloat(
-                                                            item.precioVenta
-                                                        ) *
-                                                        parseFloat(
-                                                            item.cantidad
-                                                        )
-                                                    ).toFixed(2)}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex gap-2 justify-center">
-                                                        <button
-                                                            onClick={() =>
-                                                                handleEditarProducto(
-                                                                    index
-                                                                )
-                                                            }
-                                                            className="p-1 text-yellow-600 hover:bg-yellow-50 rounded"
-                                                        >
-                                                            <svg
-                                                                className="w-4 h-4"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                                />
-                                                            </svg>
-                                                        </button>
-                                                        <button
-                                                            onClick={() =>
-                                                                handleDeleteProduct(
-                                                                    index
-                                                                )
-                                                            }
-                                                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                                                        >
-                                                            <svg
-                                                                className="w-4 h-4"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    d="M6 18L18 6M6 6l12 12"
-                                                                />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {productos.length === 0 && (
-                                            <tr>
-                                                <td
-                                                    colSpan="7"
-                                                    className="px-4 py-8 text-center text-gray-500"
-                                                >
-                                                    Sin productos
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <ProductosTable
+                                productos={productos}
+                                monedaSimbolo={monedaSimbolo}
+                                onEdit={handleEditarProducto}
+                                onDelete={handleDeleteProduct}
+                                onUpdateField={handleUpdateProductField}
+                                subtotalLabel="Subtotal"
+                            />
                         </div>
                     </div>
                 </div>

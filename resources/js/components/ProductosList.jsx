@@ -21,6 +21,7 @@ export default function ProductosList() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProducto, setSelectedProducto] = useState(null);
     const [almacenActivo, setAlmacenActivo] = useState("1");
+    const [busqueda, setBusqueda] = useState("");
 
     useEffect(() => {
         fetchProductos();
@@ -105,8 +106,33 @@ export default function ProductosList() {
         setSelectedProducto(null);
     };
 
-    const handleModalSuccess = () => {
-        fetchProductos();
+    const handleModalSuccess = (productoActualizado) => {
+        if (productoActualizado) {
+            // Formatear el producto para que coincida con la estructura de la vista
+            const productoFormateado = {
+                ...productoActualizado,
+                categoria: productoActualizado.categoria?.nombre || null,
+                unidad: productoActualizado.unidad?.nombre || null,
+                unidad_codigo: productoActualizado.unidad?.codigo || null,
+            };
+            
+            // Si es actualización, actualizar el producto en el estado
+            if (selectedProducto) {
+                setProductos(prevProductos => 
+                    prevProductos.map(p => 
+                        p.id_producto === productoFormateado.id_producto 
+                            ? productoFormateado 
+                            : p
+                    )
+                );
+            } else {
+                // Si es nuevo producto, agregarlo al inicio
+                setProductos(prevProductos => [productoFormateado, ...prevProductos]);
+            }
+        } else {
+            // Si no se recibe el producto actualizado, recargar todo
+            fetchProductos();
+        }
     };
 
     const columns = [
@@ -318,7 +344,12 @@ export default function ProductosList() {
                 </div>
 
                 {/* Botones de acción */}
-                <ProductosActionButtons onNuevoProducto={handleCreate} />
+                <ProductosActionButtons 
+                    onNuevoProducto={handleCreate}
+                    onRefresh={fetchProductos}
+                    almacenActivo={almacenActivo}
+                    busqueda={busqueda}
+                />
 
                 <DataTable
                     columns={columns}
@@ -328,6 +359,7 @@ export default function ProductosList() {
                     pagination={true}
                     pageSize={10}
                     gridView={true}
+                    onSearchChange={setBusqueda}
                     renderGridCard={(producto) => (
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-primary-600 transition-all duration-300 group h-full flex flex-col">
                             {/* Imagen del producto */}

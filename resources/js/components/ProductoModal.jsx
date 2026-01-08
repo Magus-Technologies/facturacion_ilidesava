@@ -207,7 +207,9 @@ export default function ProductoModal({ isOpen, onClose, producto, almacen, onSu
 
             if (data.success) {
                 onClose();
-                onSuccess?.();
+                
+                // Pasar el producto actualizado al callback
+                onSuccess?.(data.data);
                 
                 setTimeout(() => {
                     toast.success(

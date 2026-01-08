@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { toast } from "@/lib/sweetalert";
 import { consultarDocumento } from "@/services/apisPeru";
 import { Loader2 } from "lucide-react";
-
+import SelectUbigeo from "./ui/SelectUbigeo"
 export default function ClienteModal({ isOpen, onClose, cliente, onSuccess }) {
     const isEditing = !!cliente;
     const [loading, setLoading] = useState(false);
@@ -347,6 +347,7 @@ export default function ClienteModal({ isOpen, onClose, cliente, onSuccess }) {
                             placeholder="Av. Principal 123"
                         />
                     </ModalField>
+                    <SelectUbigeo/>
 
                     {/* Dirección 2 */}
                     <ModalField

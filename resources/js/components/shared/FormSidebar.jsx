@@ -22,12 +22,17 @@ export default function FormSidebar({
     children
 }) {
     const handleTipoDocChange = (value) => {
+        // Determinar si necesitamos cambiar la serie
+        const tipoDocActual = formData.id_tido || formData.tipo_doc;
         const nuevaSerie = value === '1' ? 'B001' : 'F001';
+        
+        // Actualizar ambos campos para compatibilidad
         onFormDataChange({
             ...formData,
             id_tido: value,
             tipo_doc: value,
-            serie: nuevaSerie
+            // Solo cambiar serie si es diferente al tipo actual
+            ...(tipoDocActual !== value && { serie: nuevaSerie })
         });
     };
 
@@ -39,7 +44,7 @@ export default function FormSidebar({
     };
 
     return (
-        <div className="bg-white rounded-lg shadow border p-6 space-y-4">
+        <div className="bg-white rounded-lg shadow  p-6 space-y-4">
             {/* Tipo de Documento y Tipo de Pago */}
             <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -151,17 +156,24 @@ export default function FormSidebar({
                         Moneda
                     </Label>
                     <Select 
-                        value={formData.moneda || formData.tipo_moneda} 
-                        onValueChange={(value) => handleChange(formData.moneda ? 'moneda' : 'tipo_moneda', value)}
+                        value={String(formData.moneda || formData.tipo_moneda || '1')} 
+                        onValueChange={(value) => {
+                            // Actualizar ambos campos para compatibilidad
+                            const field = formData.moneda !== undefined ? 'moneda' : 'tipo_moneda';
+                            onFormDataChange({
+                                ...formData,
+                                [field]: value
+                            });
+                        }}
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="Seleccionar" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="1">SOLES</SelectItem>
-                            <SelectItem value="PEN">SOLES</SelectItem>
-                            <SelectItem value="2">DÓLARES</SelectItem>
-                            <SelectItem value="USD">DÓLARES</SelectItem>
+                            <SelectItem value="1">SOLES</SelectItem> // 1SOLES
+                            {/* <SelectItem value="PEN">SOLES</SelectItem> */}
+                            <SelectItem value="2">DÓLARES</SelectItem> //2 DOLARES
+                            {/* <SelectItem value="USD">DÓLARES</SelectItem> */}
                         </SelectContent>
                     </Select>
                 </div>

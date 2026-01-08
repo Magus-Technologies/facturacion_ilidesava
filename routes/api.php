@@ -37,7 +37,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('empresas/{id}', [\App\Http\Controllers\EmpresaController::class, 'update']);
 
     // Productos
+    Route::get('productos/plantilla-excel', [\App\Http\Controllers\Exports\ProductoExportController::class, 'descargarPlantilla']);
+    Route::get('productos/descargar-excel', [\App\Http\Controllers\Exports\ProductoExportController::class, 'descargarExcel']);
+    Route::post('productos/leer-excel', [\App\Http\Controllers\Imports\ProductoImportController::class, 'leerExcel']);
+    Route::post('productos/importar-lista', [\App\Http\Controllers\Imports\ProductoImportController::class, 'importarLista']);
     Route::apiResource('productos', \App\Http\Controllers\ProductoController::class);
+
+    // Proveedores
+    Route::get('proveedores/estadisticas', [\App\Http\Controllers\ProveedorController::class, 'estadisticas']);
+    Route::get('proveedores/buscar-ruc', [\App\Http\Controllers\ProveedorController::class, 'buscarPorRuc']);
+    Route::apiResource('proveedores', \App\Http\Controllers\ProveedorController::class);
 
     // Unidades - CRUD completo
     Route::get('unidades', [UnidadProductoController::class, 'index']);
@@ -60,6 +69,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('ventas/proximo-numero', [\App\Http\Controllers\VentasController::class, 'proximoNumero']);
     Route::post('ventas/{id}/anular', [\App\Http\Controllers\VentasController::class, 'anular']);
     Route::apiResource('ventas', \App\Http\Controllers\VentasController::class);
+
+    // Compras
+    Route::get('compras/proximo-numero', [\App\Http\Controllers\CompraController::class, 'proximoNumero']);
+    Route::post('compras/{id}/anular', [\App\Http\Controllers\CompraController::class, 'anular']);
+    Route::apiResource('compras', \App\Http\Controllers\CompraController::class);
 
     // Aquí agregarás más rutas protegidas
     // Route::apiResource('/conductores', ConductorController::class);

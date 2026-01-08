@@ -59,14 +59,14 @@ export function Modal({
     return (
         <div 
             className={cn(
-                "fixed inset-0 z-50 flex items-center justify-center p-4",
+                "fixed inset-0 z-50 flex items-center justify-center py-4 px-4 overflow-y-auto",
                 isOpen ? "animate-in fade-in duration-150" : "animate-out fade-out duration-150"
             )}
         >
             {/* Overlay */}
             <div
                 className={cn(
-                    "absolute inset-0 bg-black/60 transition-opacity duration-150",
+                    "fixed inset-0 bg-black/70 transition-opacity duration-150",
                     isOpen ? "opacity-100" : "opacity-0"
                 )}
                 onClick={closeOnOverlayClick ? onClose : undefined}
@@ -75,9 +75,9 @@ export function Modal({
             {/* Modal */}
             <div
                 className={cn(
-                    "relative bg-white rounded-xl shadow-2xl w-full transition-all duration-150",
+                    "relative bg-white rounded-xl w-full transition-all duration-150 my-auto",
                     sizeClasses[size],
-                    "max-h-[90vh] flex flex-col",
+                    "max-h-[calc(100vh-2rem)] flex flex-col shadow-2xl",
                     isOpen ? "animate-in zoom-in-95 duration-150" : "animate-out zoom-out-95 duration-150"
                 )}
             >
@@ -103,7 +103,7 @@ export function Modal({
 
                 {/* Footer */}
                 {footer && (
-                    <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl flex-shrink-0">
+                    <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 flex-shrink-0">
                         {footer}
                     </div>
                 )}

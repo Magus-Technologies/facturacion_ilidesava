@@ -56,3 +56,20 @@ Route::get('/clientes', function () {
 Route::get('/configuracion/empresa', function () {
     return view('misEmpresas');
 })->name('misEmpresas');
+// Compras
+Route::get('/compras', function () {
+    return view('compras');
+})->name('compras');
+
+Route::get('/compras/nueva', function () {
+    return view('compras-nueva');
+})->name('compras.nueva');
+
+Route::get('/compras/editar/{id}', function ($id) {
+    return view('compras-editar', ['id' => $id]);
+})->name('compras.editar');
+
+// Proveedores
+Route::get('/proveedores', function () {
+    return view('proveedores');
+})->name('proveedores');

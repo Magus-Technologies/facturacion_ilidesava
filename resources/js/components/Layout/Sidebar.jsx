@@ -91,7 +91,7 @@ export default function Sidebar({ isOpen, isCollapsed, currentPath = "/dashboard
     return (
         <>
             <aside
-                className={`fixed left-0 top-0 h-full bg-gradient-to-b from-primary-600 to-primary-700 text-white transition-all duration-300 z-40 ${
+                className={`fixed left-0 top-0 h-full bg-gradient-to-b from-primary-600 to-primary-700 text-white transition-all duration-300 z-40 overflow-hidden ${
                     isOpen ? "w-64" : "w-0 -translate-x-full"
                 } ${
                     isCollapsed ? "lg:w-20" : "lg:w-64"
