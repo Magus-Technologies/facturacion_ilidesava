@@ -182,7 +182,7 @@ export default function ListaProductosModal({ isOpen, onClose, productos, onSucc
 
                 {/* Tabla de productos */}
                 <div className="border rounded-lg overflow-hidden">
-                    <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                    <div className="overflow-x-auto max-h-500px overflow-y-auto">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 sticky top-0">
                                 <tr>
@@ -208,14 +208,14 @@ export default function ListaProductosModal({ isOpen, onClose, productos, onSucc
                                                         <Input
                                                             value={item.producto || ""}
                                                             onChange={(e) => handleCambioProducto(indexOriginal, 'producto', e.target.value)}
-                                                            className="min-w-[150px]"
+                                                            className="min-w-150px"
                                                         />
                                                     </td>
                                                     <td className="px-4 py-2">
                                                         <textarea
                                                             value={item.descripcicon || ""}
                                                             onChange={(e) => handleCambioProducto(indexOriginal, 'descripcicon', e.target.value)}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg min-w-[200px] min-h-[60px]"
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg min-w-200px min-h-60px"
                                                             rows="3"
                                                         />
                                                     </td>
