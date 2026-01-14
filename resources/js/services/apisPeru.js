@@ -5,7 +5,7 @@ const API_TOKEN = import.meta.env.VITE_APISPERU_TOKEN;
 /**
  * Consultar DNI en RENIEC
  * @param {string} dni - Número de DNI (8 dígitos)
- * @returns {Promise<Object>} Datos de la persona
+ * @returns {Promise<Object>} Datos de la personas
  */
 export const consultarDNI = async (dni) => {
     try {
