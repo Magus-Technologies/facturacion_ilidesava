@@ -126,7 +126,7 @@ export default function Login({ onLoginSuccess }) {
 
     return (
         <div
-            className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-tr from-primary-500 to-primary-600"
+            className="min-h-screen flex items-center justify-center p-4 bg-linear-to-tr from-primary-500 to-primary-600"
         >
             {/* Card de Login */}
             <div className="relative w-full max-w-md">

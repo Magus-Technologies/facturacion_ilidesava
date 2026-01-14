@@ -106,7 +106,7 @@ export default function UserList() {
             header: "Nombre",
             cell: ({ row }) => (
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
+                    <div className="h-10 w-10 rounded-full bg-linear-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
                         {row.getValue("name")?.charAt(0).toUpperCase()}
                     </div>
                     <div>
