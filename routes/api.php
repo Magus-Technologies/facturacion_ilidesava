@@ -34,7 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Empresas
     Route::get('empresas', [\App\Http\Controllers\EmpresaController::class, 'index']);
     Route::get('empresas/{id}', [\App\Http\Controllers\EmpresaController::class, 'show']);
-    Route::put('empresas/{id}', [\App\Http\Controllers\EmpresaController::class, 'update']);
+    Route::post('empresas/{id}', [\App\Http\Controllers\EmpresaController::class, 'update']); // POST para FormData con logo
+    Route::delete('empresas/{id}/logo', [\App\Http\Controllers\EmpresaController::class, 'deleteLogo']);
 
     // Productos
     Route::get('productos/plantilla-excel', [\App\Http\Controllers\Exports\ProductoExportController::class, 'descargarPlantilla']);

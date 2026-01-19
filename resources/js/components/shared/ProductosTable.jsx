@@ -1,3 +1,8 @@
+import { Edit2, Trash2 } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Input } from '../ui/input';
+
 /**
  * Componente reutilizable para tablas de productos
  * Usado en: Ventas, Cotizaciones, Compras
@@ -24,298 +29,204 @@ export default function ProductosTable({
     };
 
     return (
-        <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-y">
-                    <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                            #
-                        </th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                            Código
-                        </th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                            Producto
-                        </th>
-                        <th className="px-4 py-3 text-center font-semibold text-gray-700">
-                            Cant
-                        </th>
+        <div className="rounded-lg overflow-hidden">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>Código</TableHead>
+                        <TableHead>Producto</TableHead>
+                        <TableHead className="text-center w-24">Cant</TableHead>
                         {showCosto && (
-                            <th className="px-4 py-3 text-center font-semibold text-gray-700">
-                                Costo
-                            </th>
+                            <TableHead className="text-right w-28">Costo</TableHead>
                         )}
-                        <th className="px-4 py-3 text-center font-semibold text-gray-700">
-                            P.Unit
-                        </th>
-                        <th className="px-4 py-3 text-center font-semibold text-gray-700">
-                            {subtotalLabel}
-                        </th>
+                        <TableHead className="text-right w-28">P.Unit</TableHead>
                         {showPrecioEspecial && (
-                            <th className="px-4 py-3 text-center font-semibold text-gray-700">
-                                P.Esp
-                            </th>
+                            <TableHead className="text-right w-28">P.Esp</TableHead>
                         )}
                         {showDescuento && (
-                            <th className="px-4 py-3 text-center font-semibold text-gray-700">
-                                Desc%
-                            </th>
+                            <TableHead className="text-center w-20">Desc%</TableHead>
                         )}
-                        <th className="px-4 py-3 text-center font-semibold text-gray-700">
-                            Acc
-                        </th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y">
-                    {productos.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                            {/* # */}
-                            <td className="px-4 py-3 text-center text-gray-600">
-                                {index + 1}
-                            </td>
-
-                            {/* Código */}
-                            <td className="px-4 py-3 font-mono text-sm">
-                                {item.codigo || "-"}
-                            </td>
-
-                            {/* Producto */}
-                            <td className="px-4 py-3">
-                                <span className="text-gray-900">
-                                    {item.descripcion || item.nombre}
-                                </span>
-                            </td>
-
-                            {/* Cantidad */}
-                            <td className="px-4 py-3 text-center">
-                                {item.editable ? (
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={item.cantidad}
-                                        onChange={(e) =>
-                                            onUpdateField(
-                                                index,
-                                                "cantidad",
-                                                e.target.value
-                                            )
-                                        }
-                                        className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    />
-                                ) : (
-                                    <span className="font-medium">
-                                        {parseFloat(item.cantidad || 0).toFixed(
-                                            2
-                                        )}
-                                    </span>
-                                )}
-                            </td>
-
-                            {/* Costo (solo para compras) */}
-                            {showCosto && (
-                                <td className="px-4 py-3 text-center">
-                                    {item.editable ? (
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={item.costo || 0}
-                                            onChange={(e) =>
-                                                onUpdateField(
-                                                    index,
-                                                    "costo",
-                                                    e.target.value
-                                                )
-                                            }
-                                            className="w-24 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                        />
-                                    ) : (
-                                        <span className="text-gray-700">
-                                            {monedaSimbolo}{" "}
-                                            {parseFloat(
-                                                item.costo || 0
-                                            ).toFixed(2)}
-                                        </span>
-                                    )}
-                                </td>
-                            )}
-
-                            {/* Precio Unitario */}
-                            <td className="px-4 py-3 text-center">
-                                {item.editable ? (
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={item.precioVenta || item.precio}
-                                        onChange={(e) =>
-                                            onUpdateField(
-                                                index,
-                                                "precioVenta",
-                                                e.target.value
-                                            )
-                                        }
-                                        className="w-24 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    />
-                                ) : (
-                                    <span className="text-gray-900 font-medium">
-                                        {monedaSimbolo}{" "}
-                                        {parseFloat(
-                                            item.precioVenta || item.precio || 0
-                                        ).toFixed(2)}
-                                    </span>
-                                )}
-                            </td>
-
-                            {/* Subtotal/Parcial */}
-                            <td className="px-4 py-3 text-center">
-                                <span className="font-semibold text-primary-600">
-                                    {monedaSimbolo}{" "}
-                                    {calcularSubtotal(item).toFixed(2)}
-                                </span>
-                            </td>
-
-                            {/* Precio Especial (solo cotizaciones) */}
-                            {showPrecioEspecial && (
-                                <td className="px-4 py-3 text-center">
-                                    {item.editable ? (
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={item.precioEspecial || ""}
-                                            onChange={(e) =>
-                                                onUpdateField(
-                                                    index,
-                                                    "precioEspecial",
-                                                    e.target.value
-                                                )
-                                            }
-                                            className="w-24 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                            placeholder="0.00"
-                                        />
-                                    ) : (
-                                        <span className="text-gray-600">
-                                            {item.precioEspecial
-                                                ? `${monedaSimbolo} ${parseFloat(
-                                                      item.precioEspecial
-                                                  ).toFixed(2)}`
-                                                : "-"}
-                                        </span>
-                                    )}
-                                </td>
-                            )}
-
-                            {/* Descuento (opcional) */}
-                            {showDescuento && (
-                                <td className="px-4 py-3 text-center">
-                                    {item.editable ? (
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={item.descuento || ""}
-                                            onChange={(e) =>
-                                                onUpdateField(
-                                                    index,
-                                                    "descuento",
-                                                    e.target.value
-                                                )
-                                            }
-                                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                            placeholder="0"
-                                        />
-                                    ) : (
-                                        <span className="text-gray-600">
-                                            {item.descuento
-                                                ? `${item.descuento}%`
-                                                : "-"}
-                                        </span>
-                                    )}
-                                </td>
-                            )}
-
-                            {/* Acciones */}
-                            <td className="px-4 py-3">
-                                <div className="flex gap-2 justify-center">
-                                    {/* Botón Editar */}
-                                    <button
-                                        onClick={() => onEdit(index)}
-                                        className="p-1 text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
-                                        title="Editar"
-                                    >
-                                        <svg
-                                            className="w-4 h-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                            />
-                                        </svg>
-                                    </button>
-
-                                    {/* Botón Eliminar */}
-                                    <button
-                                        onClick={() => onDelete(index)}
-                                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                        title="Eliminar"
-                                    >
-                                        <svg
-                                            className="w-4 h-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M6 18L18 6M6 6l12 12"
-                                            />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-
-                    {/* Fila vacía */}
-                    {productos.length === 0 && (
-                        <tr>
-                            <td
+                        <TableHead className="text-right w-32">{subtotalLabel}</TableHead>
+                        <TableHead className="text-center w-24">Acciones</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {productos.length === 0 ? (
+                        <TableRow>
+                            <TableCell
                                 colSpan={
-                                    8 +
+                                    6 +
                                     (showPrecioEspecial ? 1 : 0) +
                                     (showDescuento ? 1 : 0) +
                                     (showCosto ? 1 : 0)
                                 }
-                                className="px-4 py-8 text-center text-gray-500"
+                                className="h-32 text-center text-gray-500"
                             >
-                                <div className="flex flex-col items-center gap-2">
-                                    <svg
-                                        className="w-12 h-12 text-gray-300"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                                No hay productos agregados
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        productos.map((item, index) => (
+                            <TableRow key={index}>
+                                {/* # */}
+                                <TableCell className="text-center text-gray-500 font-medium">
+                                    {index + 1}
+                                </TableCell>
+
+                                {/* Código */}
+                                <TableCell className="font-mono text-sm">
+                                    {item.codigo || "-"}
+                                </TableCell>
+
+                                {/* Producto */}
+                                <TableCell className="font-medium">
+                                    {item.descripcion || item.nombre}
+                                </TableCell>
+
+                                {/* Cantidad */}
+                                <TableCell className="text-center">
+                                    {item.editable ? (
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={item.cantidad}
+                                            onChange={(e) =>
+                                                onUpdateField(index, "cantidad", e.target.value)
+                                            }
+                                            className="w-20 text-center"
                                         />
-                                    </svg>
-                                    <p>No hay productos agregados</p>
-                                    <p className="text-xs text-gray-400">
-                                        Busca y agrega productos para continuar
-                                    </p>
-                                </div>
-                            </td>
-                        </tr>
+                                    ) : (
+                                        <span className="font-medium">
+                                            {parseFloat(item.cantidad || 0).toFixed(2)}
+                                        </span>
+                                    )}
+                                </TableCell>
+
+                                {/* Costo (solo para compras) */}
+                                {showCosto && (
+                                    <TableCell className="text-right">
+                                        {item.editable ? (
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={item.costo || 0}
+                                                onChange={(e) =>
+                                                    onUpdateField(index, "costo", e.target.value)
+                                                }
+                                                className="w-24 text-right"
+                                            />
+                                        ) : (
+                                            <span>
+                                                {monedaSimbolo} {parseFloat(item.costo || 0).toFixed(2)}
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                )}
+
+                                {/* Precio Unitario */}
+                                <TableCell className="text-right">
+                                    {item.editable ? (
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={item.precioVenta || item.precio}
+                                            onChange={(e) =>
+                                                onUpdateField(index, "precioVenta", e.target.value)
+                                            }
+                                            className="w-24 text-right"
+                                        />
+                                    ) : (
+                                        <span>
+                                            {monedaSimbolo}{" "}
+                                            {parseFloat(item.precioVenta || item.precio || 0).toFixed(2)}
+                                        </span>
+                                    )}
+                                </TableCell>
+
+                                {/* Precio Especial (solo cotizaciones) */}
+                                {showPrecioEspecial && (
+                                    <TableCell className="text-right">
+                                        {item.editable ? (
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={item.precioEspecial || ""}
+                                                onChange={(e) =>
+                                                    onUpdateField(index, "precioEspecial", e.target.value)
+                                                }
+                                                className="w-24 text-right"
+                                                placeholder="0.00"
+                                            />
+                                        ) : (
+                                            <span className="text-gray-600">
+                                                {item.precioEspecial
+                                                    ? `${monedaSimbolo} ${parseFloat(
+                                                          item.precioEspecial
+                                                      ).toFixed(2)}`
+                                                    : "-"}
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                )}
+
+                                {/* Descuento (opcional) */}
+                                {showDescuento && (
+                                    <TableCell className="text-center">
+                                        {item.editable ? (
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={item.descuento || ""}
+                                                onChange={(e) =>
+                                                    onUpdateField(index, "descuento", e.target.value)
+                                                }
+                                                className="w-16 text-center"
+                                                placeholder="0"
+                                            />
+                                        ) : (
+                                            <span className="text-gray-600">
+                                                {item.descuento ? `${item.descuento}%` : "-"}
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                )}
+
+                                {/* Subtotal/Parcial */}
+                                <TableCell className="text-right">
+                                    <span className="font-semibold text-primary-600">
+                                        {monedaSimbolo} {calcularSubtotal(item).toFixed(2)}
+                                    </span>
+                                </TableCell>
+
+                                {/* Acciones */}
+                                <TableCell>
+                                    <div className="flex gap-1 justify-center">
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => onEdit(index)}
+                                            className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                        >
+                                            <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => onDelete(index)}
+                                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))
                     )}
-                </tbody>
-            </table>
+                </TableBody>
+            </Table>
         </div>
     );
 }

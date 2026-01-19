@@ -207,7 +207,6 @@ export default function ClienteAutocomplete({
         <div className={`relative ${className}`} ref={dropdownRef}>
             <div className="flex gap-2">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                         ref={inputRef}
                         type="text"
@@ -215,7 +214,6 @@ export default function ClienteAutocomplete({
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder={placeholder}
-                        className="pl-10"
                         autoComplete="off"
                     />
                     {loading && (
@@ -226,17 +224,16 @@ export default function ClienteAutocomplete({
                 {showConsultarButton && (
                     <Button
                         type="button"
-                        variant="outline"
                         onClick={handleConsultarDocumento}
                         disabled={consultando || !searchTerm.trim()}
-                        className="gap-2"
+                        size="icon"
+                        className="flex-shrink-0"
                     >
                         {consultando ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                             <Search className="h-4 w-4" />
                         )}
-                        Consultar
                     </Button>
                 )}
             </div>

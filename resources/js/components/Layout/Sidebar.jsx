@@ -270,10 +270,10 @@ export default function Sidebar({ isOpen, isCollapsed, currentPath = "/dashboard
                     </nav>
 
                     {/* Toggle Button - Solo visible en desktop */}
-                    <div className="hidden lg:block border-t border-primary-500/30 p-3">
+                    <div className="hidden lg:block border-t border-primary-500/30 p-2">
                         <button
                             onClick={toggleCollapse}
-                            className="w-full flex items-center justify-center px-4 py-3 rounded-lg hover:bg-primary-500/50 transition-all duration-200 group"
+                            className="w-full flex items-center justify-center px-3 py-2 rounded-lg hover:bg-primary-500/50 transition-all duration-200 group"
                             title={isCollapsed ? "Expandir menú" : "Contraer menú"}
                         >
                             {isCollapsed ? (

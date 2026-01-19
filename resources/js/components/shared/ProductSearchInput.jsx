@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, Package, ScanBarcode } from 'lucide-react';
+import { Loader2, Package, ScanBarcode } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 
@@ -136,7 +136,6 @@ export default function ProductSearchInput({
         <div className={`relative ${className}`} ref={dropdownRef}>
             <div className="relative flex gap-2">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                         ref={inputRef}
                         type="text"
@@ -144,7 +143,6 @@ export default function ProductSearchInput({
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder={placeholder}
-                        className="pl-10"
                         autoComplete="off"
                     />
                     {loading && (

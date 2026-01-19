@@ -2,17 +2,17 @@ import { createRoot } from "react-dom/client";
 import Login from "./components/Login";
 import DashboardApp from "./components/DashboardApp";
 import UserList from "./components/UserList";
-import VentasList from "./components/VentasList";
-import CotizacionesList from "./components/CotizacionesList";
-import CotizacionForm from "./components/CotizacionForm";
-import VentaForm from "./components/VentaForm";
-import ClientsList from "./components/ClientsList";
-import MisEmpresas from "./components/MisEmpresas";
-import ProductosList from "./components/ProductosList";
+import VentasList from "./components/Facturacion/Ventas/VentasList";
+import VentaForm from "./components/Facturacion/Ventas/VentaForm";
+import CotizacionesList from "./components/Cotizaciones/CotizacionesList";
+import CotizacionForm from "./components/Cotizaciones/CotizacionForm";
+import ClientsList from "./components/Clientes/ClientsList";
+import MisEmpresas from "./components/Empresas/MisEmpresas";
+import ProductosList from "./components/Almacen/ProductosList";
 import NotFound from "./components/NotFound";
-import Compras from "./components/Compras";
-import CompraForm from "./components/CompraForm";
-import ProveedoresList from "./components/ProveedoresList"
+import Compras from "./components/Compras/Compras";
+import CompraForm from "./components/Compras/CompraForm";
+import ProveedoresList from "./components/Proveedores/ProveedoresList"
 import "../css/app.css";
 import "../css/select-custom.css";
 

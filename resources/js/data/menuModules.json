@@ -23,13 +23,19 @@
           "id": "facturas",
           "name": "Facturas",
           "icon": "FileInvoice",
-          "path": "/facturas"
+          "path": "/ventas?tipo=factura"
         },
         {
           "id": "boletas",
           "name": "Boletas",
           "icon": "Receipt",
-          "path": "/boletas"
+          "path": "/ventas?tipo=boleta"
+        },
+        {
+          "id": "notas-venta",
+          "name": "Notas de Venta",
+          "icon": "FileCheck",
+          "path": "/ventas?tipo=nota"
         },
         {
           "id": "notas-credito",

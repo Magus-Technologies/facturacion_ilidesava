@@ -31,6 +31,7 @@ class VentasController extends Controller
                 ->map(function ($venta) {
                     return [
                         'id_venta' => $venta->id_venta,
+                        'id_tido' => $venta->id_tido,
                         'serie' => $venta->serie,
                         'numero' => $venta->numero,
                         'fecha_emision' => $venta->fecha_emision?->format('Y-m-d'),
@@ -79,6 +80,8 @@ class VentasController extends Controller
                 'igv' => 'required|numeric|min:0',
                 'total' => 'required|numeric|min:0',
                 'tipo_moneda' => 'required|in:PEN,USD',
+                'empresas_ids' => 'nullable|array',
+                'empresas_ids.*' => 'integer|exists:empresas,id_empresa',
                 'productos' => 'required|array|min:1',
                 'productos.*.id_producto' => 'required|integer|exists:productos,id_producto',
                 'productos.*.cantidad' => 'required|integer|min:1',
@@ -90,14 +93,22 @@ class VentasController extends Controller
 
             $user = $request->user();
 
-            return DB::transaction(function () use ($validated, $user) {
+            return DB::transaction(function () use ($validated, $user, $request) {
+                // Obtener el próximo número para la serie
+                $ultimaVenta = Venta::where('id_empresa', $user->id_empresa)
+                    ->where('serie', $validated['serie'])
+                    ->orderBy('numero', 'desc')
+                    ->first();
+                
+                $proximoNumero = $ultimaVenta ? $ultimaVenta->numero + 1 : 1;
+                
                 // Crear venta
                 $venta = Venta::create([
                     'id_tido' => $validated['id_tido'],
                     'id_cliente' => $validated['id_cliente'],
                     'fecha_emision' => $validated['fecha_emision'],
                     'serie' => $validated['serie'],
-                    'numero' => $validated['numero'],
+                    'numero' => $proximoNumero, // Usar el número calculado
                     'subtotal' => $validated['subtotal'],
                     'igv' => $validated['igv'],
                     'total' => $validated['total'],
@@ -123,6 +134,11 @@ class VentasController extends Controller
                         'unidad_medida' => $producto['unidad_medida'] ?? 'NIU',
                         'tipo_afectacion_igv' => $producto['tipo_afectacion_igv'] ?? '10',
                     ]);
+                }
+
+                // Guardar empresas seleccionadas en tabla pivot
+                if (!empty($validated['empresas_ids'])) {
+                    $venta->empresas()->attach($validated['empresas_ids']);
                 }
 
                 return response()->json([

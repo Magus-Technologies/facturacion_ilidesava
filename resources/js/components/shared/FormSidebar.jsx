@@ -1,5 +1,9 @@
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import SelectTipoDocumento from '../ui/SelectTipoDocumento';
+import SelectTipoPago from '../ui/SelectTipoPago';
+import SelectMoneda from '../ui/SelectMoneda';
+import SelectEmpresas from '../ui/SelectEmpresas';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import ClienteFormSection from './ClienteFormSection';
 
@@ -19,12 +23,22 @@ export default function FormSidebar({
     showCuotas = false,
     onOpenPaymentSchedule,
     tipoDocumentoLabel = "Tipo Documento",
+    tipoContexto = 'venta', // 'venta', 'compra', 'cotizacion'
+    disableTipoDoc = false,
     children
 }) {
     const handleTipoDocChange = (value) => {
         // Determinar si necesitamos cambiar la serie
         const tipoDocActual = formData.id_tido || formData.tipo_doc;
-        const nuevaSerie = value === '1' ? 'B001' : 'F001';
+        let nuevaSerie = 'B001'; // Por defecto Boleta
+        
+        if (value === '1') {
+            nuevaSerie = 'B001'; // Boleta
+        } else if (value === '2') {
+            nuevaSerie = 'F001'; // Factura
+        } else if (value === '6') {
+            nuevaSerie = 'NV01'; // Nota de Venta
+        }
         
         // Actualizar ambos campos para compatibilidad
         onFormDataChange({
@@ -45,24 +59,30 @@ export default function FormSidebar({
 
     return (
         <div className="bg-white rounded-lg shadow  p-6 space-y-4">
+            {/* Empresas */}
+            <div>
+                <Label className="block text-sm font-medium mb-2">
+                    Empresa(s) que Factura(n)
+                </Label>
+                <SelectEmpresas
+                    value={Array.isArray(formData.empresas_ids) ? formData.empresas_ids : []}
+                    onChange={(value) => handleChange('empresas_ids', value)}
+                    multiple={true}
+                />
+            </div>
+
             {/* Tipo de Documento y Tipo de Pago */}
             <div className="grid grid-cols-2 gap-3">
                 <div>
                     <Label className="block text-sm font-medium mb-2">
                         {tipoDocumentoLabel}
                     </Label>
-                    <Select 
-                        value={formData.id_tido || formData.tipo_doc} 
+                    <SelectTipoDocumento
+                        value={formData.id_tido || formData.tipo_doc}
                         onValueChange={handleTipoDocChange}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="1">BOLETA</SelectItem>
-                            <SelectItem value="2">FACTURA</SelectItem>
-                        </SelectContent>
-                    </Select>
+                        tipo={tipoContexto}
+                        disabled={disableTipoDoc}
+                    />
                 </div>
 
                 {showTipoPago && (
@@ -70,18 +90,10 @@ export default function FormSidebar({
                         <Label className="block text-sm font-medium mb-2">
                             Tipo Pago
                         </Label>
-                        <Select 
-                            value={formData.tipo_pago} 
+                        <SelectTipoPago
+                            value={formData.tipo_pago}
                             onValueChange={(value) => handleChange('tipo_pago', value)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="1">Contado</SelectItem>
-                                <SelectItem value="2">Crédito</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        />
                     </div>
                 )}
 
@@ -143,9 +155,12 @@ export default function FormSidebar({
                     <Label className="block text-sm font-medium mb-2">
                         N° {showTipoPago ? '' : 'Documento'}
                     </Label>
-                    <div className="w-full px-3 py-2 border rounded-lg bg-gray-50 font-medium">
-                        {String(formData.numero).padStart(6, '0')}
-                    </div>
+                    <Input
+                        type="text"
+                        value={String(formData.numero).padStart(6, '0')}
+                        readOnly
+                        className="bg-gray-50 font-medium"
+                    />
                 </div>
             </div>
 
@@ -155,8 +170,8 @@ export default function FormSidebar({
                     <Label className="block text-sm font-medium mb-2">
                         Moneda
                     </Label>
-                    <Select 
-                        value={String(formData.moneda || formData.tipo_moneda || '1')} 
+                    <SelectMoneda
+                        value={formData.moneda || formData.tipo_moneda || 'PEN'}
                         onValueChange={(value) => {
                             // Actualizar ambos campos para compatibilidad
                             const field = formData.moneda !== undefined ? 'moneda' : 'tipo_moneda';
@@ -165,17 +180,7 @@ export default function FormSidebar({
                                 [field]: value
                             });
                         }}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="1">SOLES</SelectItem> // 1SOLES
-                            {/* <SelectItem value="PEN">SOLES</SelectItem> */}
-                            <SelectItem value="2">DÓLARES</SelectItem> //2 DOLARES
-                            {/* <SelectItem value="USD">DÓLARES</SelectItem> */}
-                        </SelectContent>
-                    </Select>
+                    />
                 </div>
                 <div>
                     <Label className="block text-sm font-medium mb-2">

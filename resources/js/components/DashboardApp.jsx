@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import MainLayout from "./Layout/MainLayout";
 import Dashboard from "./Dashboard/Dashboard";
-import DashboardTest from "./DashboardTest";
 import Loader from "./Loader";
 
 export default function DashboardApp() {
@@ -57,28 +56,6 @@ export default function DashboardApp() {
 
     if (!isAuthenticated) {
         return null;
-    }
-
-    // MODO DEBUG: Probar componentes paso a paso
-    const DEBUG_STEP = 3; // Cambiar: 1 = DashboardTest, 2 = MainLayout simple, 3 = Dashboard completo
-
-    if (DEBUG_STEP === 1) {
-        return <DashboardTest />;
-    }
-
-    if (DEBUG_STEP === 2) {
-        return (
-            <MainLayout currentPath="/dashboard">
-                <div className="bg-white rounded-lg shadow p-6">
-                    <h1 className="text-3xl font-bold text-gray-900">
-                        MainLayout funciona!
-                    </h1>
-                    <p className="text-gray-600 mt-2">
-                        El Layout, Sidebar y Header están cargando correctamente.
-                    </p>
-                </div>
-            </MainLayout>
-        );
     }
 
     return (

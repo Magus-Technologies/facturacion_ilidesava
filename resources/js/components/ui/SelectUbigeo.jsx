@@ -172,7 +172,7 @@ export default function SelectUbigeo({
     }, [value.ubigeo, ubigeo, departamentos, onChange]);
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Departamento */}
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
@@ -236,7 +236,7 @@ export default function SelectUbigeo({
             </div>
 
             {/* Distrito */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
                     Distrito
                 </label>

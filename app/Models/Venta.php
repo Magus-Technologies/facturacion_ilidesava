@@ -80,6 +80,12 @@ class Venta extends Model
         return $this->belongsTo(Empresa::class, 'id_empresa', 'id_empresa');
     }
 
+    public function empresas()
+    {
+        return $this->belongsToMany(Empresa::class, 'venta_empresa', 'id_venta', 'id_empresa')
+            ->withTimestamps();
+    }
+
     public function tipoDocumento(): BelongsTo
     {
         return $this->belongsTo(DocumentoSunat::class, 'id_tido', 'id_tido');

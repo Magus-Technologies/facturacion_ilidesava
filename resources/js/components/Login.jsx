@@ -156,6 +156,7 @@ export default function Login({ onLoginSuccess }) {
                                 value={formData.user}
                                 onChange={handleChange}
                                 required
+                                variant="underline"
                                 className="text-base"
                                 placeholder="Ingresa tu usuario o email"
                             />
@@ -174,6 +175,7 @@ export default function Login({ onLoginSuccess }) {
                                     value={formData.password}
                                     onChange={handleChange}
                                     required
+                                    variant="underline"
                                     className="pr-11 text-base"
                                     placeholder="Ingresa tu contraseña"
                                 />

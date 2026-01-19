@@ -190,7 +190,7 @@ export default function ProductMultipleSearch({
 
                 {/* Productos seleccionados */}
                 {selectedProducts.length > 0 && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <div className="bg-orange-50  border-orange-200 rounded-lg p-3">
                         <p className="text-sm font-semibold text-orange-700 mb-2">
                             Productos seleccionados: {selectedProducts.length}
                         </p>
@@ -198,7 +198,7 @@ export default function ProductMultipleSearch({
                             {selectedProducts.map((producto) => (
                                 <div
                                     key={producto.id}
-                                    className="inline-flex items-center gap-2 bg-white border border-orange-300 rounded-full px-3 py-1"
+                                    className="inline-flex items-center gap-2 bg-white  border-orange-300 rounded-full px-3 py-1"
                                 >
                                     <span className="text-sm text-gray-700">{producto.nombre}</span>
                                     <button
@@ -215,7 +215,7 @@ export default function ProductMultipleSearch({
                 )}
 
                 {/* Lista de productos */}
-                <div className="border rounded-lg">
+                <div className="rounded-lg">
                     <div className="max-h-[400px] overflow-y-auto">
                         {loading && (
                             <div className="p-8 text-center text-gray-500">

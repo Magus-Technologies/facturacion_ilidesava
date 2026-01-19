@@ -372,3 +372,14 @@ php artisan migrate
 - **Usar transacciones DB** para todas las operaciones de escritura
 - **Validar datos** con FormRequests antes de procesar
 - **Log de errores** con Log::error() en vez de error_log()
+
+CREATE TABLE venta_empresa (
+  id bigint unsigned AUTO_INCREMENT PRIMARY KEY,
+  id_venta bigint unsigned NOT NULL,
+  id_empresa int NOT NULL,
+  created_at timestamp NULL,
+  updated_at timestamp NULL,
+  FOREIGN KEY (id_venta) REFERENCES ventas(id_venta) ON DELETE CASCADE,
+  FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa) ON DELETE CASCADE,
+  UNIQUE KEY (id_venta, id_empresa)
+)
