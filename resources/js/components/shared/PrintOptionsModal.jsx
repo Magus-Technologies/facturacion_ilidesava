@@ -1,31 +1,38 @@
-import { Printer, FileText, Download } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Modal } from '../ui/modal';
-import { useState } from 'react';
+import { Printer, FileText, Download } from "lucide-react";
+import { Button } from "../ui/button";
+import { Modal } from "../ui/modal";
+import { useState } from "react";
 
 /**
  * Modal para mostrar preview de PDF y opciones de impresión
  */
-export default function PrintOptionsModal({ isOpen, onClose, ventaId, numeroCompleto }) {
-    const [formato, setFormato] = useState('ticket'); // 'ticket' o 'a4'
+export default function PrintOptionsModal({
+    isOpen,
+    onClose,
+    ventaId,
+    numeroCompleto,
+    tipo = "venta",
+}) {
+    const [formato, setFormato] = useState("ticket"); // 'ticket' o 'a4'
 
     const getPdfUrl = () => {
-        if (formato === 'ticket') {
-            return `/reporteNV/ticket.php?id=${ventaId}`;
+        const folder = tipo === "compra" ? "reporteOC" : "reporteNV";
+        if (formato === "ticket") {
+            return `/${folder}/ticket.php?id=${ventaId}`;
         } else {
-            return `/reporteNV/a4.php?id=${ventaId}`;
+            return `/${folder}/a4.php?id=${ventaId}`;
         }
     };
 
     const handlePrint = () => {
-        const iframe = document.getElementById('pdf-preview');
+        const iframe = document.getElementById("pdf-preview");
         if (iframe) {
             iframe.contentWindow.print();
         }
     };
 
     const handleDownload = () => {
-        window.open(getPdfUrl(), '_blank');
+        window.open(getPdfUrl(), "_blank");
     };
 
     return (
@@ -41,8 +48,8 @@ export default function PrintOptionsModal({ isOpen, onClose, ventaId, numeroComp
                 {/* Botones de formato */}
                 <div className="flex gap-2">
                     <Button
-                        onClick={() => setFormato('a4')}
-                        variant={formato === 'a4' ? 'default' : 'outline'}
+                        onClick={() => setFormato("a4")}
+                        variant={formato === "a4" ? "default" : "outline"}
                         size="sm"
                         className="flex items-center gap-2"
                     >
@@ -50,8 +57,8 @@ export default function PrintOptionsModal({ isOpen, onClose, ventaId, numeroComp
                         A4
                     </Button>
                     <Button
-                        onClick={() => setFormato('ticket')}
-                        variant={formato === 'ticket' ? 'default' : 'outline'}
+                        onClick={() => setFormato("ticket")}
+                        variant={formato === "ticket" ? "default" : "outline"}
                         size="sm"
                         className="flex items-center gap-2"
                     >
@@ -83,14 +90,17 @@ export default function PrintOptionsModal({ isOpen, onClose, ventaId, numeroComp
             </div>
 
             {/* PDF Preview */}
-            <div className="w-full bg-gray-100 rounded-lg overflow-hidden" style={{ height: '70vh' }}>
+            <div
+                className="w-full bg-gray-100 rounded-lg overflow-hidden"
+                style={{ height: "70vh" }}
+            >
                 <iframe
                     id="pdf-preview"
                     key={formato}
                     src={getPdfUrl()}
                     className="w-full h-full border-0 bg-white"
                     title="Vista previa del documento"
-                    style={{ backgroundColor: 'white' }}
+                    style={{ backgroundColor: "white" }}
                 />
             </div>
         </Modal>

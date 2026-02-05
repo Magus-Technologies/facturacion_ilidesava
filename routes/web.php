@@ -95,7 +95,28 @@ Route::get('/compras/editar/{id}', function ($id) {
     return view('compras.compras-editar', ['id' => $id]);
 })->name('compras.editar');
 
+// PDFs de compras usando controlador
+Route::get('/reporteOC/ticket.php', function(Request $request) {
+    $id = $request->get('id');
+    return app(\App\Http\Controllers\Reportes\CompraPdfController::class)->generarTicket($id);
+});
+
+Route::get('/reporteOC/a4.php', function(Request $request) {
+    $id = $request->get('id');
+    return app(\App\Http\Controllers\Reportes\CompraPdfController::class)->generarA4($id);
+});
+
 // Proveedores
 Route::get('/proveedores', function () {
     return view('proveedores');
 })->name('proveedores');
+
+// Guia de Remision
+Route::get('/guia-remision', function () {
+    return view('guiaRemision.guia-remision');
+})->name('guia-remision');
+
+// Nota de Credito
+Route::get('/nota-credito', function () {
+    return view('notaCredito.nota-credito');
+})->name('nota-credito');

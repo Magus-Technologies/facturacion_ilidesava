@@ -1,11 +1,17 @@
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import SelectTipoDocumento from '../ui/SelectTipoDocumento';
-import SelectTipoPago from '../ui/SelectTipoPago';
-import SelectMoneda from '../ui/SelectMoneda';
-import SelectEmpresas from '../ui/SelectEmpresas';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import ClienteFormSection from './ClienteFormSection';
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import SelectTipoDocumento from "../ui/SelectTipoDocumento";
+import SelectTipoPago from "../ui/SelectTipoPago";
+import SelectMoneda from "../ui/SelectMoneda";
+import SelectEmpresas from "../ui/SelectEmpresas";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "../ui/select";
+import ClienteFormSection from "./ClienteFormSection";
 
 /**
  * Componente reutilizable para el sidebar de formularios (Ventas/Cotizaciones)
@@ -23,37 +29,37 @@ export default function FormSidebar({
     showCuotas = false,
     onOpenPaymentSchedule,
     tipoDocumentoLabel = "Tipo Documento",
-    tipoContexto = 'venta', // 'venta', 'compra', 'cotizacion'
+    tipoContexto = "venta", // 'venta', 'compra', 'cotizacion'
     disableTipoDoc = false,
-    children
+    children,
 }) {
     const handleTipoDocChange = (value) => {
         // Determinar si necesitamos cambiar la serie
         const tipoDocActual = formData.id_tido || formData.tipo_doc;
-        let nuevaSerie = 'B001'; // Por defecto Boleta
-        
-        if (value === '1') {
-            nuevaSerie = 'B001'; // Boleta
-        } else if (value === '2') {
-            nuevaSerie = 'F001'; // Factura
-        } else if (value === '6') {
-            nuevaSerie = 'NV01'; // Nota de Venta
+        let nuevaSerie = "B001"; // Por defecto Boleta
+
+        if (value === "1") {
+            nuevaSerie = "B001"; // Boleta
+        } else if (value === "2") {
+            nuevaSerie = "F001"; // Factura
+        } else if (value === "6") {
+            nuevaSerie = "NV01"; // Nota de Venta
         }
-        
+
         // Actualizar ambos campos para compatibilidad
         onFormDataChange({
             ...formData,
             id_tido: value,
             tipo_doc: value,
             // Solo cambiar serie si es diferente al tipo actual
-            ...(tipoDocActual !== value && { serie: nuevaSerie })
+            ...(tipoDocActual !== value && { serie: nuevaSerie }),
         });
     };
 
     const handleChange = (field, value) => {
         onFormDataChange({
             ...formData,
-            [field]: value
+            [field]: value,
         });
     };
 
@@ -65,8 +71,12 @@ export default function FormSidebar({
                     Empresa(s) que Factura(n)
                 </Label>
                 <SelectEmpresas
-                    value={Array.isArray(formData.empresas_ids) ? formData.empresas_ids : []}
-                    onChange={(value) => handleChange('empresas_ids', value)}
+                    value={
+                        Array.isArray(formData.empresas_ids)
+                            ? formData.empresas_ids
+                            : []
+                    }
+                    onChange={(value) => handleChange("empresas_ids", value)}
                     multiple={true}
                 />
             </div>
@@ -92,7 +102,9 @@ export default function FormSidebar({
                         </Label>
                         <SelectTipoPago
                             value={formData.tipo_pago}
-                            onValueChange={(value) => handleChange('tipo_pago', value)}
+                            onValueChange={(value) =>
+                                handleChange("tipo_pago", value)
+                            }
                         />
                     </div>
                 )}
@@ -112,8 +124,33 @@ export default function FormSidebar({
                 )}
             </div>
 
+            {/* Afecta Stock (solo para Notas de Venta) */}
+            {formData.id_tido === "6" && (
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <div className="space-y-0.5">
+                        <Label className="text-sm font-semibold text-blue-900">
+                            Afectar Stock
+                        </Label>
+                        <p className="text-xs text-blue-700">
+                            ¿Descontar del almacén?
+                        </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={formData.afecta_stock}
+                            onChange={(e) =>
+                                handleChange("afecta_stock", e.target.checked)
+                            }
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            )}
+
             {/* Cuotas (solo para crédito) */}
-            {showCuotas && formData.tipo_pago === '2' && (
+            {showCuotas && formData.tipo_pago === "2" && (
                 <div>
                     <Label className="block text-sm font-medium mb-2">
                         Cuotas
@@ -131,8 +168,18 @@ export default function FormSidebar({
                             onClick={onOpenPaymentSchedule}
                             className="px-3 py-2 border rounded-lg hover:bg-gray-50"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
                             </svg>
                         </button>
                     </div>
@@ -143,21 +190,26 @@ export default function FormSidebar({
             <div className="grid grid-cols-2 gap-3">
                 <div>
                     <Label className="block text-sm font-medium mb-2">
-                        Fecha {showTipoPago ? '' : 'Emisión'}
+                        Fecha {showTipoPago ? "" : "Emisión"}
                     </Label>
                     <Input
                         type="date"
                         value={formData.fecha || formData.fecha_emision}
-                        onChange={(e) => handleChange(formData.fecha ? 'fecha' : 'fecha_emision', e.target.value)}
+                        onChange={(e) =>
+                            handleChange(
+                                formData.fecha ? "fecha" : "fecha_emision",
+                                e.target.value,
+                            )
+                        }
                     />
                 </div>
                 <div>
                     <Label className="block text-sm font-medium mb-2">
-                        N° {showTipoPago ? '' : 'Documento'}
+                        N° {showTipoPago ? "" : "Documento"}
                     </Label>
                     <Input
                         type="text"
-                        value={String(formData.numero).padStart(6, '0')}
+                        value={String(formData.numero).padStart(6, "0")}
                         readOnly
                         className="bg-gray-50 font-medium"
                     />
@@ -171,13 +223,16 @@ export default function FormSidebar({
                         Moneda
                     </Label>
                     <SelectMoneda
-                        value={formData.moneda || formData.tipo_moneda || 'PEN'}
+                        value={formData.moneda || formData.tipo_moneda || "PEN"}
                         onValueChange={(value) => {
                             // Actualizar ambos campos para compatibilidad
-                            const field = formData.moneda !== undefined ? 'moneda' : 'tipo_moneda';
+                            const field =
+                                formData.moneda !== undefined
+                                    ? "moneda"
+                                    : "tipo_moneda";
                             onFormDataChange({
                                 ...formData,
-                                [field]: value
+                                [field]: value,
                             });
                         }}
                     />
@@ -190,7 +245,9 @@ export default function FormSidebar({
                         type="number"
                         step="0.001"
                         value={formData.tipo_cambio}
-                        onChange={(e) => handleChange('tipo_cambio', e.target.value)}
+                        onChange={(e) =>
+                            handleChange("tipo_cambio", e.target.value)
+                        }
                     />
                 </div>
             </div>
@@ -202,9 +259,11 @@ export default function FormSidebar({
                         <Label className="block text-sm font-medium mb-2">
                             IGV
                         </Label>
-                        <Select 
-                            value={formData.aplicar_igv} 
-                            onValueChange={(value) => handleChange('aplicar_igv', value)}
+                        <Select
+                            value={formData.aplicar_igv}
+                            onValueChange={(value) =>
+                                handleChange("aplicar_igv", value)
+                            }
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Seleccionar" />
@@ -247,7 +306,7 @@ export default function FormSidebar({
                         {monedaSimbolo} {totales.total.toFixed(2)}
                     </div>
                     <div className="text-sm uppercase">
-                        {showTipoPago ? 'Suma Pedido' : 'Total a Pagar'}
+                        {showTipoPago ? "Suma Pedido" : "Total a Pagar"}
                     </div>
                 </div>
             </div>

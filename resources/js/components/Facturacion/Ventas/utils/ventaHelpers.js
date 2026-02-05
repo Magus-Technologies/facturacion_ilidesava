@@ -116,10 +116,11 @@ export const validarProductos = (productos) => {
  * Valida que haya cliente seleccionado
  */
 export const validarCliente = (cliente, formData) => {
-    if (!cliente || !formData.num_doc) {
-        return { valid: false, message: 'Seleccione un cliente' };
+    // Permitir si ya tiene ID (cliente existente) o si tiene documento y nombre (nuevo cliente)
+    if ((cliente && cliente.id_cliente) || (formData.num_doc && formData.nom_cli)) {
+        return { valid: true };
     }
-    return { valid: true };
+    return { valid: false, message: 'Seleccione un cliente o ingrese los datos del mismo' };
 };
 
 /**
@@ -128,7 +129,10 @@ export const validarCliente = (cliente, formData) => {
 export const prepararDatosVenta = (cliente, formData, productos, totales) => {
     return {
         id_tido: parseInt(formData.id_tido),
-        id_cliente: cliente.id_cliente,
+        id_cliente: cliente?.id_cliente || null,
+        cliente_documento: formData.num_doc,
+        cliente_datos: formData.nom_cli,
+        cliente_direccion: formData.dir_cli,
         fecha_emision: formData.fecha_emision,
         serie: formData.serie,
         numero: parseInt(formData.numero),
@@ -137,6 +141,7 @@ export const prepararDatosVenta = (cliente, formData, productos, totales) => {
         total: totales.total,
         tipo_moneda: formData.tipo_moneda,
         tipo_cambio: parseFloat(formData.tipo_cambio),
+        afecta_stock: formData.id_tido === '6' ? formData.afecta_stock : true,
         empresas_ids: formData.empresas_ids || [],
         productos: productos.map((p) => ({
             id_producto: p.id_producto,

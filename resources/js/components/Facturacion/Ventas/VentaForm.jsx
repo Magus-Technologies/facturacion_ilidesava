@@ -46,24 +46,24 @@ export default function VentaForm({ ventaId = null }) {
     useEffect(() => {
         if (!isEditing) {
             const urlParams = new URLSearchParams(window.location.search);
-            const tipoParam = urlParams.get('tipo');
-            
+            const tipoParam = urlParams.get("tipo");
+
             if (tipoParam) {
                 const tipoMap = {
-                    'boleta': '1',
-                    'factura': '2',
-                    'nota': '6' // Nota de Venta
+                    boleta: "1",
+                    factura: "2",
+                    nota: "6", // Nota de Venta
                 };
-                
+
                 const serieMap = {
-                    'boleta': 'B001',
-                    'factura': 'F001',
-                    'nota': 'NV01'
+                    boleta: "B001",
+                    factura: "F001",
+                    nota: "NV01",
                 };
-                
+
                 const idTido = tipoMap[tipoParam];
                 const serie = serieMap[tipoParam];
-                
+
                 if (idTido && serie) {
                     setFormData((prev) => ({
                         ...prev,
@@ -71,13 +71,13 @@ export default function VentaForm({ ventaId = null }) {
                         serie: serie,
                         _tipoFijo: true, // Marcar que el tipo está fijo
                     }));
-                    
+
                     // Obtener número para la serie correcta
                     obtenerProximoNumero(serie);
                 }
             } else {
                 // Si no hay parámetro tipo, obtener número para la serie por defecto (B001)
-                obtenerProximoNumero('B001');
+                obtenerProximoNumero("B001");
             }
         }
     }, [isEditing]);
@@ -95,16 +95,16 @@ export default function VentaForm({ ventaId = null }) {
     };
 
     const handleTipoDocChange = (value) => {
-        let nuevaSerie = 'B001'; // Por defecto Boleta
-        
-        if (value === '1') {
-            nuevaSerie = 'B001'; // Boleta
-        } else if (value === '2') {
-            nuevaSerie = 'F001'; // Factura
-        } else if (value === '6') {
-            nuevaSerie = 'NV01'; // Nota de Venta
+        let nuevaSerie = "B001"; // Por defecto Boleta
+
+        if (value === "1") {
+            nuevaSerie = "B001"; // Boleta
+        } else if (value === "2") {
+            nuevaSerie = "F001"; // Factura
+        } else if (value === "6") {
+            nuevaSerie = "NV01"; // Nota de Venta
         }
-        
+
         setFormData((prev) => ({
             ...prev,
             id_tido: value,
@@ -133,7 +133,10 @@ export default function VentaForm({ ventaId = null }) {
                 <div className="flex items-center justify-between">
                     <div>
                         <nav className="text-sm text-gray-500 mb-2">
-                            <a href="/ventas" className="hover:text-primary-600">
+                            <a
+                                href="/ventas"
+                                className="hover:text-primary-600"
+                            >
                                 Ventas
                             </a>
                             <span className="mx-2">/</span>
@@ -169,15 +172,26 @@ export default function VentaForm({ ventaId = null }) {
                             setProductoActual={setProductoActual}
                             onProductSelect={handleProductSelect}
                             onAddProducto={handleAddProducto}
-                            onOpenMultipleSearch={() => setShowMultipleSearch(true)}
+                            onOpenMultipleSearch={() =>
+                                setShowMultipleSearch(true)
+                            }
                             onPriceSelect={handlePrecioSelect}
                             monedaSimbolo={monedaSimbolo}
                             showPriceSelector={true}
                             submitButtonText="Agregar Producto"
+                            almacen={formData.almacen}
+                            onAlmacenChange={(val) =>
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    almacen: val,
+                                }))
+                            }
                         />
 
                         <div>
-                            <h4 className="text-lg font-semibold mb-4">Productos</h4>
+                            <h4 className="text-lg font-semibold mb-4">
+                                Productos
+                            </h4>
                             <ProductosTable
                                 productos={productos}
                                 monedaSimbolo={monedaSimbolo}
@@ -220,6 +234,8 @@ export default function VentaForm({ ventaId = null }) {
                 onClose={() => setShowMultipleSearch(false)}
                 onProductsSelect={handleMultipleProductsSelect}
                 productosExistentes={productos}
+                almacen={formData.almacen}
+                afectaStock={formData.afecta_stock}
             />
 
             <PrintOptionsModal

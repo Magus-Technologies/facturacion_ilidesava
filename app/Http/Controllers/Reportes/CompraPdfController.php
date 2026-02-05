@@ -3,27 +3,26 @@
 namespace App\Http\Controllers\Reportes;
 
 use App\Http\Controllers\Controller;
-use App\Models\Venta;
+use App\Models\Compra;
 use Mpdf\Mpdf;
 
-class VentaPdfController extends Controller
+class CompraPdfController extends Controller
 {
     /**
-     * Generar PDF en formato A4
+     * Generar PDF en formato A4 (Orden de Compra)
      */
     public function generarA4($id)
     {
         try {
-            $venta = Venta::with([
-                "cliente",
-                "tipoDocumento",
+            $compra = Compra::with([
+                "proveedor",
                 "empresa",
                 "empresas",
-                "productosVentas.producto",
+                "detalles.producto",
             ])->findOrFail($id);
 
             // Renderizar vista Blade a HTML
-            $html = view("reportes.venta-a4", compact("venta"))->render();
+            $html = view("reportes.compra-a4", compact("compra"))->render();
 
             // Crear PDF con mPDF
             $mpdf = new Mpdf([
@@ -39,19 +38,17 @@ class VentaPdfController extends Controller
 
             $mpdf->shrink_tables_to_fit = 1;
             $mpdf->SetTitle(
-                $venta->tipoDocumento->nombre .
-                    " - " .
-                    $venta->serie .
+                "Orden de Compra - " .
+                    $compra->serie .
                     "-" .
-                    str_pad($venta->numero, 6, "0", STR_PAD_LEFT),
+                    str_pad($compra->numero, 6, "0", STR_PAD_LEFT),
             );
             $mpdf->WriteHTML($html);
             $mpdf->Output(
-                $venta->tipoDocumento->nombre .
+                "OC-" .
+                    $compra->serie .
                     "-" .
-                    $venta->serie .
-                    "-" .
-                    str_pad($venta->numero, 6, "0", STR_PAD_LEFT) .
+                    str_pad($compra->numero, 6, "0", STR_PAD_LEFT) .
                     ".pdf",
                 "I",
             );
@@ -61,26 +58,25 @@ class VentaPdfController extends Controller
     }
 
     /**
-     * Generar PDF en formato Ticket (8cm)
+     * Generar PDF en formato Ticket (Orden de Compra)
      */
     public function generarTicket($id)
     {
         try {
-            $venta = Venta::with([
-                "cliente",
-                "tipoDocumento",
+            $compra = Compra::with([
+                "proveedor",
                 "empresa",
                 "empresas",
-                "productosVentas.producto",
+                "detalles.producto",
             ])->findOrFail($id);
 
             // Renderizar vista Blade a HTML
-            $html = view("reportes.venta-ticket", compact("venta"))->render();
+            $html = view("reportes.compra-ticket", compact("compra"))->render();
 
-            // Crear PDF con mPDF (8cm = 80mm de ancho)
+            // Crear PDF con mPDF (8cm)
             $mpdf = new Mpdf([
                 "mode" => "utf-8",
-                "format" => [80, 297], // 80mm ancho x 297mm alto
+                "format" => [80, 297],
                 "margin_left" => 5,
                 "margin_right" => 5,
                 "margin_top" => 5,
@@ -90,17 +86,17 @@ class VentaPdfController extends Controller
 
             $mpdf->shrink_tables_to_fit = 1;
             $mpdf->SetTitle(
-                "Ticket - " .
-                    $venta->serie .
+                "Ticket OC - " .
+                    $compra->serie .
                     "-" .
-                    str_pad($venta->numero, 6, "0", STR_PAD_LEFT),
+                    str_pad($compra->numero, 6, "0", STR_PAD_LEFT),
             );
             $mpdf->WriteHTML($html);
             $mpdf->Output(
-                "Ticket-" .
-                    $venta->serie .
+                "Ticket-OC-" .
+                    $compra->serie .
                     "-" .
-                    str_pad($venta->numero, 6, "0", STR_PAD_LEFT) .
+                    str_pad($compra->numero, 6, "0", STR_PAD_LEFT) .
                     ".pdf",
                 "I",
             );

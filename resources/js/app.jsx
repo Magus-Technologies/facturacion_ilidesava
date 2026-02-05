@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import Login from "./components/Login";
 import DashboardApp from "./components/DashboardApp";
-import UserList from "./components/UserList";
+import UserList from "./components/Usuarios/UserList";
 import VentasList from "./components/Facturacion/Ventas/VentasList";
 import VentaForm from "./components/Facturacion/Ventas/VentaForm";
 import CotizacionesList from "./components/Cotizaciones/CotizacionesList";
@@ -12,7 +12,10 @@ import ProductosList from "./components/Almacen/ProductosList";
 import NotFound from "./components/NotFound";
 import Compras from "./components/Compras/Compras";
 import CompraForm from "./components/Compras/CompraForm";
-import ProveedoresList from "./components/Proveedores/ProveedoresList"
+import ProveedoresList from "./components/Proveedores/ProveedoresList";
+import GuiaRemision from "./components/GuiaRemision/page";
+import NotaCredito from "./components/NotaCredito/page";
+
 import "../css/app.css";
 import "../css/select-custom.css";
 
@@ -32,6 +35,8 @@ const components = {
     Compras,
     CompraForm,
     ProveedoresList,
+    GuiaRemision,
+    NotaCredito,
 };
 
 // Monta cada elemento con atributo data-react-component

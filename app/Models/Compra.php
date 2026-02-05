@@ -47,6 +47,17 @@ class Compra extends Model
         return $this->belongsTo(Proveedor::class, 'proveedor_id', 'proveedor_id');
     }
 
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class, 'id_empresa', 'id_empresa');
+    }
+
+    public function empresas()
+    {
+        return $this->belongsToMany(Empresa::class, 'compra_empresa', 'id_compra', 'id_empresa')
+            ->withTimestamps();
+    }
+
     public function detalles(): HasMany
     {
         return $this->hasMany(ProductoCompra::class, 'id_compra', 'id_compra');

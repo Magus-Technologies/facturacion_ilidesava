@@ -19,6 +19,8 @@ export const useCompraForm = (compraId = null) => {
     const [productos, setProductos] = useState([]);
     const [showMultipleSearch, setShowMultipleSearch] = useState(false);
     const [showPaymentSchedule, setShowPaymentSchedule] = useState(false);
+    const [showPrintModal, setShowPrintModal] = useState(false);
+    const [compraGuardada, setCompraGuardada] = useState(null);
     
     const [productoActual, setProductoActual] = useState({
         id_producto: null,
@@ -42,7 +44,8 @@ export const useCompraForm = (compraId = null) => {
         razon_social: '',
         direccion: '',
         observaciones: '',
-        cuotas: []
+        cuotas: [],
+        empresas_ids: []
     });
 
     useEffect(() => {
@@ -102,7 +105,8 @@ export const useCompraForm = (compraId = null) => {
                     moneda: compra.moneda,
                     tipo_pago: compra.id_tipo_pago.toString(),
                     observaciones: compra.observaciones || '',
-                    cuotas: compra.cuotas || []
+                    cuotas: compra.cuotas || [],
+                    empresas_ids: compra.empresas ? compra.empresas.map(e => e.id_empresa) : []
                 }));
             }
         } catch (error) {
@@ -313,9 +317,18 @@ export const useCompraForm = (compraId = null) => {
             const data = await response.json();
             if (data.success) {
                 toast.success(isEditing ? 'Compra actualizada' : 'Compra registrada exitosamente');
-                setTimeout(() => {
-                    window.location.href = '/compras';
-                }, 1000);
+                
+                if (!isEditing) {
+                    setCompraGuardada({
+                        id: data.data.id_compra,
+                        numero_completo: data.data.documento
+                    });
+                    setShowPrintModal(true);
+                } else {
+                    setTimeout(() => {
+                        window.location.href = '/compras';
+                    }, 1000);
+                }
             } else {
                 toast.error(data.message || 'Error al guardar la compra');
             }
@@ -338,6 +351,8 @@ export const useCompraForm = (compraId = null) => {
         formData,
         showMultipleSearch,
         showPaymentSchedule,
+        showPrintModal,
+        compraGuardada,
         
         // Setters
         setProveedor,
@@ -346,6 +361,8 @@ export const useCompraForm = (compraId = null) => {
         setFormData,
         setShowMultipleSearch,
         setShowPaymentSchedule,
+        setShowPrintModal,
+        setCompraGuardada,
         
         // Handlers
         handleProveedorSelect,

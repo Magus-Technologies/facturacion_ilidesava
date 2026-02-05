@@ -17,6 +17,7 @@ class Venta extends Model
     protected $fillable = [
         'id_tido',
         'id_tipo_pago',
+        'afecta_stock',
         'fecha_emision',
         'fecha_vencimiento',
         'dias_pagos',
@@ -56,6 +57,7 @@ class Venta extends Model
         'fecha_vencimiento' => 'date',
         'fecha_registro' => 'datetime',
         'total' => 'decimal:2',
+        'afecta_stock' => 'boolean',
         'subtotal' => 'decimal:2',
         'igv' => 'decimal:2',
         'tipo_cambio' => 'decimal:4',

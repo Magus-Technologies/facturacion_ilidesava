@@ -72,7 +72,10 @@ class VentasController extends Controller
         try {
             $validated = $request->validate([
                 'id_tido' => 'required|integer|exists:documentos_sunat,id_tido',
-                'id_cliente' => 'required|integer|exists:clientes,id_cliente',
+                'id_cliente' => 'nullable|integer|exists:clientes,id_cliente',
+                'cliente_documento' => 'required_without:id_cliente|string|max:11',
+                'cliente_datos' => 'required_without:id_cliente|string|max:250',
+                'cliente_direccion' => 'nullable|string|max:500',
                 'fecha_emision' => 'required|date',
                 'serie' => 'required|string|max:4',
                 'numero' => 'required|integer',
@@ -80,6 +83,7 @@ class VentasController extends Controller
                 'igv' => 'required|numeric|min:0',
                 'total' => 'required|numeric|min:0',
                 'tipo_moneda' => 'required|in:PEN,USD',
+                'afecta_stock' => 'nullable|boolean',
                 'empresas_ids' => 'nullable|array',
                 'empresas_ids.*' => 'integer|exists:empresas,id_empresa',
                 'productos' => 'required|array|min:1',
@@ -94,6 +98,25 @@ class VentasController extends Controller
             $user = $request->user();
 
             return DB::transaction(function () use ($validated, $user, $request) {
+                $idCliente = $validated['id_cliente'];
+
+                // Si no hay id_cliente, buscar por documento o crear
+                if (!$idCliente) {
+                    $clienteModel = \App\Models\Cliente::where('documento', $validated['cliente_documento'])
+                        ->where('id_empresa', $user->id_empresa)
+                        ->first();
+                    
+                    if (!$clienteModel) {
+                        $clienteModel = \App\Models\Cliente::create([
+                            'documento' => $validated['cliente_documento'],
+                            'datos' => $validated['cliente_datos'],
+                            'direccion' => $validated['cliente_direccion'] ?? '',
+                            'id_empresa' => $user->id_empresa,
+                        ]);
+                    }
+                    $idCliente = $clienteModel->id_cliente;
+                }
+
                 // Obtener el próximo número para la serie
                 $ultimaVenta = Venta::where('id_empresa', $user->id_empresa)
                     ->where('serie', $validated['serie'])
@@ -105,7 +128,7 @@ class VentasController extends Controller
                 // Crear venta
                 $venta = Venta::create([
                     'id_tido' => $validated['id_tido'],
-                    'id_cliente' => $validated['id_cliente'],
+                    'id_cliente' => $idCliente,
                     'fecha_emision' => $validated['fecha_emision'],
                     'serie' => $validated['serie'],
                     'numero' => $proximoNumero, // Usar el número calculado
@@ -113,6 +136,7 @@ class VentasController extends Controller
                     'igv' => $validated['igv'],
                     'total' => $validated['total'],
                     'tipo_moneda' => $validated['tipo_moneda'],
+                    'afecta_stock' => $validated['afecta_stock'] ?? true,
                     'estado' => '1',
                     'estado_sunat' => '0',
                     'id_empresa' => $user->id_empresa,
@@ -120,8 +144,10 @@ class VentasController extends Controller
                     'fecha_registro' => now(),
                     'direccion' => '',
                 ]);
+                
+                $afectaStock = $validated['afecta_stock'] ?? true;
 
-                // Crear productos de la venta
+                // Crear productos de la venta y descontar stock
                 foreach ($validated['productos'] as $producto) {
                     ProductoVenta::create([
                         'id_venta' => $venta->id_venta,
@@ -134,6 +160,15 @@ class VentasController extends Controller
                         'unidad_medida' => $producto['unidad_medida'] ?? 'NIU',
                         'tipo_afectacion_igv' => $producto['tipo_afectacion_igv'] ?? '10',
                     ]);
+
+                    // Descontar stock del producto si aplica
+                    if ($afectaStock) {
+                        $productoModel = \App\Models\Producto::find($producto['id_producto']);
+                        if ($productoModel) {
+                            $productoModel->decrement('cantidad', $producto['cantidad']);
+                            $productoModel->update(['ultima_salida' => now()]);
+                        }
+                    }
                 }
 
                 // Guardar empresas seleccionadas en tabla pivot

@@ -40,8 +40,11 @@ export const useVentaForm = (ventaId = null) => {
     });
 
     const [formData, setFormData] = useState({
-        id_tido: '1', // 1=Boleta, 2=Factura
-        fecha_emision: new Date().toISOString().split('T')[0],
+        id_tido: "",
+        id_tipo_pago: "1",
+        afecta_stock: true,
+        fecha_emision: new Date().toISOString().split("T")[0],
+        fecha_vencimiento: new Date().toISOString().split("T")[0],
         serie: 'B001',
         numero: '',
         tipo_moneda: 'PEN',
@@ -51,7 +54,18 @@ export const useVentaForm = (ventaId = null) => {
         dir_cli: '',
         aplicar_igv: true,
         empresas_ids: [], // IDs de empresas seleccionadas
+        almacen: '1', // Almacén por defecto
     });
+
+    useEffect(() => {
+        if (formData.id_tido) {
+            obtenerProximoNumero(formData.id_tido);
+            // Si no es Nota de Venta (6), siempre debe afectar stock
+            if (formData.id_tido !== "6") {
+                setFormData((prev) => ({ ...prev, afecta_stock: true }));
+            }
+        }
+    }, [formData.id_tido]);
 
     useEffect(() => {
         if (isEditing) {
@@ -201,6 +215,27 @@ export const useVentaForm = (ventaId = null) => {
             toast.warning('El producto ya está en la lista');
             return;
         }
+
+        // Validación de Stock
+        const stockActual = parseFloat(productoActual.stock || 0);
+        const cantidadSolicitada = parseFloat(productoActual.cantidad || 0);
+        const afectaStock = formData.afecta_stock;
+
+        if (stockActual <= 0) {
+            if (afectaStock) {
+                toast.error('No se puede agregar: El producto no tiene stock disponible.');
+                return;
+            } else {
+                toast.warning('Aviso: El producto no tiene stock, pero se agregará por ser comprobante que no afecta stock real.');
+            }
+        } else if (cantidadSolicitada > stockActual) {
+            if (afectaStock) {
+                toast.error(`No hay suficiente stock. Disponible: ${stockActual}`);
+                return;
+            } else {
+                toast.warning(`Aviso: La cantidad supera el stock real (${stockActual}).`);
+            }
+        }
         
         setProductos([...productos, { ...productoActual }]);
         
@@ -226,7 +261,25 @@ export const useVentaForm = (ventaId = null) => {
      * Maneja la selección múltiple de productos
      */
     const handleMultipleProductsSelect = (productosNuevos) => {
-        setProductos([...productos, ...productosNuevos]);
+        const afectaStock = formData.afecta_stock;
+        let finalSeleccion = [...productosNuevos];
+        let advertenciaStock = false;
+
+        if (afectaStock) {
+            finalSeleccion = productosNuevos.filter(p => parseFloat(p.stock || 0) > 0);
+            if (finalSeleccion.length !== productosNuevos.length) {
+                toast.error('Algunos productos sin stock fueron omitidos por política de almacén.');
+            }
+        } else {
+            const sinStock = productosNuevos.some(p => parseFloat(p.stock || 0) <= 0);
+            if (sinStock) {
+                toast.warning('Aviso: Algunos productos seleccionados no tienen stock.');
+            }
+        }
+
+        if (finalSeleccion.length > 0) {
+            setProductos([...productos, ...finalSeleccion]);
+        }
         setShowMultipleSearch(false);
     };
 

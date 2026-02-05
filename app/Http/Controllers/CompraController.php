@@ -118,6 +118,8 @@ class CompraController extends Controller
                 'productos.*.id_producto' => 'required|exists:productos,id_producto',
                 'productos.*.cantidad' => 'required|numeric|min:0.01',
                 'productos.*.costo' => 'required|numeric|min:0',
+                'empresas_ids' => 'nullable|array',
+                'empresas_ids.*' => 'integer|exists:empresas,id_empresa',
             ]);
 
             // Calcular totales
@@ -189,6 +191,11 @@ class CompraController extends Controller
                 ]);
             }
 
+            // Guardar empresas asociadas
+            if (!empty($request->empresas_ids)) {
+                $compra->empresas()->attach($request->empresas_ids);
+            }
+
             // Si es crédito, guardar cuotas
             if ($request->id_tipo_pago == 2 && !empty($request->cuotas)) {
                 foreach ($request->cuotas as $cuota) {
@@ -227,7 +234,7 @@ class CompraController extends Controller
     public function show($id)
     {
         try {
-            $compra = Compra::with(['proveedor', 'detalles.producto', 'cuotas', 'usuario'])
+            $compra = Compra::with(['proveedor', 'detalles.producto', 'cuotas', 'usuario', 'empresas'])
                 ->findOrFail($id);
 
             return response()->json([
@@ -267,6 +274,13 @@ class CompraController extends Controller
                             'monto' => $cuota->monto,
                             'fecha' => $cuota->fecha->format('Y-m-d'),
                             'estado' => $cuota->estado,
+                        ];
+                    }),
+                    'empresas' => $compra->empresas->map(function ($emp) {
+                        return [
+                            'id_empresa' => $emp->id_empresa,
+                            'comercial' => $emp->comercial,
+                            'ruc' => $emp->ruc,
                         ];
                     }),
                 ]

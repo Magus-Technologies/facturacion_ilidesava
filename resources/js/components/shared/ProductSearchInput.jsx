@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { Loader2, Package, ScanBarcode } from 'lucide-react';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
+import { useState, useEffect, useRef } from "react";
+import { Loader2, Package, ScanBarcode } from "lucide-react";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 
 /**
  * Componente de búsqueda de productos con autocomplete
@@ -9,12 +9,12 @@ import { Button } from '../ui/button';
  */
 export default function ProductSearchInput({
     onProductSelect,
-    almacen = '1',
-    placeholder = 'Buscar producto por nombre o código...',
+    almacen = "1",
+    placeholder = "Buscar producto por nombre o código...",
     showScanner = false,
-    className = ''
+    className = "",
 }) {
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState("");
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -39,46 +39,47 @@ export default function ProductSearchInput({
 
     const searchProducts = async (term) => {
         setLoading(true);
+        // Limpiar resultados anteriores para evitar mostrar basura mientras carga
+        setProducts([]);
         try {
-            const token = localStorage.getItem('auth_token');
+            const token = localStorage.getItem("auth_token");
 
-            // Buscar en productos y repuestos en paralelo
-            const [productosRes, repuestosRes] = await Promise.all([
-                fetch(`/api/productos?search=${encodeURIComponent(term)}&almacen=${almacen}`, {
+            // Buscar en productos
+            const response = await fetch(
+                `/api/productos?search=${encodeURIComponent(term)}&almacen=${almacen}`,
+                {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json'
-                    }
-                }),
-                // TODO: Agregar endpoint de repuestos si existe
-                Promise.resolve({ json: async () => ({ success: true, data: [] }) })
-            ]);
+                        Authorization: `Bearer ${token}`,
+                        Accept: "application/json",
+                    },
+                },
+            );
 
-            const productosData = await productosRes.json();
-            const repuestosData = await repuestosRes.json();
+            const data = await response.json();
 
-            let results = [];
-
-            if (productosData.success && productosData.data) {
-                results = productosData.data.map(p => ({
+            if (data.success && data.data) {
+                const results = data.data.map((p) => ({
                     ...p,
-                    tipo: 'producto',
+                    tipo: "producto",
                     value: `${p.codigo} | ${p.nombre}`,
                     codigo_pp: p.codigo,
                     cnt: p.cantidad,
                     precio_mayor: p.precio_mayor || 0,
                     precio_menor: p.precio_menor || 0,
-                    precio_unidad: p.precio_unidad || 0
+                    precio_unidad: p.precio_unidad || 0,
                 }));
-            }
 
-            // Combinar productos y repuestos, limitar a 15
-            setProducts(results.slice(0, 15));
-            setShowDropdown(results.length > 0);
+                setProducts(results.slice(0, 15));
+                setShowDropdown(results.length > 0);
+            } else {
+                setProducts([]);
+                setShowDropdown(true); // Mostrar mensaje de "no se encontraron"
+            }
             setSelectedIndex(-1);
         } catch (error) {
-            console.error('Error buscando productos:', error);
+            console.error("Error buscando productos:", error);
             setProducts([]);
+            setShowDropdown(false);
         } finally {
             setLoading(false);
         }
@@ -86,7 +87,7 @@ export default function ProductSearchInput({
 
     const handleSelectProduct = (product) => {
         onProductSelect(product);
-        setSearchTerm('');
+        setSearchTerm("");
         setProducts([]);
         setShowDropdown(false);
         inputRef.current?.focus();
@@ -97,23 +98,23 @@ export default function ProductSearchInput({
         if (!showDropdown || products.length === 0) return;
 
         switch (e.key) {
-            case 'ArrowDown':
+            case "ArrowDown":
                 e.preventDefault();
-                setSelectedIndex(prev =>
-                    prev < products.length - 1 ? prev + 1 : prev
+                setSelectedIndex((prev) =>
+                    prev < products.length - 1 ? prev + 1 : prev,
                 );
                 break;
-            case 'ArrowUp':
+            case "ArrowUp":
                 e.preventDefault();
-                setSelectedIndex(prev => prev > 0 ? prev - 1 : -1);
+                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
                 break;
-            case 'Enter':
+            case "Enter":
                 e.preventDefault();
                 if (selectedIndex >= 0 && products[selectedIndex]) {
                     handleSelectProduct(products[selectedIndex]);
                 }
                 break;
-            case 'Escape':
+            case "Escape":
                 setShowDropdown(false);
                 setSelectedIndex(-1);
                 break;
@@ -123,13 +124,17 @@ export default function ProductSearchInput({
     // Cerrar dropdown al hacer click fuera
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            if (
+                dropdownRef.current &&
+                !dropdownRef.current.contains(event.target)
+            ) {
                 setShowDropdown(false);
             }
         };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     return (
@@ -173,7 +178,7 @@ export default function ProductSearchInput({
                             className={`
                                 flex items-start gap-3 p-3 cursor-pointer transition-colors
                                 hover:bg-orange-50 border-b border-gray-100 last:border-b-0
-                                ${selectedIndex === index ? 'bg-orange-50 border-l-4 border-l-orange-500' : ''}
+                                ${selectedIndex === index ? "bg-orange-50 border-l-4 border-l-orange-500" : ""}
                             `}
                         >
                             {/* Imagen del producto */}
@@ -183,7 +188,7 @@ export default function ProductSearchInput({
                                     alt={product.nombre}
                                     className="w-12 h-12 object-cover rounded-md flex-shrink-0"
                                     onError={(e) => {
-                                        e.target.style.display = 'none';
+                                        e.target.style.display = "none";
                                     }}
                                 />
                             ) : (
@@ -201,15 +206,20 @@ export default function ProductSearchInput({
                                     Código: {product.codigo}
                                 </p>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                        product.cantidad > 0
-                                            ? 'bg-green-100 text-green-700'
-                                            : 'bg-red-100 text-red-700'
-                                    }`}>
+                                    <span
+                                        className={`text-xs px-2 py-0.5 rounded-full ${
+                                            product.cantidad > 0
+                                                ? "bg-green-100 text-green-700"
+                                                : "bg-red-100 text-red-700"
+                                        }`}
+                                    >
                                         Stock: {product.cantidad}
                                     </span>
                                     <span className="text-sm font-semibold text-orange-600">
-                                        {product.moneda === 'USD' ? '$' : 'S/'} {parseFloat(product.precio || 0).toFixed(2)}
+                                        {product.moneda === "USD" ? "$" : "S/"}{" "}
+                                        {parseFloat(
+                                            product.precio || 0,
+                                        ).toFixed(2)}
                                     </span>
                                 </div>
                             </div>
@@ -219,11 +229,14 @@ export default function ProductSearchInput({
             )}
 
             {/* No hay resultados */}
-            {showDropdown && !loading && products.length === 0 && searchTerm.length >= 2 && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center text-gray-500">
-                    No se encontraron productos
-                </div>
-            )}
+            {showDropdown &&
+                !loading &&
+                products.length === 0 &&
+                searchTerm.length >= 2 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center text-gray-500">
+                        No se encontraron productos
+                    </div>
+                )}
         </div>
     );
 }

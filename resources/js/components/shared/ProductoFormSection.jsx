@@ -1,14 +1,14 @@
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Plus } from 'lucide-react';
-import ProductSearchInput from './ProductSearchInput';
-import ProductPriceSelector from './ProductPriceSelector';
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Plus } from "lucide-react";
+import ProductSearchInput from "./ProductSearchInput";
+import ProductPriceSelector from "./ProductPriceSelector";
 
 /**
  * Componente reutilizable para la sección de búsqueda y agregado de productos
  * Usado en: Ventas, Cotizaciones, Compras
- * 
+ *
  * @param {Object} productoActual - Estado del producto actual
  * @param {Function} setProductoActual - Setter del producto actual
  * @param {Function} onProductSelect - Callback cuando se selecciona un producto
@@ -27,38 +27,72 @@ export default function ProductoFormSection({
     onAddProducto,
     onOpenMultipleSearch,
     onPriceSelect,
-    monedaSimbolo = 'S/',
+    monedaSimbolo = "S/",
     showPriceSelector = false,
     showCosto = false,
-    submitButtonText = 'Agregar',
+    submitButtonText = "Agregar",
+    almacen = "1",
+    onAlmacenChange,
 }) {
     return (
         <form onSubmit={onAddProducto} className="space-y-4 mb-8">
-            {/* Búsqueda de Producto */}
-            <div>
-                <Label className="block mb-2">
-                    Buscar Producto
-                </Label>
-                <div className="flex gap-2">
-                    <div className="flex-1">
-                        <ProductSearchInput onProductSelect={onProductSelect} />
+            {/* Cabecera de búsqueda y Almacén */}
+            <div className="flex flex-col md:flex-row md:items-start gap-4">
+                {/* Búsqueda de Producto */}
+                <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-medium text-gray-700">
+                            Buscar Producto
+                        </Label>
+                        <button
+                            type="button"
+                            onClick={onOpenMultipleSearch}
+                            className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-all"
+                        >
+                            Búsqueda Múltiple
+                        </button>
                     </div>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={onOpenMultipleSearch}
-                        className="text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    >
-                        Búsqueda Múltiple
-                    </Button>
+                    <ProductSearchInput
+                        onProductSelect={onProductSelect}
+                        almacen={almacen}
+                    />
+                </div>
+
+                {/* Selección de Almacén */}
+                <div className="flex flex-col gap-2 mt-1">
+                    <Label className="text-sm font-medium text-gray-700">
+                        Almacén
+                    </Label>
+                    <div className="flex p-1 bg-gray-100 rounded-lg h-10 w-fit">
+                        <button
+                            type="button"
+                            onClick={() => onAlmacenChange("1")}
+                            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
+                                almacen === "1"
+                                    ? "bg-white text-primary-700 shadow-sm"
+                                    : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                            Almacén 1
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onAlmacenChange("2")}
+                            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
+                                almacen === "2"
+                                    ? "bg-white text-primary-700 shadow-sm"
+                                    : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                            Almacén 2
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Descripción */}
             <div>
-                <Label className="block mb-2">
-                    Descripción
-                </Label>
+                <Label className="block mb-2">Descripción</Label>
                 <Input
                     type="text"
                     value={productoActual.descripcion}
@@ -68,10 +102,12 @@ export default function ProductoFormSection({
             </div>
 
             {/* Stock, Cantidad y Precio/Costo */}
-            <div className={`grid ${showCosto ? 'grid-cols-4' : 'grid-cols-3'} gap-4`}>
+            <div
+                className={`grid ${showCosto ? "grid-cols-4" : "grid-cols-3"} gap-4`}
+            >
                 <div>
                     <Label className="block mb-2">
-                        {showCosto ? 'Stock Actual' : 'Stock'}
+                        {showCosto ? "Stock Actual" : "Stock"}
                     </Label>
                     <Input
                         type="text"
@@ -80,11 +116,9 @@ export default function ProductoFormSection({
                         className="bg-gray-100 text-center"
                     />
                 </div>
-                
+
                 <div>
-                    <Label className="block mb-2">
-                        Cantidad
-                    </Label>
+                    <Label className="block mb-2">Cantidad</Label>
                     <Input
                         type="number"
                         step="0.01"
@@ -102,9 +136,7 @@ export default function ProductoFormSection({
                 {/* Precio con selector o Costo simple */}
                 {showCosto ? (
                     <div>
-                        <Label className="block mb-2">
-                            Costo
-                        </Label>
+                        <Label className="block mb-2">Costo</Label>
                         <Input
                             type="number"
                             step="0.01"
@@ -120,9 +152,7 @@ export default function ProductoFormSection({
                     </div>
                 ) : showPriceSelector ? (
                     <div>
-                        <Label className="block mb-2">
-                            Precio
-                        </Label>
+                        <Label className="block mb-2">Precio</Label>
                         <ProductPriceSelector
                             producto={productoActual}
                             onPriceSelect={onPriceSelect}
@@ -131,13 +161,14 @@ export default function ProductoFormSection({
                     </div>
                 ) : (
                     <div>
-                        <Label className="block mb-2">
-                            Precio
-                        </Label>
+                        <Label className="block mb-2">Precio</Label>
                         <Input
                             type="number"
                             step="0.01"
-                            value={productoActual.precioVenta || productoActual.precio}
+                            value={
+                                productoActual.precioVenta ||
+                                productoActual.precio
+                            }
                             onChange={(e) =>
                                 setProductoActual({
                                     ...productoActual,

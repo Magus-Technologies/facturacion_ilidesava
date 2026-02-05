@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Modal, ModalForm, ModalField } from '../ui/modal';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import { Search, Package, Plus, Check } from 'lucide-react';
-import { toast } from '@/lib/sweetalert';
+import { useState, useEffect } from "react";
+import { Modal, ModalForm, ModalField } from "../ui/modal";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { Search, Package, Plus, Check } from "lucide-react";
+import { toast } from "@/lib/sweetalert";
 
 /**
  * Modal de búsqueda múltiple de productos
@@ -13,10 +13,11 @@ export default function ProductMultipleSearch({
     isOpen,
     onClose,
     onProductsSelect,
-    almacen = '1',
-    productosExistentes = []
+    almacen = "1",
+    afectaStock = true,
+    productosExistentes = [],
 }) {
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState("");
     const [productos, setProductos] = useState([]);
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -38,23 +39,23 @@ export default function ProductMultipleSearch({
     const buscarProductos = async (term) => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('auth_token');
+            const token = localStorage.getItem("auth_token");
 
             // Buscar productos
             const response = await fetch(
                 `/api/productos?search=${encodeURIComponent(term)}&almacen=${almacen}&limit=50`,
                 {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json'
-                    }
-                }
+                        Authorization: `Bearer ${token}`,
+                        Accept: "application/json",
+                    },
+                },
             );
 
             const data = await response.json();
 
             if (data.success && data.data) {
-                const productosFormateados = data.data.map(p => ({
+                const productosFormateados = data.data.map((p) => ({
                     id: p.id_producto,
                     id_producto: p.id_producto,
                     codigo: p.codigo,
@@ -69,14 +70,14 @@ export default function ProductMultipleSearch({
                     moneda: p.moneda,
                     imagen: p.imagen,
                     costo: p.costo,
-                    tipo: 'producto'
+                    tipo: "producto",
                 }));
                 setProductos(productosFormateados);
             } else {
                 setProductos([]);
             }
         } catch (error) {
-            console.error('Error buscando productos:', error);
+            console.error("Error buscando productos:", error);
             setProductos([]);
         } finally {
             setLoading(false);
@@ -84,18 +85,28 @@ export default function ProductMultipleSearch({
     };
 
     const toggleProductSelection = (producto) => {
-        const isSelected = selectedProducts.some(p => p.id === producto.id);
+        const isSelected = selectedProducts.some((p) => p.id === producto.id);
 
         if (isSelected) {
-            setSelectedProducts(selectedProducts.filter(p => p.id !== producto.id));
+            setSelectedProducts(
+                selectedProducts.filter((p) => p.id !== producto.id),
+            );
         } else {
+            // Verificar Stock si afecta
+            if (afectaStock && parseFloat(producto.stock || 0) <= 0) {
+                toast.error("No hay stock disponible para este producto.");
+                return;
+            }
+
             // Verificar si ya existe en los productos existentes
             const yaExiste = productosExistentes.some(
-                p => (p.id_producto === producto.id) || (p.codigo === producto.codigo)
+                (p) =>
+                    p.id_producto === producto.id ||
+                    p.codigo === producto.codigo,
             );
 
             if (yaExiste) {
-                toast.warning('Este producto ya está en la lista');
+                toast.warning("Este producto ya está en la lista");
                 return;
             }
 
@@ -105,12 +116,12 @@ export default function ProductMultipleSearch({
 
     const handleConfirm = () => {
         if (selectedProducts.length === 0) {
-            toast.warning('Seleccione al menos un producto');
+            toast.warning("Seleccione al menos un producto");
             return;
         }
 
         // Formatear productos para agregar
-        const productosParaAgregar = selectedProducts.map(p => ({
+        const productosParaAgregar = selectedProducts.map((p) => ({
             id_producto: p.id_producto,
             productoid: p.id_producto,
             codigo: p.codigo,
@@ -125,29 +136,29 @@ export default function ProductMultipleSearch({
             precio_unidad: p.precio_unidad,
             precioVenta: p.precio,
             precio_mostrado: p.precio,
-            tipo_precio: 'PV',
+            tipo_precio: "PV",
             moneda: p.moneda,
             costo: p.costo,
             tipo: p.tipo,
             almacen: almacen,
-            editable: false
+            editable: false,
         }));
 
         onProductsSelect(productosParaAgregar);
 
         // Limpiar y cerrar
         setSelectedProducts([]);
-        setSearchTerm('');
+        setSearchTerm("");
         setProductos([]);
         onClose();
     };
 
     const isProductSelected = (producto) => {
-        return selectedProducts.some(p => p.id === producto.id);
+        return selectedProducts.some((p) => p.id === producto.id);
     };
 
     const getMonedaSimbolo = (moneda) => {
-        return moneda === 'USD' ? '$' : 'S/';
+        return moneda === "USD" ? "$" : "S/";
     };
 
     return (
@@ -167,7 +178,9 @@ export default function ProductMultipleSearch({
                         className="gap-2"
                     >
                         <Plus className="h-4 w-4" />
-                        Agregar {selectedProducts.length > 0 && `(${selectedProducts.length})`}
+                        Agregar{" "}
+                        {selectedProducts.length > 0 &&
+                            `(${selectedProducts.length})`}
                     </Button>
                 </>
             }
@@ -200,10 +213,14 @@ export default function ProductMultipleSearch({
                                     key={producto.id}
                                     className="inline-flex items-center gap-2 bg-white  border-orange-300 rounded-full px-3 py-1"
                                 >
-                                    <span className="text-sm text-gray-700">{producto.nombre}</span>
+                                    <span className="text-sm text-gray-700">
+                                        {producto.nombre}
+                                    </span>
                                     <button
                                         type="button"
-                                        onClick={() => toggleProductSelection(producto)}
+                                        onClick={() =>
+                                            toggleProductSelection(producto)
+                                        }
                                         className="text-orange-600 hover:text-orange-800"
                                     >
                                         ×
@@ -229,43 +246,57 @@ export default function ProductMultipleSearch({
                             </div>
                         )}
 
-                        {!loading && searchTerm.length >= 2 && productos.length === 0 && (
-                            <div className="p-8 text-center text-gray-500">
-                                No se encontraron productos
-                            </div>
-                        )}
+                        {!loading &&
+                            searchTerm.length >= 2 &&
+                            productos.length === 0 && (
+                                <div className="p-8 text-center text-gray-500">
+                                    No se encontraron productos
+                                </div>
+                            )}
 
                         {!loading && productos.length > 0 && (
                             <div className="divide-y divide-gray-200">
                                 {productos.map((producto) => {
-                                    const selected = isProductSelected(producto);
-                                    const monedaSimbolo = getMonedaSimbolo(producto.moneda);
+                                    const selected =
+                                        isProductSelected(producto);
+                                    const monedaSimbolo = getMonedaSimbolo(
+                                        producto.moneda,
+                                    );
                                     const yaExiste = productosExistentes.some(
-                                        p => (p.id_producto === producto.id) || (p.codigo === producto.codigo)
+                                        (p) =>
+                                            p.id_producto === producto.id ||
+                                            p.codigo === producto.codigo,
                                     );
 
                                     return (
                                         <div
                                             key={producto.id}
-                                            onClick={() => !yaExiste && toggleProductSelection(producto)}
+                                            onClick={() =>
+                                                !yaExiste &&
+                                                toggleProductSelection(producto)
+                                            }
                                             className={`
                                                 flex items-center gap-3 p-3 transition-colors
-                                                ${yaExiste
-                                                    ? 'bg-gray-100 cursor-not-allowed opacity-50'
-                                                    : selected
-                                                        ? 'bg-orange-50 border-l-4 border-l-orange-500 cursor-pointer'
-                                                        : 'hover:bg-gray-50 cursor-pointer'
+                                                ${
+                                                    yaExiste
+                                                        ? "bg-gray-100 cursor-not-allowed opacity-50"
+                                                        : selected
+                                                          ? "bg-orange-50 border-l-4 border-l-orange-500 cursor-pointer"
+                                                          : "hover:bg-gray-50 cursor-pointer"
                                                 }
                                             `}
                                         >
                                             {/* Checkbox visual */}
-                                            <div className={`
+                                            <div
+                                                className={`
                                                 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center
-                                                ${selected
-                                                    ? 'bg-orange-500 border-orange-500'
-                                                    : 'bg-white border-gray-300'
+                                                ${
+                                                    selected
+                                                        ? "bg-orange-500 border-orange-500"
+                                                        : "bg-white border-gray-300"
                                                 }
-                                            `}>
+                                            `}
+                                            >
                                                 {selected && (
                                                     <Check className="h-3 w-3 text-white" />
                                                 )}
@@ -278,7 +309,8 @@ export default function ProductMultipleSearch({
                                                     alt={producto.nombre}
                                                     className="w-12 h-12 object-cover rounded flex-shrink-0"
                                                     onError={(e) => {
-                                                        e.target.style.display = 'none';
+                                                        e.target.style.display =
+                                                            "none";
                                                     }}
                                                 />
                                             ) : (
@@ -296,15 +328,20 @@ export default function ProductMultipleSearch({
                                                     Código: {producto.codigo}
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                                        producto.cantidad > 0
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : 'bg-red-100 text-red-700'
-                                                    }`}>
-                                                        Stock: {producto.cantidad}
+                                                    <span
+                                                        className={`text-xs px-2 py-0.5 rounded-full ${
+                                                            producto.cantidad >
+                                                            0
+                                                                ? "bg-green-100 text-green-700"
+                                                                : "bg-red-100 text-red-700"
+                                                        }`}
+                                                    >
+                                                        Stock:{" "}
+                                                        {producto.cantidad}
                                                     </span>
                                                     <span className="text-sm font-semibold text-orange-600">
-                                                        {monedaSimbolo} {producto.precio}
+                                                        {monedaSimbolo}{" "}
+                                                        {producto.precio}
                                                     </span>
                                                 </div>
                                             </div>

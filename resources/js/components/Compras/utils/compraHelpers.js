@@ -115,6 +115,7 @@ export const prepararDatosCompra = (proveedor, formData, productos) => {
         numero: formData.numero,
         direccion: formData.direccion,
         observaciones: formData.observaciones,
+        empresas_ids: formData.empresas_ids || [],
         productos: productos.map(p => ({
             id_producto: p.id_producto,
             cantidad: parseFloat(p.cantidad),

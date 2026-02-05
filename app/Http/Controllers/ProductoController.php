@@ -16,16 +16,33 @@ class ProductoController extends Controller
     {
         try {
             $almacen = $request->get('almacen', '1');
+            $search = $request->get('search');
             $user = $request->user();
             
-            $productos = DB::table("view_productos_$almacen")
-                ->where('id_empresa', $user->id_empresa)
-                ->orderBy('id_producto', 'desc')
+            $query = DB::table("view_productos_$almacen")
+                ->where('id_empresa', $user->id_empresa);
+
+            if ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('nombre', 'LIKE', "%$search%")
+                      ->orWhere('codigo', 'LIKE', "%$search%")
+                      ->orWhere('cod_barra', 'LIKE', "%$search%");
+                });
+            }
+            
+            $productos = $query->orderBy('id_producto', 'desc')
+                ->limit(50)
                 ->get();
             
             return response()->json([
                 'success' => true,
-                'data' => $productos
+                'data' => $productos,
+                'debug' => [
+                    'search' => $search,
+                    'almacen' => $almacen,
+                    'sql' => $query->toSql(),
+                    'bindings' => $query->getBindings()
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([

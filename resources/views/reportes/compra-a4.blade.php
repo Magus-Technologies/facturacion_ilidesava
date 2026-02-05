@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>{{ $venta->tipoDocumento->nombre }} - {{ $venta->serie }}-{{ str_pad($venta->numero, 6, '0', STR_PAD_LEFT) }}</title>
+    <title>Orden de Compra - {{ $compra->serie }}-{{ str_pad($compra->numero, 6, '0', STR_PAD_LEFT) }}</title>
     <style>
         * {
             margin: 0;
@@ -55,7 +55,7 @@
 
         /* Document Box */
         .doc-box {
-            border: 2px solid #fabd1e;
+            border: 2px solid #fabd1e; /* Color de marca */
             display: inline-block;
             min-width: 200px;
         }
@@ -82,7 +82,7 @@
             color: #000;
         }
 
-        /* Client Info */
+        /* Client/Supplier Info */
         .client-section {
             background: #f8f9fa;
             padding: 12px;
@@ -121,6 +121,7 @@
         }
         .products-table thead {
             background: #fabd1e;
+            color: #000;
         }
         .products-table th {
             padding: 8px;
@@ -171,6 +172,7 @@
         }
         .total-final {
             background: #fabd1e;
+            color: #000;
             font-weight: bold;
             font-size: 11pt;
             border: none;
@@ -196,69 +198,58 @@
                 <td style="width: 60%; vertical-align: top; text-align: center; padding-right: 10px;">
                     <div class="logos">
                         @php
-                            $empresasConLogo = $venta->empresas->count() > 0
-                                ? $venta->empresas->filter(fn($e) => $e->logo && file_exists(public_path('storage/' . $e->logo)))
-                                : collect([$venta->empresa])->filter(fn($e) => $e && $e->logo && file_exists(public_path('storage/' . $e->logo)));
+                            $empresasConLogo = $compra->empresas->count() > 0
+                                ? $compra->empresas->filter(fn($e) => $e->logo && file_exists(public_path('storage/' . $e->logo)))
+                                : collect([$compra->empresa])->filter(fn($e) => $e && $e->logo && file_exists(public_path('storage/' . $e->logo)));
                         @endphp
                         @foreach($empresasConLogo as $empresa)
                             <img src="{{ public_path('storage/' . $empresa->logo) }}" alt="Logo" height="45">
                         @endforeach
                     </div>
-                    <div class="company-name">{{ $venta->empresa->razon_social }}</div>
+                    <div class="company-name">{{ $compra->empresa->razon_social }}</div>
                     <div class="company-info">
-                        {{ $venta->empresa->direccion }}<br>
-                        Tel: {{ $venta->empresa->telefono }} | Email: {{ $venta->empresa->email }}
+                        {{ $compra->empresa->direccion }}<br>
+                        Tel: {{ $compra->empresa->telefono }} | Email: {{ $compra->empresa->email }}
                     </div>
                 </td>
                 <td style="width: 40%; vertical-align: top; text-align: center; padding: 0;">
                     <svg width="220" height="110" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto; display: block;">
-                        <!-- Rectángulo principal con esquinas redondeadas -->
                         <rect x="0" y="0" width="220" height="110" rx="10" ry="10" fill="white" stroke="#fabd1e" stroke-width="2"/>
-
-                        <!-- Fondo amarillo para sección media (va ANTES de las líneas) -->
                         <rect x="0" y="35" width="220" height="37" fill="#fabd1e"/>
-
-                        <!-- Líneas divisorias (van ENCIMA del fondo) -->
                         <line x1="0" y1="35" x2="220" y2="35" stroke="#fabd1e" stroke-width="2"/>
                         <line x1="0" y1="72" x2="220" y2="72" stroke="#fabd1e" stroke-width="2"/>
-
-                        <!-- Texto RUC -->
                         <text x="110" y="22" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#000">
-                            R.U.C. {{ $venta->empresa->ruc }}
+                            R.U.C. {{ $compra->empresa->ruc }}
                         </text>
-
-                        <!-- Texto NOTA DE VENTA -->
                         <text x="110" y="57" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#000">
-                            {{ strtoupper($venta->tipoDocumento->nombre) }}
+                            ORDEN DE COMPRA
                         </text>
-
-                        <!-- Texto Número -->
                         <text x="110" y="95" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#000">
-                            {{ $venta->serie }}-{{ str_pad($venta->numero, 6, '0', STR_PAD_LEFT) }}
+                            {{ $compra->serie }}-{{ str_pad($compra->numero, 6, '0', STR_PAD_LEFT) }}
                         </text>
                     </svg>
                 </td>
             </tr>
         </table>
 
-        <!-- Client Info -->
+        <!-- Supplier Info -->
         <div class="client-section" style="padding: 10px 15px;">
             <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                     <td style="width: 18%; font-weight: bold; color: #666; font-size: 8pt; padding: 3px 0; vertical-align: top;">FECHA DE EMISIÓN:</td>
-                    <td style="width: 32%; font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $venta->fecha_emision->format('d/m/Y') }}</td>
+                    <td style="width: 32%; font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $compra->fecha_emision->format('d/m/Y') }}</td>
                     <td style="width: 15%; font-weight: bold; color: #666; font-size: 8pt; padding: 3px 0; vertical-align: top;">DIRECCIÓN:</td>
-                    <td style="width: 35%; font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $venta->cliente->direccion ?: 'N/A' }}</td>
+                    <td style="width: 35%; font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $compra->proveedor->direccion ?: 'N/A' }}</td>
                 </tr>
                 <tr>
-                    <td style="font-weight: bold; color: #666; font-size: 8pt; padding: 3px 0; vertical-align: top;">DNI/RUC:</td>
-                    <td style="font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $venta->cliente->documento }}</td>
+                    <td style="font-weight: bold; color: #666; font-size: 8pt; padding: 3px 0; vertical-align: top;">RUC PROVEEDOR:</td>
+                    <td style="font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $compra->proveedor->ruc }}</td>
                     <td style="font-weight: bold; color: #666; font-size: 8pt; padding: 3px 0; vertical-align: top;">FORMA DE PAGO:</td>
-                    <td style="font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $venta->id_tipo_pago == 1 ? 'Contado' : 'Crédito' }}</td>
+                    <td style="font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $compra->id_tipo_pago == 1 ? 'Contado' : 'Crédito' }}</td>
                 </tr>
                 <tr>
-                    <td style="font-weight: bold; color: #666; font-size: 8pt; padding: 3px 0; vertical-align: top;">CLIENTE:</td>
-                    <td colspan="3" style="font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $venta->cliente->datos }}</td>
+                    <td style="font-weight: bold; color: #666; font-size: 8pt; padding: 3px 0; vertical-align: top;">PROVEEDOR:</td>
+                    <td colspan="3" style="font-size: 9pt; color: #000; padding: 3px 0; vertical-align: top;">{{ $compra->proveedor->razon_social }}</td>
                 </tr>
             </table>
         </div>
@@ -268,24 +259,22 @@
             <thead>
                 <tr>
                     <th width="5%" class="text-center">#</th>
-                    <th width="12%">Código</th>
-                    <th width="38%">Producto</th>
+                    <th width="15%">Código</th>
+                    <th width="45%">Producto</th>
                     <th width="10%" class="text-center">Cant.</th>
-                    <th width="10%" class="text-center">Unidad</th>
-                    <th width="12%" class="text-right">P. Unit.</th>
+                    <th width="12%" class="text-right">Costo Unit.</th>
                     <th width="13%" class="text-right">Total</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($venta->productosVentas as $index => $item)
+                @foreach($compra->detalles as $index => $item)
                 <tr>
                     <td class="text-center">{{ $index + 1 }}</td>
                     <td>{{ $item->producto->codigo ?? '-' }}</td>
-                    <td>{{ $item->producto->descripcion }}</td>
+                    <td>{{ $item->producto->nombre }}</td>
                     <td class="text-center">{{ $item->cantidad }}</td>
-                    <td class="text-center">{{ $item->unidad_medida }}</td>
-                    <td class="text-right">{{ $venta->tipo_moneda }} {{ number_format($item->precio_unitario, 2) }}</td>
-                    <td class="text-right">{{ $venta->tipo_moneda }} {{ number_format($item->total, 2) }}</td>
+                    <td class="text-right">{{ $compra->moneda }} {{ number_format($item->costo, 2) }}</td>
+                    <td class="text-right">{{ $compra->moneda }} {{ number_format($item->cantidad * $item->costo, 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -296,22 +285,28 @@
             <div class="totals-box">
                 <div class="total-row">
                     <div class="total-label">SUBTOTAL:</div>
-                    <div class="total-value">{{ $venta->tipo_moneda }} {{ number_format($venta->subtotal, 2) }}</div>
+                    <div class="total-value">{{ $compra->moneda }} {{ number_format($compra->subtotal, 2) }}</div>
                 </div>
                 <div class="total-row">
-                    <div class="total-label">IGV (18%):</div>
-                    <div class="total-value">{{ $venta->tipo_moneda }} {{ number_format($venta->igv, 2) }}</div>
+                    <div class="total-label">IGV (0%):</div>
+                    <div class="total-value">{{ $compra->moneda }} {{ number_format($compra->igv, 2) }}</div>
                 </div>
                 <div class="total-row total-final">
                     <div class="total-label">TOTAL:</div>
-                    <div class="total-value">{{ $venta->tipo_moneda }} {{ number_format($venta->total, 2) }}</div>
+                    <div class="total-value">{{ $compra->moneda }} {{ number_format($compra->total, 2) }}</div>
                 </div>
             </div>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            ¡Gracias por su preferencia!
+            Esta es una Orden de Compra electrónica generada por el sistema.
+            @if($compra->observaciones)
+                <div style="margin-top: 10px; text-align: left; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                    <strong>Observaciones:</strong><br>
+                    {{ $compra->observaciones }}
+                </div>
+            @endif
         </div>
     </div>
 </body>

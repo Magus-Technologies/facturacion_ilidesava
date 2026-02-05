@@ -12,12 +12,19 @@ import {
     Shield,
     Loader2,
 } from "lucide-react";
-import MainLayout from "./Layout/MainLayout";
+import MainLayout from "../Layout/MainLayout";
+import { confirmDelete, toast } from "@/lib/sweetalert";
+import UserModal from "./UserModal";
 
 export default function UserList() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Estado para el modal
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [modalMode, setModalMode] = useState("edit"); // "edit" o "view"
 
     useEffect(() => {
         fetchUsers();
@@ -50,44 +57,56 @@ export default function UserList() {
         }
     };
 
-    const handleDelete = async (user) => {
-        if (!confirm(`¿Estás seguro de eliminar al usuario "${user.name}"?`)) {
-            return;
-        }
+    const handleDelete = (user) => {
+        confirmDelete({
+            title: "Eliminar Usuario",
+            message: `¿Estás seguro de eliminar al usuario <b class="text-red-600">${user.name}</b>?<br/>Esta acción no se puede deshacer.`,
+            onConfirm: async () => {
+                try {
+                    const token = localStorage.getItem("auth_token");
 
-        try {
-            const token = localStorage.getItem("auth_token");
+                    const response = await fetch(`/api/users/${user.id}`, {
+                        method: "DELETE",
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            Accept: "application/json",
+                        },
+                    });
 
-            const response = await fetch(`/api/users/${user.id}`, {
-                method: "DELETE",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: "application/json",
-                },
-            });
+                    const data = await response.json();
 
-            const data = await response.json();
-
-            if (data.success) {
-                alert("Usuario eliminado exitosamente");
-                fetchUsers(); // Recargar lista
-            } else {
-                alert(data.message || "Error al eliminar usuario");
-            }
-        } catch (err) {
-            alert("Error de conexión al servidor");
-            console.error("Error:", err);
-        }
+                    if (data.success) {
+                        toast.success("Usuario eliminado exitosamente");
+                        fetchUsers(); // Recargar lista
+                    } else {
+                        toast.error(
+                            data.message || "Error al eliminar usuario",
+                        );
+                    }
+                } catch (err) {
+                    toast.error("Error de conexión al servidor");
+                    console.error("Error:", err);
+                }
+            },
+        });
     };
 
     const handleEdit = (user) => {
-        // TODO: Implementar modal o redirigir a página de edición
-        alert(`Editar usuario: ${user.name}\nID: ${user.id}`);
+        setSelectedUser(user);
+        setModalMode("edit");
+        setModalOpen(true);
     };
 
     const handleView = (user) => {
-        // TODO: Implementar modal de detalles
-        alert(`Ver detalles de: ${user.name}\nEmail: ${user.email}`);
+        setSelectedUser(user);
+        setModalMode("view");
+        setModalOpen(true);
+    };
+
+    const handleCreate = () => {
+        setSelectedUser(null);
+        setModalMode("edit");
+        setModalOpen(true);
     };
 
     // Definición de columnas
@@ -119,13 +138,6 @@ export default function UserList() {
                         </p>
                     </div>
                 </div>
-            ),
-        },
-        {
-            accessorKey: "email",
-            header: "Email",
-            cell: ({ row }) => (
-                <span className="text-gray-600">{row.getValue("email")}</span>
             ),
         },
         {
@@ -180,7 +192,7 @@ export default function UserList() {
             cell: ({ row }) => {
                 const user = row.original;
                 const currentUserId = JSON.parse(
-                    localStorage.getItem("user") || "{}"
+                    localStorage.getItem("user") || "{}",
                 ).id;
                 const isCurrentUser = user.id === currentUserId;
 
@@ -235,10 +247,10 @@ export default function UserList() {
         },
     ];
 
-    if (loading) {
+    if (loading && users.length === 0) {
         return (
             <MainLayout currentPath="/configuracion/usuarios">
-                <div className="flex items-center justify-center min-h-400px">
+                <div className="flex items-center justify-center min-h-[400px]">
                     <div className="text-center">
                         <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto mb-4" />
                         <p className="text-gray-600">Cargando usuarios...</p>
@@ -251,7 +263,7 @@ export default function UserList() {
     if (error) {
         return (
             <MainLayout currentPath="/configuracion/usuarios">
-                <div className="flex items-center justify-center min-h-400px">
+                <div className="flex items-center justify-center min-h-[400px]">
                     <div className="text-center">
                         <div className="bg-red-100 text-red-700 px-6 py-4 rounded-lg">
                             <p className="font-semibold">Error</p>
@@ -271,30 +283,44 @@ export default function UserList() {
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                   
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            Usuarios
+                        </h1>
+                        <p className="text-gray-500">
+                            Administra los accesos al sistema
+                        </p>
+                    </div>
                     <Button
-                        onClick={() =>
-                            alert("TODO: Implementar modal de crear usuario")
-                        }
-                        className="gap-2"
+                        onClick={handleCreate}
+                        className="gap-2 shadow-lg shadow-primary-200"
                     >
                         <UserPlus className="h-5 w-5" />
                         Nuevo Usuario
                     </Button>
                 </div>
 
-              
-
                 {/* Tabla de Usuarios */}
-                <DataTable
-                    columns={columns}
-                    data={users}
-                    searchable={true}
-                    searchPlaceholder="Buscar por nombre, email..."
-                    pagination={true}
-                    pageSize={10}
-                />
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <DataTable
+                        columns={columns}
+                        data={users}
+                        searchable={true}
+                        searchPlaceholder="Buscar por nombre, email..."
+                        pagination={true}
+                        pageSize={10}
+                    />
+                </div>
             </div>
+
+            {/* Modal de Usuario */}
+            <UserModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                user={selectedUser}
+                mode={modalMode}
+                onSuccess={fetchUsers}
+            />
         </MainLayout>
     );
 }

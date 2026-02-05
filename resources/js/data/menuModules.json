@@ -41,13 +41,13 @@
           "id": "notas-credito",
           "name": "Notas de Crédito",
           "icon": "FileX",
-          "path": "/notas-credito"
+          "path": "/nota-credito"
         },
         {
           "id": "guias-remision",
           "name": "Guías de Remisión",
           "icon": "Truck",
-          "path": "/guias-remision"
+          "path": "/guia-remision"
         }
       ]
     },
