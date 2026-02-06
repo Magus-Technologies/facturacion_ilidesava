@@ -210,13 +210,6 @@
                         Tel: {{ $venta->empresa->telefono }} | Email: {{ $venta->empresa->email }}
                     </div>
                 </td>
-                <td style="width: 40%; vertical-align: top; text-align: center; padding: 0;">
-                    <svg width="220" height="110" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto; display: block;">
-                        <!-- Rectángulo principal con esquinas redondeadas -->
-                        <rect x="0" y="0" width="220" height="110" rx="10" ry="10" fill="white" stroke="#fabd1e" stroke-width="2"/>
-
-                        <!-- Fondo amarillo para sección media (va ANTES de las líneas) -->
-                        <rect x="0" y="35" width="220" height="37" fill="#fabd1e"/>
 
                         <!-- Líneas divisorias (van ENCIMA del fondo) -->
                         <line x1="0" y1="35" x2="220" y2="35" stroke="#fabd1e" stroke-width="2"/>

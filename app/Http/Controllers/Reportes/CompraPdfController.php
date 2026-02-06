@@ -28,6 +28,7 @@ class CompraPdfController extends Controller
             $mpdf = new Mpdf([
                 "mode" => "utf-8",
                 "format" => "A4",
+                "tempDir" => storage_path("app/mpdf"),
                 "margin_left" => 15,
                 "margin_right" => 15,
                 "margin_top" => 15,
@@ -53,7 +54,16 @@ class CompraPdfController extends Controller
                 "I",
             );
         } catch (\Exception $e) {
-            abort(500, "Error al generar PDF: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("Error Compra A4: " . $e->getMessage(), [
+                "file" => $e->getFile(),
+                "line" => $e->getLine(),
+                "trace" => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                "success" => false, 
+                "error" => $e->getMessage(),
+                "trace" => config('app.debug') ? $e->getTrace() : null
+            ], 500);
         }
     }
 
@@ -77,6 +87,7 @@ class CompraPdfController extends Controller
             $mpdf = new Mpdf([
                 "mode" => "utf-8",
                 "format" => [80, 297],
+                "tempDir" => storage_path("app/mpdf"),
                 "margin_left" => 5,
                 "margin_right" => 5,
                 "margin_top" => 5,
@@ -101,7 +112,16 @@ class CompraPdfController extends Controller
                 "I",
             );
         } catch (\Exception $e) {
-            abort(500, "Error al generar PDF: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("Error Compra Ticket: " . $e->getMessage(), [
+                "file" => $e->getFile(),
+                "line" => $e->getLine(),
+                "trace" => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                "success" => false, 
+                "error" => $e->getMessage(),
+                "trace" => config('app.debug') ? $e->getTrace() : null
+            ], 500);
         }
     }
 }
