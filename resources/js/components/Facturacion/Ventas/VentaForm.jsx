@@ -82,6 +82,26 @@ export default function VentaForm({ ventaId = null }) {
         }
     }, [isEditing]);
 
+    // NUEVO: Sincronizar almacén con tipo de documento
+    useEffect(() => {
+        if (formData.id_tido) {
+            let nuevoAlmacen = "1"; // Por defecto Almacén 1
+
+            if (formData.id_tido === "6") {
+                // Nota de Venta → Almacén 2 (Kardex Real)
+                nuevoAlmacen = "2";
+            } else if (formData.id_tido === "1" || formData.id_tido === "2") {
+                // Factura/Boleta → Almacén 1 (SUNAT)
+                nuevoAlmacen = "1";
+            }
+
+            // Solo actualizar si cambió
+            if (formData.almacen !== nuevoAlmacen) {
+                setFormData((prev) => ({ ...prev, almacen: nuevoAlmacen }));
+            }
+        }
+    }, [formData.id_tido]);
+
     const totales = calcularTotales();
     const monedaSimbolo = getSimboloMoneda(formData.tipo_moneda);
 
@@ -116,7 +136,7 @@ export default function VentaForm({ ventaId = null }) {
 
     if (loading) {
         return (
-            <MainLayout currentPath="/ventas">
+            <MainLayout>
                 <div className="flex items-center justify-center h-screen">
                     <div className="text-center">
                         <Loader2 className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto" />
@@ -128,7 +148,7 @@ export default function VentaForm({ ventaId = null }) {
     }
 
     return (
-        <MainLayout currentPath="/ventas">
+        <MainLayout>
             <div className="mb-6">
                 <div className="flex items-center justify-between">
                     <div>
@@ -180,12 +200,16 @@ export default function VentaForm({ ventaId = null }) {
                             showPriceSelector={true}
                             submitButtonText="Agregar Producto"
                             almacen={formData.almacen}
-                            onAlmacenChange={(val) =>
-                                setFormData((prev) => ({
-                                    ...prev,
-                                    almacen: val,
-                                }))
-                            }
+                            onAlmacenChange={(val) => {
+                                // Solo permitir cambio si no hay tipo de documento seleccionado
+                                if (!formData.id_tido) {
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        almacen: val,
+                                    }));
+                                }
+                            }}
+                            disableAlmacenSelector={!!formData.id_tido}
                         />
 
                         <div>

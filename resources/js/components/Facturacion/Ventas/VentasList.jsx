@@ -24,13 +24,13 @@ export default function VentasList() {
     // Leer parámetro 'tipo' de la URL para filtrar
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
-        const tipoParam = urlParams.get('tipo');
-        
+        const tipoParam = urlParams.get("tipo");
+
         if (tipoParam) {
             const tipoMap = {
-                'boleta': '1',
-                'factura': '2',
-                'nota': '6' // Nota de Venta
+                boleta: "1",
+                factura: "2",
+                nota: "6", // Nota de Venta
             };
             setFiltroTipo(tipoMap[tipoParam]);
         } else {
@@ -39,36 +39,40 @@ export default function VentasList() {
     }, [window.location.search]);
 
     // Filtrar ventas según el tipo
-    const ventasFiltradas = filtroTipo 
-        ? ventas.filter(venta => String(venta.id_tido) === filtroTipo)
+    const ventasFiltradas = filtroTipo
+        ? ventas.filter((venta) => String(venta.id_tido) === filtroTipo)
         : ventas;
 
     // Obtener título según el filtro
     const getTitulo = () => {
-        if (filtroTipo === '1') return 'Boletas';
-        if (filtroTipo === '2') return 'Facturas';
-        if (filtroTipo === '6') return 'Notas de Venta';
-        return 'Ventas';
+        if (filtroTipo === "1") return "Boletas";
+        if (filtroTipo === "2") return "Facturas";
+        if (filtroTipo === "6") return "Notas de Venta";
+        return "Ventas";
     };
 
     // Generar columnas con los handlers
-    const columns = getVentasColumns({
-        handleView,
-        handlePrint,
-        handleAnular,
-    }, filtroTipo === '6'); // Ocultar columna Sunat si es nota de venta
+    const columns = getVentasColumns(
+        {
+            handleView,
+            handlePrint,
+            handleAnular,
+        },
+        filtroTipo === "6",
+    ); // Ocultar columna Sunat si es nota de venta
 
     // Vista principal
     return (
-        <MainLayout currentPath="/ventas">
+        <MainLayout>
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight">{getTitulo()}</h2>
+                    <h2 className="text-2xl font-bold tracking-tight">
+                        {getTitulo()}
+                    </h2>
                     <p className="text-muted-foreground">
-                        {filtroTipo 
+                        {filtroTipo
                             ? `Administra todas las ${getTitulo().toLowerCase()} del sistema`
-                            : 'Administra todas las ventas del sistema'
-                        }
+                            : "Administra todas las ventas del sistema"}
                     </p>
                 </div>
 
@@ -90,8 +94,8 @@ export default function VentasList() {
                         </Button>
                     </div>
                 ) : (
-                    <DataTable 
-                        columns={columns} 
+                    <DataTable
+                        columns={columns}
                         data={ventasFiltradas}
                         searchable={true}
                         searchPlaceholder="Buscar por serie, número, cliente..."

@@ -29,11 +29,13 @@ export default function CotizacionesList() {
     // Estados de carga y error
     if (loading) {
         return (
-            <MainLayout currentPath="/cotizaciones">
+            <MainLayout>
                 <div className="flex items-center justify-center min-h-400px">
                     <div className="text-center">
                         <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto mb-4" />
-                        <p className="text-gray-600">Cargando cotizaciones...</p>
+                        <p className="text-gray-600">
+                            Cargando cotizaciones...
+                        </p>
                     </div>
                 </div>
             </MainLayout>
@@ -42,7 +44,7 @@ export default function CotizacionesList() {
 
     if (error) {
         return (
-            <MainLayout currentPath="/cotizaciones">
+            <MainLayout>
                 <div className="flex items-center justify-center min-h-400px">
                     <div className="text-center">
                         <div className="bg-red-100 text-red-700 px-6 py-4 rounded-lg">
@@ -60,7 +62,7 @@ export default function CotizacionesList() {
 
     // Vista principal
     return (
-        <MainLayout currentPath="/cotizaciones">
+        <MainLayout>
             <div className="space-y-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>

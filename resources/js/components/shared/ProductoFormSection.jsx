@@ -33,6 +33,7 @@ export default function ProductoFormSection({
     submitButtonText = "Agregar",
     almacen = "1",
     onAlmacenChange,
+    disableAlmacenSelector = false,
 }) {
     return (
         <form onSubmit={onAddProducto} className="space-y-4 mb-8">
@@ -66,27 +67,38 @@ export default function ProductoFormSection({
                     <div className="flex p-1 bg-gray-100 rounded-lg h-10 w-fit">
                         <button
                             type="button"
-                            onClick={() => onAlmacenChange("1")}
+                            onClick={() =>
+                                !disableAlmacenSelector && onAlmacenChange("1")
+                            }
+                            disabled={disableAlmacenSelector}
                             className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
                                 almacen === "1"
                                     ? "bg-white text-primary-700 shadow-sm"
                                     : "text-gray-500 hover:text-gray-700"
-                            }`}
+                            } ${disableAlmacenSelector ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                         >
                             Almacén 1
                         </button>
                         <button
                             type="button"
-                            onClick={() => onAlmacenChange("2")}
+                            onClick={() =>
+                                !disableAlmacenSelector && onAlmacenChange("2")
+                            }
+                            disabled={disableAlmacenSelector}
                             className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
                                 almacen === "2"
                                     ? "bg-white text-primary-700 shadow-sm"
                                     : "text-gray-500 hover:text-gray-700"
-                            }`}
+                            } ${disableAlmacenSelector ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                         >
                             Almacén 2
                         </button>
                     </div>
+                    {disableAlmacenSelector && (
+                        <p className="text-xs text-gray-500 italic">
+                            El almacén está determinado por el tipo de documento
+                        </p>
+                    )}
                 </div>
             </div>
 

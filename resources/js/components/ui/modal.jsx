@@ -57,17 +57,19 @@ export function Modal({
     };
 
     return (
-        <div 
+        <div
             className={cn(
                 "fixed inset-0 z-50 flex items-center justify-center py-4 px-4 overflow-y-auto",
-                isOpen ? "animate-in fade-in duration-150" : "animate-out fade-out duration-150"
+                isOpen
+                    ? "animate-in fade-in duration-150"
+                    : "animate-out fade-out duration-150",
             )}
         >
             {/* Overlay */}
             <div
                 className={cn(
                     "fixed inset-0 bg-black/70 transition-opacity duration-150",
-                    isOpen ? "opacity-100" : "opacity-0"
+                    isOpen ? "opacity-100" : "opacity-0",
                 )}
                 onClick={closeOnOverlayClick ? onClose : undefined}
             />
@@ -78,7 +80,9 @@ export function Modal({
                     "relative bg-white rounded-xl w-full transition-all duration-150 my-auto",
                     sizeClasses[size],
                     "max-h-[calc(100vh-2rem)] flex flex-col shadow-2xl",
-                    isOpen ? "animate-in zoom-in-95 duration-150" : "animate-out zoom-out-95 duration-150"
+                    isOpen
+                        ? "animate-in zoom-in-95 duration-150"
+                        : "animate-out zoom-out-95 duration-150",
                 )}
             >
                 {/* Header */}
@@ -124,15 +128,15 @@ export function ModalForm({ onSubmit, children, className }) {
 // Componente de campo de formulario
 export function ModalField({ label, error, required, children, className }) {
     return (
-        <div className={cn("space-y-2", className)}>
+        <div className={cn("space-y-1", className)}>
             {label && (
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-xs font-medium text-gray-700">
                     {label}
                     {required && <span className="text-red-500 ml-1">*</span>}
                 </label>
             )}
             {children}
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
     );
 }

@@ -10,13 +10,13 @@ const inputVariants = cva(
                 underline:
                     "h-12 border-0 border-b border-gray-300 bg-transparent px-0 py-3 focus:border-primary-600 relative",
                 outlined:
-                    "h-11 rounded-lg border border-gray-200 bg-white px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500/20 hover:border-gray-300",
+                    "h-9 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500/20 hover:border-gray-300",
             },
         },
         defaultVariants: {
             variant: "outlined",
         },
-    }
+    },
 );
 
 const Input = React.forwardRef(
@@ -43,13 +43,13 @@ const Input = React.forwardRef(
                     <span
                         className={cn(
                             "absolute bottom-0 left-0 h-[2px] w-full bg-primary-600 origin-left transition-transform duration-300 ease-out",
-                            isFocused ? "scale-x-100" : "scale-x-0"
+                            isFocused ? "scale-x-100" : "scale-x-0",
                         )}
                     />
                 )}
             </div>
         );
-    }
+    },
 );
 
 Input.displayName = "Input";

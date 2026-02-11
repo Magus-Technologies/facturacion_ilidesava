@@ -82,7 +82,7 @@ class ProductoController extends Controller
             $user = $request->user();
             
             $validator = Validator::make($request->all(), [
-                'codigo' => 'nullable|string|max:50|unique:productos,codigo',
+                'codigo' => 'nullable|string|max:50',
                 'cod_barra' => 'nullable|string|max:100',
                 'nombre' => 'required|string|max:255',
                 'descripcion' => 'nullable|string',
@@ -132,15 +132,27 @@ class ProductoController extends Controller
             $data['id_empresa'] = $user->id_empresa;
             $data['fecha_registro'] = now();
             
+            // NUEVO: Crear producto en el almacén seleccionado
             $producto = Producto::create($data);
+            
+            // NUEVO: Crear automáticamente en el otro almacén
+            $otroAlmacen = $data['almacen'] === '1' ? '2' : '1';
+            $dataCopia = $data;
+            $dataCopia['almacen'] = $otroAlmacen;
+            $dataCopia['cantidad'] = 0; // Stock inicial 0 en el otro almacén
+            // Mantener el mismo código para vincular ambos productos
+            
+            $productoHermano = Producto::create($dataCopia);
             
             // Cargar relaciones
             $producto->load(['categoria', 'unidad']);
             
             return response()->json([
                 'success' => true,
-                'message' => 'Producto creado exitosamente',
-                'data' => $producto
+                'message' => 'Producto creado exitosamente en ambos almacenes',
+                'data' => $producto,
+                'almacen_principal' => $data['almacen'],
+                'almacen_secundario' => $otroAlmacen
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -159,7 +171,7 @@ class ProductoController extends Controller
             $producto = Producto::findOrFail($id);
             
             $validator = Validator::make($request->all(), [
-                'codigo' => 'nullable|string|max:50|unique:productos,codigo,' . $id . ',id_producto',
+                'codigo' => 'nullable|string|max:50',
                 'cod_barra' => 'nullable|string|max:100',
                 'nombre' => 'required|string|max:255',
                 'descripcion' => 'nullable|string',
@@ -207,15 +219,55 @@ class ProductoController extends Controller
                 $data['imagen'] = $path;
             }
 
+            // MODIFICADO: Actualizar producto actual
             $producto->update($data);
+            
+            // NUEVO: Buscar producto hermano en el otro almacén
+            $otroAlmacen = $producto->almacen === '1' ? '2' : '1';
+            $productoHermano = Producto::where('codigo', $producto->codigo)
+                ->where('almacen', $otroAlmacen)
+                ->where('id_empresa', $producto->id_empresa)
+                ->first();
+            
+            // NUEVO: Sincronizar campos (excepto cantidad y almacen)
+            if ($productoHermano) {
+                $camposSincronizar = [
+                    'nombre' => $data['nombre'],
+                    'descripcion' => $data['descripcion'] ?? null,
+                    'precio' => $data['precio'],
+                    'costo' => $data['costo'] ?? null,
+                    'precio_mayor' => $data['precio_mayor'] ?? null,
+                    'precio_menor' => $data['precio_menor'] ?? null,
+                    'precio2' => $data['precio2'] ?? null,
+                    'precio3' => $data['precio3'] ?? null,
+                    'precio4' => $data['precio4'] ?? null,
+                    'precio_unidad' => $data['precio_unidad'] ?? null,
+                    'stock_minimo' => $data['stock_minimo'] ?? null,
+                    'stock_maximo' => $data['stock_maximo'] ?? null,
+                    'categoria_id' => $data['categoria_id'] ?? null,
+                    'unidad_id' => $data['unidad_id'] ?? null,
+                    'codsunat' => $data['codsunat'] ?? null,
+                    'usar_barra' => $data['usar_barra'] ?? null,
+                    'usar_multiprecio' => $data['usar_multiprecio'] ?? null,
+                    'moneda' => $data['moneda'] ?? null,
+                ];
+                
+                // Sincronizar imagen también
+                if (isset($data['imagen'])) {
+                    $camposSincronizar['imagen'] = $data['imagen'];
+                }
+                
+                $productoHermano->update($camposSincronizar);
+            }
             
             // Cargar relaciones
             $producto->load(['categoria', 'unidad']);
             
             return response()->json([
                 'success' => true,
-                'message' => 'Producto actualizado exitosamente',
-                'data' => $producto
+                'message' => 'Producto actualizado exitosamente' . ($productoHermano ? ' (sincronizado en ambos almacenes)' : ''),
+                'data' => $producto,
+                'sincronizado' => $productoHermano ? true : false
             ]);
         } catch (\Exception $e) {
             return response()->json([

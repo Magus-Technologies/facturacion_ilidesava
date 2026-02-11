@@ -59,7 +59,7 @@ export default function DashboardApp() {
     }
 
     return (
-        <MainLayout currentPath="/dashboard">
+        <MainLayout>
             <Dashboard />
         </MainLayout>
     );

@@ -245,12 +245,32 @@ class VentasController extends Controller
             $user = $request->user();
 
             return DB::transaction(function () use ($id, $validated, $user, $request) {
-                $venta = Venta::where('id_empresa', $user->id_empresa)
+                $venta = Venta::with(['productosVentas.producto'])
+                    ->where('id_empresa', $user->id_empresa)
                     ->where('estado', '1')
                     ->findOrFail($id);
 
                 // Cambiar estado de la venta
                 $venta->update(['estado' => '2']);
+                
+                // NUEVO: Retornar stock al almacén correcto si afectó stock
+                if ($venta->afecta_stock) {
+                    foreach ($venta->productosVentas as $detalle) {
+                        $producto = $detalle->producto;
+                        if ($producto) {
+                            // Incrementar stock del producto
+                            $producto->increment('cantidad', $detalle->cantidad);
+                            
+                            Log::info("Stock retornado al anular venta", [
+                                'id_producto' => $producto->id_producto,
+                                'codigo' => $producto->codigo,
+                                'almacen' => $producto->almacen,
+                                'cantidad_retornada' => $detalle->cantidad,
+                                'stock_nuevo' => $producto->fresh()->cantidad
+                            ]);
+                        }
+                    }
+                }
 
                 // Registrar anulación
                 DB::table('ventas_anuladas')->insert([
@@ -269,7 +289,7 @@ class VentasController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Venta anulada exitosamente',
+                    'message' => 'Venta anulada exitosamente' . ($venta->afecta_stock ? ' (stock retornado)' : ''),
                 ]);
             });
         } catch (\Exception $e) {

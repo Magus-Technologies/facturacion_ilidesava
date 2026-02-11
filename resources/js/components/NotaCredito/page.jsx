@@ -122,7 +122,7 @@ export default function NotaCreditoPage() {
     ];
 
     return (
-        <MainLayout currentPath="/nota-credito">
+        <MainLayout>
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>

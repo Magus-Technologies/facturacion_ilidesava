@@ -71,7 +71,7 @@ export default function ProveedoresList() {
                                 Authorization: `Bearer ${token}`,
                                 Accept: "application/json",
                             },
-                        }
+                        },
                     );
 
                     const data = await response.json();
@@ -80,7 +80,9 @@ export default function ProveedoresList() {
                         toast.success("Proveedor eliminado exitosamente");
                         fetchProveedores();
                     } else {
-                        toast.error(data.message || "Error al eliminar proveedor");
+                        toast.error(
+                            data.message || "Error al eliminar proveedor",
+                        );
                     }
                 } catch (err) {
                     toast.error("Error de conexión al servidor");
@@ -110,10 +112,14 @@ export default function ProveedoresList() {
     };
 
     const handleView = (proveedor) => {
-        const ubicacion = [proveedor.distrito, proveedor.provincia, proveedor.departamento]
+        const ubicacion = [
+            proveedor.distrito,
+            proveedor.provincia,
+            proveedor.departamento,
+        ]
             .filter(Boolean)
-            .join(', ');
-        
+            .join(", ");
+
         const info = `INFORMACIÓN DEL PROVEEDOR\n\nRUC: ${proveedor.ruc}\nRazón Social: ${proveedor.razon_social}\nEmail: ${proveedor.email || "No registrado"}\nTeléfono: ${proveedor.telefono || "No registrado"}\nDirección: ${proveedor.direccion || "No registrada"}\nUbicación: ${ubicacion || "No registrada"}`;
         alert(info);
     };
@@ -190,13 +196,17 @@ export default function ProveedoresList() {
                 const ubicacion = [
                     row.original.distrito,
                     row.original.provincia,
-                    row.original.departamento
-                ].filter(Boolean).join(', ');
-                
+                    row.original.departamento,
+                ]
+                    .filter(Boolean)
+                    .join(", ");
+
                 return ubicacion ? (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                         <MapPin className="h-3 w-3 text-gray-400" />
-                        <span className="truncate max-w-[200px]">{ubicacion}</span>
+                        <span className="truncate max-w-[200px]">
+                            {ubicacion}
+                        </span>
                     </div>
                 ) : (
                     <span className="text-gray-400 text-sm">No registrada</span>
@@ -253,7 +263,7 @@ export default function ProveedoresList() {
 
     if (loading) {
         return (
-            <MainLayout currentPath="/proveedores">
+            <MainLayout>
                 <div className="flex items-center justify-center min-h-[400px]">
                     <div className="text-center">
                         <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto mb-4" />
@@ -266,7 +276,7 @@ export default function ProveedoresList() {
 
     if (error) {
         return (
-            <MainLayout currentPath="/proveedores">
+            <MainLayout>
                 <div className="flex items-center justify-center min-h-[400px]">
                     <div className="text-center">
                         <div className="bg-red-100 text-red-700 px-6 py-4 rounded-lg">
@@ -283,7 +293,7 @@ export default function ProveedoresList() {
     }
 
     return (
-        <MainLayout currentPath="/proveedores">
+        <MainLayout>
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
@@ -294,10 +304,7 @@ export default function ProveedoresList() {
                             Gestiona tu cartera de proveedores
                         </p>
                     </div>
-                    <Button
-                        onClick={handleCreate}
-                        className="gap-2"
-                    >
+                    <Button onClick={handleCreate} className="gap-2">
                         <UserPlus className="h-5 w-5" />
                         Nuevo Proveedor
                     </Button>

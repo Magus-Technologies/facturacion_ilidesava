@@ -2,7 +2,10 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
-export default function MainLayout({ children, currentPath }) {
+export default function MainLayout({
+    children,
+    currentPath = window.location.pathname + window.location.search,
+}) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile toggle
     const [isCollapsed, setIsCollapsed] = useState(false); // Desktop collapse
 
@@ -17,8 +20,8 @@ export default function MainLayout({ children, currentPath }) {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Sidebar */}
-            <Sidebar 
-                isOpen={isSidebarOpen} 
+            <Sidebar
+                isOpen={isSidebarOpen}
                 isCollapsed={isCollapsed}
                 currentPath={currentPath}
                 toggleCollapse={toggleCollapse}
@@ -33,9 +36,11 @@ export default function MainLayout({ children, currentPath }) {
             )}
 
             {/* Main Content Area */}
-            <div className={`transition-all duration-300 ${
-                isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-            }`}>
+            <div
+                className={`transition-all duration-300 ${
+                    isCollapsed ? "lg:ml-20" : "lg:ml-64"
+                }`}
+            >
                 {/* Header */}
                 <Header
                     toggleSidebar={toggleSidebar}

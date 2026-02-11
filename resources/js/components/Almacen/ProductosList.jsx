@@ -32,12 +32,15 @@ export default function ProductosList() {
             setLoading(true);
             const token = localStorage.getItem("auth_token");
 
-            const response = await fetch(`/api/productos?almacen=${almacenActivo}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: "application/json",
+            const response = await fetch(
+                `/api/productos?almacen=${almacenActivo}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: "application/json",
+                    },
                 },
-            });
+            );
 
             const data = await response.json();
 
@@ -72,7 +75,7 @@ export default function ProductosList() {
                                 Authorization: `Bearer ${token}`,
                                 Accept: "application/json",
                             },
-                        }
+                        },
                     );
 
                     const data = await response.json();
@@ -81,7 +84,9 @@ export default function ProductosList() {
                         toast.success("Producto eliminado exitosamente");
                         fetchProductos();
                     } else {
-                        toast.error(data.message || "Error al eliminar producto");
+                        toast.error(
+                            data.message || "Error al eliminar producto",
+                        );
                     }
                 } catch (err) {
                     toast.error("Error de conexión al servidor");
@@ -115,19 +120,22 @@ export default function ProductosList() {
                 unidad: productoActualizado.unidad?.nombre || null,
                 unidad_codigo: productoActualizado.unidad?.codigo || null,
             };
-            
+
             // Si es actualización, actualizar el producto en el estado
             if (selectedProducto) {
-                setProductos(prevProductos => 
-                    prevProductos.map(p => 
-                        p.id_producto === productoFormateado.id_producto 
-                            ? productoFormateado 
-                            : p
-                    )
+                setProductos((prevProductos) =>
+                    prevProductos.map((p) =>
+                        p.id_producto === productoFormateado.id_producto
+                            ? productoFormateado
+                            : p,
+                    ),
                 );
             } else {
                 // Si es nuevo producto, agregarlo al inicio
-                setProductos(prevProductos => [productoFormateado, ...prevProductos]);
+                setProductos((prevProductos) => [
+                    productoFormateado,
+                    ...prevProductos,
+                ]);
             }
         } else {
             // Si no se recibe el producto actualizado, recargar todo
@@ -199,16 +207,18 @@ export default function ProductosList() {
             cell: ({ row }) => {
                 const cantidad = parseInt(row.getValue("cantidad") || 0);
                 const stockMinimo = parseInt(row.original.stock_minimo || 0);
-                
+
                 let colorClass = "text-green-700 bg-green-50";
                 if (cantidad === 0) {
                     colorClass = "text-red-700 bg-red-50";
                 } else if (cantidad <= stockMinimo) {
                     colorClass = "text-yellow-700 bg-yellow-50";
                 }
-                
+
                 return (
-                    <span className={`px-2 py-1 rounded-md font-semibold text-sm ${colorClass}`}>
+                    <span
+                        className={`px-2 py-1 rounded-md font-semibold text-sm ${colorClass}`}
+                    >
                         {cantidad}
                     </span>
                 );
@@ -218,7 +228,9 @@ export default function ProductosList() {
             accessorKey: "precio_unidad",
             header: "Precio",
             cell: ({ row }) => {
-                const precio = parseFloat(row.getValue("precio_unidad") || row.original.precio || 0);
+                const precio = parseFloat(
+                    row.getValue("precio_unidad") || row.original.precio || 0,
+                );
                 const moneda = row.original.moneda === "USD" ? "$" : "S/";
                 return (
                     <span className="font-semibold text-gray-900">
@@ -279,7 +291,7 @@ export default function ProductosList() {
 
     if (loading) {
         return (
-            <MainLayout currentPath="/productos">
+            <MainLayout>
                 <div className="flex items-center justify-center min-h-400px">
                     <div className="text-center">
                         <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto mb-4" />
@@ -292,7 +304,7 @@ export default function ProductosList() {
 
     if (error) {
         return (
-            <MainLayout currentPath="/productos">
+            <MainLayout>
                 <div className="flex items-center justify-center min-h-400px">
                     <div className="text-center">
                         <div className="bg-red-100 text-red-700 px-6 py-4 rounded-lg">
@@ -309,7 +321,7 @@ export default function ProductosList() {
     }
 
     return (
-        <MainLayout currentPath="/productos">
+        <MainLayout>
             <div className="space-y-6">
                 {/* Header con selector de almacén */}
                 <div className="flex items-center justify-between flex-wrap gap-4">
@@ -321,11 +333,13 @@ export default function ProductosList() {
                             Gestiona tu inventario de productos
                         </p>
                     </div>
-                    
+
                     {/* Selector de Almacén */}
                     <div className="flex items-center gap-2">
                         <Button
-                            variant={almacenActivo === "1" ? "default" : "outline"}
+                            variant={
+                                almacenActivo === "1" ? "default" : "outline"
+                            }
                             onClick={() => setAlmacenActivo("1")}
                             className="gap-2"
                         >
@@ -333,7 +347,9 @@ export default function ProductosList() {
                             Almacén 1
                         </Button>
                         <Button
-                            variant={almacenActivo === "2" ? "default" : "outline"}
+                            variant={
+                                almacenActivo === "2" ? "default" : "outline"
+                            }
                             onClick={() => setAlmacenActivo("2")}
                             className="gap-2"
                         >
@@ -344,7 +360,7 @@ export default function ProductosList() {
                 </div>
 
                 {/* Botones de acción */}
-                <ProductosActionButtons 
+                <ProductosActionButtons
                     onNuevoProducto={handleCreate}
                     onRefresh={fetchProductos}
                     almacenActivo={almacenActivo}
@@ -373,7 +389,9 @@ export default function ProductosList() {
                                 ) : (
                                     <div className="flex flex-col items-center justify-center text-gray-400">
                                         <ImageIcon className="h-16 w-16 mb-2 opacity-50" />
-                                        <span className="text-sm">Sin imagen</span>
+                                        <span className="text-sm">
+                                            Sin imagen
+                                        </span>
                                     </div>
                                 )}
                             </div>
@@ -407,13 +425,22 @@ export default function ProductosList() {
                                     <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-md font-medium">
                                         {producto.unidad || "N/A"}
                                     </span>
-                                    <span className={`text-sm font-semibold px-2 py-1 rounded-md ${
-                                        parseInt(producto.cantidad || 0) === 0
-                                            ? "text-red-700 bg-red-50"
-                                            : parseInt(producto.cantidad || 0) <= parseInt(producto.stock_minimo || 0)
-                                            ? "text-yellow-700 bg-yellow-50"
-                                            : "text-green-700 bg-green-50"
-                                    }`}>
+                                    <span
+                                        className={`text-sm font-semibold px-2 py-1 rounded-md ${
+                                            parseInt(producto.cantidad || 0) ===
+                                            0
+                                                ? "text-red-700 bg-red-50"
+                                                : parseInt(
+                                                        producto.cantidad || 0,
+                                                    ) <=
+                                                    parseInt(
+                                                        producto.stock_minimo ||
+                                                            0,
+                                                    )
+                                                  ? "text-yellow-700 bg-yellow-50"
+                                                  : "text-green-700 bg-green-50"
+                                        }`}
+                                    >
                                         Stock: {producto.cantidad || 0}
                                     </span>
                                 </div>
@@ -421,7 +448,11 @@ export default function ProductosList() {
                                 {/* Precio */}
                                 <div className="text-xl font-bold text-primary-600 mb-4">
                                     {producto.moneda === "USD" ? "$" : "S/"}{" "}
-                                    {parseFloat(producto.precio_unidad || producto.precio || 0).toFixed(2)}
+                                    {parseFloat(
+                                        producto.precio_unidad ||
+                                            producto.precio ||
+                                            0,
+                                    ).toFixed(2)}
                                 </div>
 
                                 {/* Acciones - al final */}

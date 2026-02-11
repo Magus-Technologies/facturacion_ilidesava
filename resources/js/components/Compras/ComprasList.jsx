@@ -14,7 +14,7 @@ export default function ComprasList() {
     // Estado de carga
     if (loading) {
         return (
-            <MainLayout currentPath="/compras">
+            <MainLayout>
                 <div className="flex items-center justify-center h-screen">
                     <div className="text-center">
                         <Loader2 className="animate-spin h-12 w-12 text-primary-600 mx-auto" />
@@ -29,7 +29,7 @@ export default function ComprasList() {
 
     // Vista principal
     return (
-        <MainLayout currentPath="/compras">
+        <MainLayout>
             <div className="mb-6">
                 <div className="flex items-center justify-between">
                     <div>
