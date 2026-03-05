@@ -119,7 +119,7 @@ export function ModalForm({ onSubmit, children, className }) {
 }
 
 // Componente de campo de formulario
-export function ModalField({ label, error, required, children, className }) {
+export function ModalField({ label, error, required, hint, children, className }) {
     return (
         <div className={cn("space-y-1", className)}>
             {label && (
@@ -128,6 +128,7 @@ export function ModalField({ label, error, required, children, className }) {
                     {required && <span className="text-red-500 ml-1">*</span>}
                 </label>
             )}
+            {hint && <p className="text-xs text-gray-500">{hint}</p>}
             {children}
             {error && <p className="text-xs text-red-600">{error}</p>}
         </div>

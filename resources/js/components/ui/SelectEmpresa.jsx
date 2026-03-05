@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Building2 } from "lucide-react";
 
 /**
@@ -8,6 +9,8 @@ export default function SelectEmpresa({ value, onChange, error, placeholder = "S
     const [empresas, setEmpresas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+    const btnRef = useRef(null);
 
     useEffect(() => {
         fetchEmpresas();
@@ -41,11 +44,20 @@ export default function SelectEmpresa({ value, onChange, error, placeholder = "S
         setIsOpen(false);
     };
 
+    const toggleOpen = () => {
+        if (!isOpen && btnRef.current) {
+            const rect = btnRef.current.getBoundingClientRect();
+            setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+        }
+        setIsOpen(!isOpen);
+    };
+
     return (
         <div className="relative">
             <button
+                ref={btnRef}
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggleOpen}
                 className={`w-full flex items-center justify-between px-4 py-2.5 bg-white border rounded-lg transition-colors ${
                     error
                         ? "border-red-300 focus:border-red-500 focus:ring-red-500"
@@ -76,13 +88,16 @@ export default function SelectEmpresa({ value, onChange, error, placeholder = "S
                 />
             </button>
 
-            {isOpen && (
+            {isOpen && createPortal(
                 <>
                     <div
-                        className="fixed inset-0 z-10"
+                        className="fixed inset-0 z-[60]"
                         onClick={() => setIsOpen(false)}
                     />
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                    <div
+                        className="fixed z-[70] bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto"
+                        style={{ top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+                    >
                         {empresas.length === 0 ? (
                             <div className="px-4 py-3 text-sm text-gray-500 text-center">
                                 No hay empresas disponibles
@@ -109,7 +124,8 @@ export default function SelectEmpresa({ value, onChange, error, placeholder = "S
                             ))
                         )}
                     </div>
-                </>
+                </>,
+                document.body
             )}
 
             {error && (
