@@ -40,13 +40,20 @@ class UserController extends Controller
     public function store(Request $request)
     {
         try {
+            $isAdmin = $request->rol_id == 1;
+
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
                 'password' => 'required|string|min:6|confirmed',
                 'rol_id' => 'required|integer|exists:roles,rol_id',
-                'id_empresa' => 'required|integer|exists:empresas,id_empresa',
+                'id_empresa' => $isAdmin ? 'nullable|integer|exists:empresas,id_empresa' : 'required|integer|exists:empresas,id_empresa',
             ]);
+
+            // Admin sin empresa: asignar la del creador
+            if ($isAdmin && empty($validated['id_empresa'])) {
+                $validated['id_empresa'] = $request->user()->id_empresa;
+            }
 
             $user = User::create([
                 'name' => $validated['name'],
@@ -118,7 +125,7 @@ class UserController extends Controller
                 ],
                 'password' => 'sometimes|nullable|string|min:6|confirmed',
                 'rol_id' => 'sometimes|required|integer|exists:roles,rol_id',
-                'id_empresa' => 'sometimes|required|integer|exists:empresas,id_empresa',
+                'id_empresa' => 'nullable|integer|exists:empresas,id_empresa',
             ]);
 
             if (isset($validated['name'])) {

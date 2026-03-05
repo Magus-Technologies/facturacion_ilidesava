@@ -208,9 +208,12 @@ export default function UserModal({
                         {/* Empresa */}
                         <ModalField
                             label="Empresa Asignada"
-                            required
+                            required={String(formData.rol_id) !== "1"}
                             error={errors.id_empresa?.[0]}
-                            hint="Selecciona la empresa a la que tendrá acceso este usuario"
+                            hint={String(formData.rol_id) === "1"
+                                ? "Admin tiene acceso a todas las empresas. Selecciona su empresa por defecto (opcional)"
+                                : "Selecciona la empresa a la que tendrá acceso este usuario"
+                            }
                         >
                             <SelectEmpresa
                                 value={formData.id_empresa}

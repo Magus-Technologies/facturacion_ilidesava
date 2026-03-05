@@ -101,10 +101,10 @@ export default function Login({ onLoginSuccess }) {
                     localStorage.setItem("empresas", JSON.stringify(data.empresas));
                 }
 
-                // Establecer empresa activa (la primera disponible o la del usuario)
-                if (!localStorage.getItem("empresa_activa") && data.empresas?.length > 0) {
-                    const empresaDefault = data.empresas.find(e => e.id_empresa === data.user.id_empresa) || data.empresas[0];
-                    localStorage.setItem("empresa_activa", JSON.stringify(empresaDefault));
+                // Sincronizar empresa activa con la del usuario en el backend
+                if (data.empresas?.length > 0) {
+                    const empresaDelUser = data.empresas.find(e => e.id_empresa === data.user.id_empresa) || data.empresas[0];
+                    localStorage.setItem("empresa_activa", JSON.stringify(empresaDelUser));
                 }
 
                 // Guardar permisos en el store
