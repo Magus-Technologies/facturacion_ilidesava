@@ -31,7 +31,7 @@ php artisan test tests/Feature/ExampleTest.php
 This is NOT a typical SPA. Blade templates mount React components via `data-react-component` attributes. Each page is a Blade view that renders a specific React component. Navigation between pages is full page loads, not client-side routing. See `resources/js/app.jsx` for the component registry.
 
 ### Database
-Default database is SQLite (`database/database.sqlite`). Tests use SQLite in-memory (configured in `phpunit.xml`). Production typically uses MySQL — set `DB_CONNECTION` accordingly.
+Local development uses MySQL via Laragon (DB: `factura_sava`, user: `root`, no password). Tests use SQLite in-memory (configured in `phpunit.xml`). Direct MySQL access: `C:\laragon\bin\mysql\mysql-8.0.30-winx64\bin\mysql.exe -u root factura_sava -e "QUERY;"`
 
 ### Backend Structure
 - **Controllers** handle API endpoints. SUNAT-related controllers (VentasController, NotaCreditoController, GuiaRemisionController, etc.) delegate XML generation and submission to `SunatService`.
@@ -44,7 +44,7 @@ Default database is SQLite (`database/database.sqlite`). Tests use SQLite in-mem
   - Boletas also require Resumen Diario for SUNAT acceptance
   - Annulment uses Comunicación de Baja (async with tickets)
 - **Permission middleware** `CheckPermission` uses format `resource.action` (e.g., `ventas.create`, `productos.view`). Admin (rol_id=1) bypasses all checks.
-- **Multi-company**: Users belong to companies. `empresa_activa_id` on the User model determines the current company context. All queries scope by this company.
+- **Multi-company**: Users belong to companies. `id_empresa` on the User model determines the current company context (updated via `/api/switch-empresa` when admin switches). All queries scope by `$user->id_empresa`. The frontend stores the active empresa in `localStorage` as `empresa_activa` for display. Admin (rol_id=1) can switch between all active empresas; other users are locked to their assigned empresa.
 
 ### Frontend Structure
 - **Feature-based organization** under `resources/js/components/` — each module (Ventas, GuiaRemision, NotaCredito, etc.) has its own folder with page component, form, columns definition, detail modal, and hooks.
@@ -64,7 +64,7 @@ SUNAT files stored under `storage/app/sunat/`:
 ### Key Configuration
 - `config/sunat.php` — SUNAT endpoints (beta/production), IGV rate, SOL credentials, storage paths
 - Beta testing uses RUC `20000000001` with credentials `MODDATOS/moddatos`
-- GRE API (guías) requires separate OAuth client credentials (`SUNAT_GRE_CLIENT_ID`, `SUNAT_GRE_CLIENT_SECRET`)
+- GRE API (guías) uses per-empresa OAuth credentials (`gre_client_id`, `gre_client_secret` on the `empresas` table), with fallback to `.env` (`SUNAT_GRE_CLIENT_ID`, `SUNAT_GRE_CLIENT_SECRET`)
 
 ## Conventions
 
@@ -76,3 +76,5 @@ SUNAT files stored under `storage/app/sunat/`:
 - Series format: `F001` (factura), `B001` (boleta), `FC01`/`BC01` (notas de crédito), `T001` (guías)
 - PDF reports served via web routes (`/reporteNV/`, `/reporteGR/`, etc.) using mPDF
 - Excel exports use PhpSpreadsheet with styled headers and alternating row colors
+- SUNAT identity document types (tipo_doc): `"1"` = DNI (8 digits), `"4"` = CE/Carnet de Extranjería (variable length, up to 12), `"6"` = RUC (11 digits). Stored in `clientes.tipo_doc` column; detection by document length is used as fallback for older records without tipo_doc
+- Custom dropdown components (SelectEmpresa, SelectRol) that render inside modals must use `createPortal` to `document.body` to avoid being clipped by `overflow-y-auto` on the modal content container

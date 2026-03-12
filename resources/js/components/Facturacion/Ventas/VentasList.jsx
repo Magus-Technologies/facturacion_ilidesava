@@ -9,6 +9,7 @@ import { useSunat } from "./hooks/useSunat";
 import { getVentasColumns } from "./columns/ventasColumns";
 import DetallesVentaModal from "./DetallesVentaModal";
 import DescontarStockModal from "./DescontarStockModal";
+import WhatsAppModal, { enviarWhatsApp } from "../../shared/WhatsAppModal";
 
 export default function VentasList() {
     const {
@@ -28,6 +29,7 @@ export default function VentasList() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [sunatLoadingId, setSunatLoadingId] = useState(null);
     const [stockModalVenta, setStockModalVenta] = useState(null);
+    const [whatsAppModal, setWhatsAppModal] = useState({ open: false, mensaje: "", clienteNombre: "" });
 
     const handleGenerarXml = async (venta) => {
         setSunatLoadingId(venta.id_venta);
@@ -132,6 +134,19 @@ export default function VentasList() {
         setStockModalVenta(venta);
     };
 
+    const handleWhatsApp = (venta) => {
+        const token = localStorage.getItem("auth_token");
+        const serie = venta.serie;
+        const numero = String(venta.numero).padStart(6, "0");
+        const pdfUrl = `${window.location.origin}/reporteNV/a4.php?id=${venta.id_venta}&token=${token}`;
+        const mensaje = `Hola ${venta.cliente?.datos || ""}! Le enviamos su comprobante ${serie}-${numero}.\n${pdfUrl}`;
+        const telefono = venta.cliente?.telefono;
+
+        if (!enviarWhatsApp(telefono, mensaje)) {
+            setWhatsAppModal({ open: true, mensaje, clienteNombre: venta.cliente?.datos || "" });
+        }
+    };
+
     const confirmarDescontarStock = async (venta) => {
         const { toast } = await import("@/lib/sweetalert");
         const token = localStorage.getItem("auth_token");
@@ -167,6 +182,7 @@ export default function VentasList() {
             handleDescargarCdr,
             handleGenerarGuia,
             handleDescontarStock,
+            handleWhatsApp,
         },
         filtroTipo === "6",
         sunatLoadingId,
@@ -227,6 +243,13 @@ export default function VentasList() {
                 onClose={() => setStockModalVenta(null)}
                 venta={stockModalVenta}
                 onConfirm={confirmarDescontarStock}
+            />
+
+            <WhatsAppModal
+                isOpen={whatsAppModal.open}
+                onClose={() => setWhatsAppModal({ open: false, mensaje: "", clienteNombre: "" })}
+                mensaje={whatsAppModal.mensaje}
+                clienteNombre={whatsAppModal.clienteNombre}
             />
         </MainLayout>
     );

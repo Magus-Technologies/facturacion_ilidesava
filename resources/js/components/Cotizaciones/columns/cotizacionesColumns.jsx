@@ -9,6 +9,7 @@ import {
     Clock,
     ShoppingCart,
     MoreHorizontal,
+    MessageCircle,
 } from "lucide-react";
 import { Button } from "../../ui/button";
 import {
@@ -159,6 +160,15 @@ export const getCotizacionesColumns = (handlers) => [
                                 <Printer className="mr-2 h-4 w-4 text-gray-600" />
                                 Imprimir
                             </DropdownMenuItem>
+                            {handlers.handleWhatsApp && (
+                                <DropdownMenuItem
+                                    onClick={() => handlers.handleWhatsApp(cotizacion)}
+                                    className="text-green-600 focus:bg-green-50 focus:text-green-700"
+                                >
+                                    <MessageCircle className="mr-2 h-4 w-4" />
+                                    Enviar por WhatsApp
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                                 onClick={() => handlers.handleDelete(cotizacion)}
                                 className="text-red-600 focus:bg-red-50 focus:text-red-700"

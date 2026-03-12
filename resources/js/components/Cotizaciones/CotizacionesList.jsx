@@ -6,9 +6,11 @@ import MainLayout from "../Layout/MainLayout";
 import { useCotizaciones } from "./hooks/useCotizaciones";
 import { getCotizacionesColumns } from "./columns/cotizacionesColumns";
 import PrintOptionsModal from "../shared/PrintOptionsModal";
+import WhatsAppModal, { enviarWhatsApp } from "../shared/WhatsAppModal";
 
 export default function CotizacionesList() {
     const [printCotizacion, setPrintCotizacion] = useState(null);
+    const [whatsAppModal, setWhatsAppModal] = useState({ open: false, mensaje: "", clienteNombre: "" });
 
     const {
         cotizaciones,
@@ -23,6 +25,19 @@ export default function CotizacionesList() {
         handleConvertir,
     } = useCotizaciones();
 
+    const handleWhatsApp = (cotizacion) => {
+        const token = localStorage.getItem("auth_token");
+        const numero = String(cotizacion.numero).padStart(6, "0");
+        const pdfUrl = `${window.location.origin}/reporteCOT/a4.php?id=${cotizacion.id}&token=${token}`;
+        const nombre = cotizacion.cliente_nombre || "";
+        const mensaje = `Hola ${nombre}! Le enviamos su cotización COT-${numero}.\n${pdfUrl}`;
+        const telefono = cotizacion.cliente_telefono;
+
+        if (!enviarWhatsApp(telefono, mensaje)) {
+            setWhatsAppModal({ open: true, mensaje, clienteNombre: nombre });
+        }
+    };
+
     // Generar columnas con los handlers
     const columns = getCotizacionesColumns({
         handleView: (cotizacion) => handleView(cotizacion, setPrintCotizacion),
@@ -31,6 +46,7 @@ export default function CotizacionesList() {
         handleConvertir,
         handlePrint: (cotizacion) =>
             handlePrint(cotizacion, setPrintCotizacion),
+        handleWhatsApp,
     });
 
     // Estados de carga y error
@@ -107,6 +123,13 @@ export default function CotizacionesList() {
                     tipo="cotizacion"
                 />
             )}
+
+            <WhatsAppModal
+                isOpen={whatsAppModal.open}
+                onClose={() => setWhatsAppModal({ open: false, mensaje: "", clienteNombre: "" })}
+                mensaje={whatsAppModal.mensaje}
+                clienteNombre={whatsAppModal.clienteNombre}
+            />
         </MainLayout>
     );
 }

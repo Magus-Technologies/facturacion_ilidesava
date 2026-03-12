@@ -153,77 +153,45 @@
         </table>
 
         <!-- Client Info -->
-        <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
+        @php
+            $pago = $venta->pagos->first();
+            $metodosPago = [1 => 'EFECTIVO', 2 => 'TARJETA', 4 => 'TRANSFERENCIA', 5 => 'YAPE / PLIN'];
+        @endphp
+        <table style="width: 100%; border-collapse: separate; border-spacing: 10px 0; margin-bottom: 20px; margin-left: -10px;">
             <tr>
-                <!-- Tarjeta Izquierda -->
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 10px;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; width: 22%; vertical-align: top; color: #000;">CLIENTE:</td>
-                            <td style="font-size: 8pt; color: #000; padding-bottom: 4px; vertical-align: top;">{{ $venta->cliente->datos ?? '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; vertical-align: top; color: #000;">{{ strlen($venta->cliente->documento ?? '') === 11 ? 'RUC' : (strlen($venta->cliente->documento ?? '') === 8 ? 'DNI' : 'CE') }}:</td>
-                            <td style="font-size: 8pt; color: #000; padding-bottom: 4px; vertical-align: top;">{{ $venta->cliente->documento ?? '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; vertical-align: top; color: #000;">DIRECCIÓN:</td>
-                            <td style="font-size: 8pt; color: #000; vertical-align: top;">{{ $venta->cliente->direccion ?? '-' }}</td>
-                        </tr>
-                        @if($venta->cotizacion)
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; vertical-align: top; color: #000; padding-top: 4px;">REF. COT.:</td>
-                            <td style="font-size: 8pt; color: #000; vertical-align: top; padding-top: 4px;">COT-{{ str_pad($venta->cotizacion->numero, 6, '0', STR_PAD_LEFT) }}</td>
-                        </tr>
-                        @endif
-                    </table>
+                <td style="width: 48%; vertical-align: top; border: 1.2px solid #777; border-radius: 10px; padding: 10px;">
+                    <span style="font-weight: bold; font-size: 8pt; color: #000;">CLIENTE: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->cliente->datos ?? '-' }}</span><br>
+                    <span style="font-weight: bold; font-size: 8pt; color: #000;">{{ strlen($venta->cliente->documento ?? '') === 11 ? 'RUC' : (strlen($venta->cliente->documento ?? '') === 8 ? 'DNI' : 'CE') }}: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->cliente->documento ?? '-' }}</span><br>
+                    <span style="font-weight: bold; font-size: 8pt; color: #000;">DIRECCIÓN: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->cliente->direccion ?? '-' }}</span>
+                    @if($venta->cotizacion)
+                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">REF. COT.: </span>
+                    <span style="font-size: 8pt; color: #000;">COT-{{ str_pad($venta->cotizacion->numero, 6, '0', STR_PAD_LEFT) }}</span>
+                    @endif
                 </td>
-                
-                <!-- Espaciador -->
-                <td style="width: 4%;"></td>
-                
-                <!-- Tarjeta Derecha -->
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 10px;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; width: 45%; vertical-align: top; color: #000;">FECHA EMISIÓN:</td>
-                            <td style="font-size: 8pt; color: #000; padding-bottom: 4px; vertical-align: top;">{{ $venta->fecha_emision ? $venta->fecha_emision->format('d/m/Y') : '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; vertical-align: top; color: #000;">MONEDA:</td>
-                            <td style="font-size: 8pt; color: #000; padding-bottom: 4px; vertical-align: top;">{{ $venta->tipo_moneda === 'USD' ? 'DÓLARES' : 'SOLES' }}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; vertical-align: top; color: #000;">FORMA DE PAGO:</td>
-                            <td style="font-size: 8pt; color: #000; padding-bottom: 4px; vertical-align: top;">{{ $venta->id_tipo_pago == 1 ? 'CONTADO' : 'CRÉDITO' }}</td>
-                        </tr>
-                        @php
-                            $pago = $venta->pagos->first();
-                            $metodosPago = [1 => 'EFECTIVO', 2 => 'TARJETA', 4 => 'TRANSFERENCIA', 5 => 'YAPE / PLIN'];
-                        @endphp
-                        @if($pago)
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; vertical-align: top; color: #000;">MÉTODO PAGO:</td>
-                            <td style="font-size: 8pt; color: #000; padding-bottom: 4px; vertical-align: top;">{{ $metodosPago[$pago->id_tipo_pago] ?? 'OTRO' }}</td>
-                        </tr>
-                        @if($pago->numero_operacion)
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; vertical-align: top; color: #000;">N° OPERACIÓN:</td>
-                            <td style="font-size: 8pt; color: #000; padding-bottom: 4px; vertical-align: top;">{{ $pago->numero_operacion }}</td>
-                        </tr>
-                        @endif
-                        @if($pago->banco)
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; vertical-align: top; color: #000;">BANCO:</td>
-                            <td style="font-size: 8pt; color: #000; padding-bottom: 4px; vertical-align: top;">{{ $pago->banco }}</td>
-                        </tr>
-                        @endif
-                        @endif
-                        <tr>
-                            <td style="font-weight: bold; font-size: 8pt; vertical-align: top; color: #000;">VENDEDOR:</td>
-                            <td style="font-size: 8pt; color: #000; vertical-align: top;">{{ $venta->usuario->name ?? 'Sistema' }}</td>
-                        </tr>
-                    </table>
+                <td style="width: 48%; vertical-align: top; border: 1.2px solid #777; border-radius: 10px; padding: 10px;">
+                    <span style="font-weight: bold; font-size: 8pt; color: #000;">FECHA EMISIÓN: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->fecha_emision ? $venta->fecha_emision->format('d/m/Y') : '-' }}</span><br>
+                    <span style="font-weight: bold; font-size: 8pt; color: #000;">MONEDA: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->tipo_moneda === 'USD' ? 'DÓLARES' : 'SOLES' }}</span><br>
+                    <span style="font-weight: bold; font-size: 8pt; color: #000;">FORMA DE PAGO: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->id_tipo_pago == 1 ? 'CONTADO' : 'CRÉDITO' }}</span>
+                    @if($pago)
+                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">MÉTODO PAGO: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $metodosPago[$pago->id_tipo_pago] ?? 'OTRO' }}</span>
+                    @if($pago->numero_operacion)
+                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">N° OPERACIÓN: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $pago->numero_operacion }}</span>
+                    @endif
+                    @if($pago->banco)
+                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">BANCO: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $pago->banco }}</span>
+                    @endif
+                    @endif
+                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">VENDEDOR: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->usuario->name ?? 'Sistema' }}</span>
                 </td>
             </tr>
         </table>

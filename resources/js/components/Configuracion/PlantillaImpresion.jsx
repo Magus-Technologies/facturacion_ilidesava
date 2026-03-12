@@ -15,11 +15,16 @@ function QuillEditor({ initialValue, onChangeHtml }) {
         if (!containerRef.current || quillRef.current) return;
 
         import("quill").then(({ default: Quill }) => {
+            // Registrar tamaños en px con inline styles (compatibles con mPDF)
+            const SizeStyle = Quill.import("attributors/style/size");
+            SizeStyle.whitelist = ["8px", "10px", "12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
+            Quill.register(SizeStyle, true);
+
             const q = new Quill(containerRef.current, {
                 theme: "snow",
                 modules: {
                     toolbar: [
-                        [{ size: ["small", false, "large", "huge"] }],
+                        [{ size: ["8px", "10px", "12px", "14px", false, "18px", "20px", "24px", "28px", "32px"] }],
                         ["bold", "italic", "underline"],
                         [{ align: [] }],
                         [{ color: [] }],
@@ -332,7 +337,7 @@ function SeccionAcordeon({ titulo, seccionKey, seccion, expandida, onToggleExpan
                     </div>
 
                     {/* Editor Quill */}
-                    <div className="quill-wrapper rounded-lg overflow-hidden border border-gray-200 bg-white">
+                    <div className="quill-wrapper rounded-lg border border-gray-200 bg-white">
                         {dataLoaded ? (
                             <QuillEditor
                                 key={`quill-${seccionKey}`}

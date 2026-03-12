@@ -41,6 +41,7 @@ class VentasController extends Controller
                         'cliente' => [
                             'documento' => $venta->cliente?->documento,
                             'datos' => $venta->cliente?->datos,
+                            'telefono' => $venta->cliente?->telefono,
                         ],
                         'tipo_documento' => [
                             'abreviatura' => $venta->tipoDocumento?->abreviatura,

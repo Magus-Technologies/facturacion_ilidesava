@@ -19,6 +19,7 @@ import {
     PackageCheck,
     Image,
     Loader2,
+    MessageCircle,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -368,6 +369,15 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                     <Printer className="mr-2 h-4 w-4 text-gray-600" />
                                     Imprimir PDF
                                 </DropdownMenuItem>
+                                {handlers.handleWhatsApp && (
+                                    <DropdownMenuItem
+                                        onClick={() => handlers.handleWhatsApp(venta)}
+                                        className="text-green-600 focus:bg-green-50 focus:text-green-700"
+                                    >
+                                        <MessageCircle className="mr-2 h-4 w-4" />
+                                        Enviar por WhatsApp
+                                    </DropdownMenuItem>
+                                )}
                                 {!estaAnulada && venta.stock_real_descontado && (
                                     <DropdownMenuItem disabled className="text-green-600 opacity-100">
                                         <PackageCheck className="mr-2 h-4 w-4" />
