@@ -4,16 +4,9 @@
     <meta charset="UTF-8">
     <title>Cotización COT-{{ str_pad($cotizacion->numero, 6, '0', STR_PAD_LEFT) }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Arial', sans-serif;
-            font-size: 9pt;
-            color: #333;
-        }
+        @page { margin: 50px 40px 50px 40px; }
+        body { font-family: 'Arial', sans-serif; font-size: 9pt; color: #333; margin: 0; padding: 0; }
+        p, div, span, table, td, th, tr { margin: 0; padding: 0; }
         /* Header */
         .header-table {
             width: 100%;
@@ -93,7 +86,7 @@
             border-radius: 6px;
         }
         .products-table thead {
-            background: #e5e7eb;
+            background: #bfc4cc;
             color: #000;
         }
         .products-table th {
@@ -122,7 +115,7 @@
 
         /* Cuotas */
         .cuotas-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 8pt; }
-        .cuotas-table th { background: #fabd1e; color: #000; padding: 5px 8px; text-align: left; border: 1px solid #ddd; }
+        .cuotas-table th { background: #bfc4cc; color: #000; padding: 5px 8px; text-align: left; border: 1px solid #ddd; }
         .cuotas-table td { padding: 5px 8px; border: 1px solid #ddd; }
 
         /* Footer */
@@ -159,7 +152,12 @@
                         <tr>
                             <td style="width: 45%; vertical-align: top; text-align: left; padding-right: 5px;">
                                 @if($cotizacion->empresa && $cotizacion->empresa->logo && file_exists(public_path('storage/' . $cotizacion->empresa->logo)))
-                                    <img src="{{ public_path('storage/' . $cotizacion->empresa->logo) }}" alt="Logo" style="max-width: 100%; height: auto; max-height: 90px;">
+                                    @php
+                                        $logoPath = public_path('storage/' . $cotizacion->empresa->logo);
+                                        $logoData = base64_encode(file_get_contents($logoPath));
+                                        $logoMime = mime_content_type($logoPath);
+                                    @endphp
+                                    <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="max-width: 100%; height: 110px; width: auto;">
                                 @endif
                             </td>
                             <td style="width: 55%; vertical-align: top; text-align: left;">
@@ -179,21 +177,17 @@
                     </table>
                 </td>
                 <td style="width: 37%; vertical-align: top; text-align: right; padding: 0;">
-                    <svg width="240" height="124" xmlns="http://www.w3.org/2000/svg" style="display: inline-block;">
-                        <rect x="0" y="0" width="238" height="122" rx="10" ry="10" fill="white" stroke="#fabd1e" stroke-width="2"/>
-                        <rect x="0" y="40" width="238" height="42" fill="#fabd1e"/>
-                        <line x1="0" y1="40" x2="238" y2="40" stroke="#fabd1e" stroke-width="2"/>
-                        <line x1="0" y1="82" x2="238" y2="82" stroke="#fabd1e" stroke-width="2"/>
-                        <text x="119" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#000">
+                    <div style="border: 2px solid #bfc4cc; border-radius: 10px; overflow: hidden; width: 240px; float: right;">
+                        <div style="text-align: center; padding: 8px 10px; font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; color: #000;">
                             R.U.C. {{ $cotizacion->empresa->ruc ?? '' }}
-                        </text>
-                        <text x="119" y="66" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#000">
+                        </div>
+                        <div style="background: #bfc4cc; text-align: center; padding: 10px; font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; color: #000;">
                             COTIZACIÓN
-                        </text>
-                        <text x="119" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" font-weight="bold" fill="#000">
+                        </div>
+                        <div style="text-align: center; padding: 10px; font-family: Arial, sans-serif; font-size: 17px; font-weight: bold; color: #000;">
                             COT-{{ str_pad($cotizacion->numero, 6, '0', STR_PAD_LEFT) }}
-                        </text>
-                    </svg>
+                        </div>
+                    </div>
                 </td>
             </tr>
         </table>
@@ -219,10 +213,10 @@
         </table>
 
         <!-- Client Info -->
-        <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
+        <table style="width: 100%; border-collapse: separate; border-spacing: 10px 0; margin-left: -10px; margin-bottom: 20px;">
             <tr>
                 <!-- Tarjeta Izquierda -->
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 10px;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
                             <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; width: 22%; vertical-align: top; color: #000;">CLIENTE:</td>
@@ -255,11 +249,8 @@
                     </table>
                 </td>
                 
-                <!-- Espaciador -->
-                <td style="width: 4%;"></td>
-                
                 <!-- Tarjeta Derecha -->
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 10px;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
                             <td style="font-weight: bold; font-size: 8pt; padding-bottom: 4px; width: 45%; vertical-align: top; color: #000;">FECHA EMISIÓN:</td>
@@ -404,7 +395,7 @@
                     </table>
 
                     <!-- Caja Inferior: Total -->
-                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid #999; border-radius: 6px; background-color: #d1d5db; overflow: hidden;">
+                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid #999; border-radius: 6px; background-color: #bfc4cc; overflow: hidden;">
                         <tr>
                             <td style="padding: 6px 10px; text-align: right; font-size: 13pt; font-weight: bold; width: 65%;">TOTAL: {{ $simbolo }}</td>
                             <td style="padding: 6px 10px; text-align: right; font-size: 13pt; font-weight: bold; width: 35%; color: #000;">{{ number_format($total, 2) }}</td>

@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <title>GUÍA DE REMISIÓN - {{ $guia->serie }}-{{ str_pad($guia->numero, 8, '0', STR_PAD_LEFT) }}</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Arial', sans-serif; font-size: 9pt; color: #333; }
+        @page { margin: 50px 40px 50px 40px; }
+        body { font-family: 'Arial', sans-serif; font-size: 9pt; color: #333; margin: 0; padding: 0; }
+        p, div, span, table, td, th, tr { margin: 0; padding: 0; }
         .ql-output p { margin: 0; padding: 0; line-height: 1.3; }
         .ql-output ol, .ql-output ul { margin: 0; padding-left: 16px; }
         .ql-output h1 { font-size: 14pt; margin: 0; }
@@ -13,7 +14,7 @@
         .ql-output h3 { font-size: 10pt; margin: 0; }
         .section-box {
             border: 1px solid #777;
-            border-radius: 6px;
+            border-radius: 10px;
             padding: 8px 10px;
             margin-bottom: 10px;
         }
@@ -28,9 +29,9 @@
             width: 100%;
             border-collapse: collapse;
             border: 2px solid #999;
-            border-radius: 6px;
+            border-radius: 10px;
         }
-        .products-table thead { background: #e5e7eb; }
+        .products-table thead { background: #bfc4cc; }
         .products-table th {
             padding: 6px 4px;
             font-size: 7.5pt;
@@ -70,7 +71,12 @@
                         <tr>
                             <td style="width: 45%; vertical-align: top; text-align: left; padding-right: 5px;">
                                 @if($empresa && $empresa->logo && file_exists(public_path('storage/' . $empresa->logo)))
-                                    <img src="{{ public_path('storage/' . $empresa->logo) }}" alt="Logo" style="max-width: 100%; height: auto; max-height: 90px;">
+                                    @php
+                                        $logoPath = public_path('storage/' . $empresa->logo);
+                                        $logoData = base64_encode(file_get_contents($logoPath));
+                                        $logoMime = mime_content_type($logoPath);
+                                    @endphp
+                                    <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="max-width: 100%; height: 110px; width: auto;">
                                 @endif
                             </td>
                             <td style="width: 55%; vertical-align: top; text-align: left;">
@@ -90,24 +96,17 @@
                     </table>
                 </td>
                 <td style="width: 37%; vertical-align: top; text-align: right; padding: 0;">
-                    <svg width="240" height="124" xmlns="http://www.w3.org/2000/svg" style="display: inline-block;">
-                        <rect x="0" y="0" width="238" height="122" rx="10" ry="10" fill="white" stroke="#fabd1e" stroke-width="2"/>
-                        <rect x="0" y="30" width="238" height="52" fill="#fabd1e"/>
-                        <line x1="0" y1="30" x2="238" y2="30" stroke="#fabd1e" stroke-width="2"/>
-                        <line x1="0" y1="82" x2="238" y2="82" stroke="#fabd1e" stroke-width="2"/>
-                        <text x="119" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#000">
+                    <div style="border: 2px solid #bfc4cc; border-radius: 10px; overflow: hidden; width: 240px; float: right;">
+                        <div style="text-align: center; padding: 6px 10px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; color: #000;">
                             RUC {{ $empresa->ruc ?? '' }}
-                        </text>
-                        <text x="119" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#000">
-                            GUÍA DE REMISIÓN
-                        </text>
-                        <text x="119" y="68" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#000">
-                            ELECTRÓNICA REMITENTE
-                        </text>
-                        <text x="119" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#000">
+                        </div>
+                        <div style="background: #bfc4cc; text-align: center; padding: 8px 10px; font-family: Arial, sans-serif; font-size: 10px; font-weight: bold; color: #000; line-height: 1.4;">
+                            GUÍA DE REMISIÓN<br>ELECTRÓNICA REMITENTE
+                        </div>
+                        <div style="text-align: center; padding: 10px; font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; color: #000;">
                             {{ $serieNumero }}
-                        </text>
-                    </svg>
+                        </div>
+                    </div>
                 </td>
             </tr>
         </table>
@@ -135,7 +134,7 @@
         <!-- Destinatario + Datos del Documento -->
         <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 10px;">
             <tr>
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 8px 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 8px 10px;">
                     <div class="section-title">DESTINATARIO</div>
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
@@ -149,7 +148,7 @@
                     </table>
                 </td>
                 <td style="width: 4%;"></td>
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 8px 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 8px 10px;">
                     <div class="section-title">DATOS DEL DOCUMENTO</div>
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
@@ -191,7 +190,7 @@
         <!-- Conductor / Transportista -->
         <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 10px;">
             <tr>
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 8px 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 8px 10px;">
                     <div class="section-title">CONDUCTOR / VEHICULO</div>
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
@@ -217,7 +216,7 @@
                     </table>
                 </td>
                 <td style="width: 4%;"></td>
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 8px 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 8px 10px;">
                     <div class="section-title">TRANSPORTISTA</div>
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
@@ -240,12 +239,12 @@
         <!-- Motivo y Modalidad -->
         <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 10px;">
             <tr>
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 8px 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 8px 10px;">
                     <span class="label">MOTIVO DE TRASLADO:</span>
                     <span class="value" style="margin-left: 8px;">{{ strtoupper($motivoTexto) }}</span>
                 </td>
                 <td style="width: 4%;"></td>
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 6px; padding: 8px 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 8px 10px;">
                     <span class="label">MODALIDAD DE TRASLADO:</span>
                     <span class="value" style="margin-left: 8px;">{{ $modalidad }}</span>
                 </td>
@@ -304,7 +303,7 @@
                     @endif
                 </td>
                 <td style="width: 70%; vertical-align: middle;">
-                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid #999; border-radius: 6px; background-color: #d1d5db;">
+                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid #999; border-radius: 10px; background-color: #bfc4cc;">
                         <tr>
                             <td style="padding: 10px 15px; text-align: right; font-size: 12pt; font-weight: bold; width: 65%;">
                                 TOTAL PESO BRUTO ({{ $guia->und_peso_total ?? 'KGM' }}):

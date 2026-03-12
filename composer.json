@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "chillerlan/php-qrcode": "^5.0",
+        "dompdf/dompdf": "^3.1",
         "greenter/gre-api": "^1.0",
         "greenter/lite": "*",
         "greenter/xmldsig": "*",

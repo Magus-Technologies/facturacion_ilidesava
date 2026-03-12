@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Reportes;
 
 use App\Http\Controllers\Controller;
 use App\Models\Compra;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Mpdf\Mpdf;
 
 class CompraPdfController extends Controller
@@ -25,36 +27,24 @@ class CompraPdfController extends Controller
             // Renderizar vista Blade a HTML
             $html = view("reportes.compra-a4", compact("compra"))->render();
 
-            // Crear PDF con mPDF
-            $mpdf = new Mpdf([
-                "mode" => "utf-8",
-                "format" => "A4",
-                "tempDir" => storage_path("app/mpdf"),
-                "margin_left" => 15,
-                "margin_right" => 15,
-                "margin_top" => 15,
-                "margin_bottom" => 15,
-                "img_dpi" => 96,
-                "autoPadding" => true,
-            ]);
+            // Crear PDF con Dompdf
+            $options = new Options();
+            $options->set('isRemoteEnabled', true);
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('tempDir', storage_path('app/mpdf'));
 
-            $mpdf->shrink_tables_to_fit = 1;
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
             $tipoDoc = $compra->tipoDocumento->nombre ?? 'Compra';
-            $mpdf->SetTitle(
-                $tipoDoc . " - " .
-                    $compra->serie .
-                    "-" .
-                    str_pad($compra->numero, 6, "0", STR_PAD_LEFT),
-            );
-            $mpdf->WriteHTML($html);
-            $mpdf->Output(
-                $tipoDoc . "-" .
-                    $compra->serie .
-                    "-" .
-                    str_pad($compra->numero, 6, "0", STR_PAD_LEFT) .
-                    ".pdf",
-                "I",
-            );
+            $filename = $tipoDoc . "-" . $compra->serie . "-" . str_pad($compra->numero, 6, "0", STR_PAD_LEFT) . ".pdf";
+
+            return response($dompdf->output(), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->view('errors.pdf-no-encontrado', [], 404);
         } catch (\Exception $e) {
