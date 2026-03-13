@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Reportes;
 use App\Helpers\QrHelper;
 use App\Http\Controllers\Controller;
 use App\Models\PlantillaImpresion;
+use App\Models\Empresa;
 use App\Models\Venta;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -37,8 +38,17 @@ class VentaPdfController extends Controller
                 ? PlantillaImpresion::obtenerPara($venta->empresa->id_empresa)
                 : null;
 
+            // Cargar logos extra para Nota de Venta (id_tido=6)
+            $logosEmpresas = [];
+            if ($venta->id_tido == 6 && $plantilla && !empty($plantilla->logos_nota_venta)) {
+                $logosEmpresas = Empresa::whereIn('id_empresa', $plantilla->logos_nota_venta)
+                    ->whereNotNull('logo')
+                    ->where('logo', '!=', '')
+                    ->get(['id_empresa', 'comercial', 'razon_social', 'logo']);
+            }
+
             // Renderizar vista Blade a HTML
-            $html = view("reportes.venta-a4", compact("venta", "qrBase64", "consultaUrl", "plantilla"))->render();
+            $html = view("reportes.venta-a4", compact("venta", "qrBase64", "consultaUrl", "plantilla", "logosEmpresas"))->render();
 
             // Crear PDF con Dompdf
             $options = new Options();

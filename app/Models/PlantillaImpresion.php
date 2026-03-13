@@ -16,12 +16,14 @@ class PlantillaImpresion extends Model
         'inferior_activo',
         'mensaje_despedida',
         'despedida_activo',
+        'logos_nota_venta',
     ];
 
     protected $casts = [
         'cabecera_activo'  => 'boolean',
         'inferior_activo'  => 'boolean',
         'despedida_activo' => 'boolean',
+        'logos_nota_venta'  => 'array',
     ];
 
     // Valores por defecto cuando no hay registro en BD

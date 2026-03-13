@@ -37,7 +37,8 @@ Local development uses MySQL via Laragon (DB: `factura_sava`, user: `root`, no p
 - **Controllers** handle API endpoints. SUNAT-related controllers (VentasController, NotaCreditoController, GuiaRemisionController, etc.) delegate XML generation and submission to `SunatService`.
 - **`app/Services/SunatService.php`** (~700+ lines) is the core service. It builds Greenter objects, generates XML, signs with certificates, sends to SUNAT, and processes CDR responses. All SUNAT document types are handled here.
 - **`app/Services/ProductoService.php`** handles stock movement logic (entries, exits, adjustments) used across ventas and compras.
-- **PDF controllers** (e.g., `VentaPdfController`, `GuiaRemisionPdfController`) serve reports via web routes using mPDF. These routes use the `TokenFromQuery` middleware to accept `?token=` in the URL for browser-based PDF downloads.
+- **PDF controllers** (e.g., `VentaPdfController`, `CotizacionPdfController`, `CompraPdfController`, `GuiaRemisionPdfController`) serve reports via web routes. **A4 format uses Dompdf** (supports border-radius, base64 images); **ticket format (80mm) uses mPDF**. These routes use the `TokenFromQuery` middleware to accept `?token=` in the URL for browser-based PDF downloads.
+- **`PlantillaImpresion`** model stores per-empresa customizable header/footer/farewell messages for PDF reports. Managed via `/configuracion/plantilla-impresion` and API at `/api/plantilla-impresion`.
 - **SUNAT submission flows differ by document type:**
   - Facturas/Boletas/Notas: Synchronous via SOAP — `sendXml()` returns CDR immediately
   - Guías de Remisión: Async via REST (GRE API) — `enviar()` returns a ticket, then `consultarTicket()` polls for CDR
@@ -74,7 +75,9 @@ SUNAT files stored under `storage/app/sunat/`:
 - CDR files prefixed with `R-` (e.g., `R-20612706702-09-T001-00000001.zip`)
 - Database uses `id_empresa` for company scoping across all main tables
 - Series format: `F001` (factura), `B001` (boleta), `FC01`/`BC01` (notas de crédito), `T001` (guías)
-- PDF reports served via web routes (`/reporteNV/`, `/reporteGR/`, etc.) using mPDF
+- PDF reports served via web routes (`/reporteNV/`, `/reporteGR/`, etc.) — A4 uses Dompdf, tickets use mPDF
+- A4 PDF templates use inline styles (dompdf doesn't support `object-fit`), base64-encoded logos, and `@page` CSS for margins
+- Dompdf does NOT support inline SVG — use HTML/CSS divs instead
 - Excel exports use PhpSpreadsheet with styled headers and alternating row colors
 - SUNAT identity document types (tipo_doc): `"1"` = DNI (8 digits), `"4"` = CE/Carnet de Extranjería (variable length, up to 12), `"6"` = RUC (11 digits). Stored in `clientes.tipo_doc` column; detection by document length is used as fallback for older records without tipo_doc
 - Custom dropdown components (SelectEmpresa, SelectRol) that render inside modals must use `createPortal` to `document.body` to avoid being clipped by `overflow-y-auto` on the modal content container

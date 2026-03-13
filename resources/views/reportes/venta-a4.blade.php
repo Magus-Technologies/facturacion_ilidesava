@@ -95,16 +95,70 @@
                     <!-- Logo and Slogan Header -->
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 2px;">
                         <tr>
+                            {{-- Logos: empresa principal + extras --}}
+                            @php
+                                $hasExtras = !empty($logosEmpresas) && count($logosEmpresas) > 0;
+                                $totalLogos = ($hasExtras ? count($logosEmpresas) : 0) + 1; // +1 por el principal
+                                // Todos los logos en una fila: adaptar tamaño según cantidad total
+                                if ($totalLogos <= 2) {
+                                    $mainH = 90; $extraH = 70;
+                                } elseif ($totalLogos <= 3) {
+                                    $mainH = 75; $extraH = 60;
+                                } else {
+                                    $mainH = 65; $extraH = 50;
+                                }
+                            @endphp
                             <td style="width: 45%; vertical-align: top; text-align: left; padding-right: 5px;">
-                                @if($venta->empresa && $venta->empresa->logo && file_exists(public_path('storage/' . $venta->empresa->logo)))
+                                @if(!$hasExtras)
+                                    {{-- Sin extras: logo solo --}}
+                                    @if($venta->empresa && $venta->empresa->logo && file_exists(public_path('storage/' . $venta->empresa->logo)))
+                                        @php
+                                            $logoPath = public_path('storage/' . $venta->empresa->logo);
+                                            $logoData = base64_encode(file_get_contents($logoPath));
+                                            $logoMime = mime_content_type($logoPath);
+                                        @endphp
+                                        <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="height: 110px; width: auto;">
+                                    @endif
+                                @else
+                                    {{-- Con extras: logo principal + extras en grilla de 2 columnas --}}
                                     @php
-                                        $logoPath = public_path('storage/' . $venta->empresa->logo);
-                                        $logoData = base64_encode(file_get_contents($logoPath));
-                                        $logoMime = mime_content_type($logoPath);
+                                        // Juntar logo principal + extras en un solo array de imágenes base64
+                                        $allLogos = [];
+                                        if ($venta->empresa && $venta->empresa->logo && file_exists(public_path('storage/' . $venta->empresa->logo))) {
+                                            $logoPath = public_path('storage/' . $venta->empresa->logo);
+                                            $allLogos[] = [
+                                                'data' => base64_encode(file_get_contents($logoPath)),
+                                                'mime' => mime_content_type($logoPath),
+                                                'alt'  => 'Logo',
+                                            ];
+                                        }
+                                        foreach ($logosEmpresas as $logoEmp) {
+                                            if ($logoEmp->logo && file_exists(public_path('storage/' . $logoEmp->logo))) {
+                                                $lPath = public_path('storage/' . $logoEmp->logo);
+                                                $allLogos[] = [
+                                                    'data' => base64_encode(file_get_contents($lPath)),
+                                                    'mime' => mime_content_type($lPath),
+                                                    'alt'  => $logoEmp->comercial ?? 'Logo',
+                                                ];
+                                            }
+                                        }
+                                        $logoChunks = array_chunk($allLogos, 2);
+                                        $lH = count($allLogos) <= 2 ? 75 : (count($allLogos) <= 4 ? 60 : 50);
                                     @endphp
-                                    <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="max-width: 100%; height: 110px; width: auto;">
+                                    <table style="border-collapse: collapse;">
+                                        @foreach($logoChunks as $chunk)
+                                            <tr>
+                                                @foreach($chunk as $logo)
+                                                    <td style="vertical-align: middle; padding: 2px 4px;">
+                                                        <img src="data:{{ $logo['mime'] }};base64,{{ $logo['data'] }}" alt="{{ $logo['alt'] }}" style="height: {{ $lH }}px; width: auto;">
+                                                    </td>
+                                                @endforeach
+                                            </tr>
+                                        @endforeach
+                                    </table>
                                 @endif
                             </td>
+                            {{-- Cabecera / Slogan --}}
                             <td style="width: 55%; vertical-align: top; text-align: left;">
                                 @if(!empty($plantilla) && $plantilla->cabecera_activo && $plantilla->mensaje_cabecera)
                                     <div class="ql-output" style="font-size: 8pt;">{!! $plantilla->mensaje_cabecera !!}</div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import MainLayout from "../Layout/MainLayout";
-import { ChevronDown, ChevronUp, Loader2, Save } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Save, Image } from "lucide-react";
 import Swal from "sweetalert2";
 import "quill/dist/quill.snow.css";
 
@@ -83,7 +83,7 @@ function Toggle({ checked, onChange }) {
    ────────────────────────────────────────────────── */
 const PREVIEW_DESIGN_WIDTH = 700;
 
-function DocumentPreview({ secciones, empresa }) {
+function DocumentPreview({ secciones, empresa, logosNotaVenta = [], empresas = [] }) {
     const wrapperRef = useRef(null);
     const innerRef   = useRef(null);
     const [scale, setScale]             = useState(1);
@@ -107,7 +107,7 @@ function DocumentPreview({ secciones, empresa }) {
     useEffect(() => {
         const t = setTimeout(recalc, 60);
         return () => clearTimeout(t);
-    }, [secciones, recalc]);
+    }, [secciones, logosNotaVenta, recalc]);
 
     const { cabecera, inferior, despedida } = secciones;
 
@@ -153,27 +153,46 @@ function DocumentPreview({ secciones, empresa }) {
             >
                 {/* ── Cabecera: Logo | Slogan | RUC box ── */}
                 <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-                    {/* Logo + cabecera */}
+                    {/* Logo empresa + cabecera + logos extra NV */}
                     <div style={{ flex: "0 0 62%", display: "flex", gap: 10 }}>
+                        {/* Logo de la empresa actual (siempre) */}
                         <div style={{ width: 85, height: 70, background: "#f3f4f6",
                                       border: "1px dashed #d1d5db", display: "flex",
                                       alignItems: "center", justifyContent: "center",
                                       flexShrink: 0, overflow: "hidden" }}>
                             {empresa?.logo ? (
-                                <img
-                                    src={`/storage/${empresa.logo}`}
-                                    alt="Logo"
-                                    style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-                                />
+                                <img src={`/storage/${empresa.logo}`} alt="Logo"
+                                    style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
                             ) : (
                                 <span style={{ fontSize: 9, color: "#9ca3af" }}>LOGO</span>
                             )}
                         </div>
+                        {/* Cabecera */}
                         <div style={{ flex: 1, border: "2px solid #dc2626", borderRadius: 5,
                                       padding: "6px 10px", minHeight: 70,
                                       display: "flex", alignItems: "center" }}>
                             {getContent(cabecera, "AQUÍ SE MOSTRARÁ TU MENSAJE DE CABECERA")}
                         </div>
+                        {/* Logos extra NV (al lado de la cabecera) */}
+                        {(() => {
+                            const selectedEmps = empresas.filter(e => logosNotaVenta.includes(e.id_empresa) && e.logo);
+                            if (selectedEmps.length === 0) return null;
+                            return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0, justifyContent: "center" }}>
+                                    {selectedEmps.map((emp) => (
+                                        <div key={emp.id_empresa} style={{
+                                            width: 50, height: selectedEmps.length > 2 ? 32 : 42,
+                                            background: "#f3f4f6", border: "1px dashed #d1d5db",
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            overflow: "hidden", borderRadius: 4,
+                                        }}>
+                                            <img src={`/storage/${emp.logo}`} alt=""
+                                                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                     </div>
                     {/* RUC box */}
                     <div style={{ flex: 1, border: "2px solid #fabd1e", borderRadius: 7, overflow: "hidden" }}>
@@ -368,6 +387,8 @@ export default function PlantillaImpresion() {
         despedida: { html: "", texto: "", activo: true },
     });
     const [empresa, setEmpresa] = useState(null);
+    const [empresas, setEmpresas] = useState([]);
+    const [logosNotaVenta, setLogosNotaVenta] = useState([]);
     const [expandida, setExpandida] = useState("cabecera");
     const [dataLoaded, setDataLoaded] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -400,6 +421,17 @@ export default function PlantillaImpresion() {
                 }
             }
 
+            // Cargar lista de todas las empresas (para selector de logos NV)
+            // Excluir la empresa activa (su logo ya se muestra siempre)
+            const empListRes = await fetch("/api/empresas", { headers });
+            if (empListRes.ok) {
+                const empListJson = await empListRes.json();
+                if (empListJson.success && empListJson.data) {
+                    const idActiva = empresaActiva.id_empresa;
+                    setEmpresas(empListJson.data.filter(e => e.activo !== false && e.id_empresa !== idActiva));
+                }
+            }
+
             const res = await fetch("/api/plantilla-impresion", { headers });
             const json = await res.json();
 
@@ -422,6 +454,7 @@ export default function PlantillaImpresion() {
                         activo: d.despedida_activo ?? true,
                     },
                 });
+                setLogosNotaVenta(d.logos_nota_venta || []);
             }
         } catch (err) {
             console.error("Error al cargar plantilla:", err);
@@ -470,6 +503,7 @@ export default function PlantillaImpresion() {
                 inferior_activo: secciones.inferior.activo,
                 mensaje_despedida: secciones.despedida.html,
                 despedida_activo: secciones.despedida.activo,
+                logos_nota_venta: logosNotaVenta,
             };
 
             const res = await fetch("/api/plantilla-impresion", {
@@ -545,6 +579,73 @@ export default function PlantillaImpresion() {
                             />
                         ))}
 
+                        {/* ── Logos para Nota de Venta ── */}
+                        <div className="border-t border-gray-100 pt-4 mt-2">
+                            <div className="flex items-center gap-2.5 mb-3">
+                                <Image className="h-4 w-4 text-primary-600" />
+                                <span className="text-sm font-semibold text-gray-700">
+                                    Logos para Nota de Venta
+                                </span>
+                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                    Solo NV
+                                </span>
+                            </div>
+                            <p className="text-xs text-gray-400 mb-3">
+                                Selecciona qué logos de empresas se mostrarán en los PDF de Notas de Venta.
+                                Facturas y Boletas solo mostrarán el logo de la empresa emisora.
+                            </p>
+                            {empresas.length > 0 ? (
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {empresas.map((emp) => (
+                                        <label
+                                            key={emp.id_empresa}
+                                            className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                                                logosNotaVenta.includes(emp.id_empresa)
+                                                    ? "border-primary-300 bg-primary-50/50"
+                                                    : "border-gray-200 hover:bg-gray-50"
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={logosNotaVenta.includes(emp.id_empresa)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setLogosNotaVenta((prev) => [...prev, emp.id_empresa]);
+                                                    } else {
+                                                        setLogosNotaVenta((prev) =>
+                                                            prev.filter((id) => id !== emp.id_empresa)
+                                                        );
+                                                    }
+                                                }}
+                                                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                            />
+                                            <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center overflow-hidden shrink-0">
+                                                {emp.logo ? (
+                                                    <img
+                                                        src={`/storage/${emp.logo}`}
+                                                        alt=""
+                                                        className="w-full h-full object-contain"
+                                                    />
+                                                ) : (
+                                                    <Image className="h-3 w-3 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-xs font-medium text-gray-700 truncate">
+                                                    {emp.comercial || emp.razon_social}
+                                                </div>
+                                                <div className="text-[10px] text-gray-400">
+                                                    RUC: {emp.ruc}
+                                                </div>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-gray-400 italic">No hay empresas registradas</p>
+                            )}
+                        </div>
+
                         <div className="mt-6 flex justify-end">
                             <button
                                 type="button"
@@ -569,7 +670,7 @@ export default function PlantillaImpresion() {
                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 text-center">
                             Vista previa del comprobante
                         </p>
-                        <DocumentPreview secciones={secciones} empresa={empresa} />
+                        <DocumentPreview secciones={secciones} empresa={empresa} logosNotaVenta={logosNotaVenta} empresas={empresas} />
                     </div>
                 </div>
             </div>

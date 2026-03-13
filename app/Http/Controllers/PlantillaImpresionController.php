@@ -35,12 +35,14 @@ class PlantillaImpresionController extends Controller
         }
 
         $validated = $request->validate([
-            'mensaje_cabecera'  => 'nullable|string',
-            'cabecera_activo'   => 'boolean',
-            'mensaje_inferior'  => 'nullable|string',
-            'inferior_activo'   => 'boolean',
-            'mensaje_despedida' => 'nullable|string',
-            'despedida_activo'  => 'boolean',
+            'mensaje_cabecera'    => 'nullable|string',
+            'cabecera_activo'     => 'boolean',
+            'mensaje_inferior'    => 'nullable|string',
+            'inferior_activo'     => 'boolean',
+            'mensaje_despedida'   => 'nullable|string',
+            'despedida_activo'    => 'boolean',
+            'logos_nota_venta'    => 'nullable|array',
+            'logos_nota_venta.*'  => 'integer|exists:empresas,id_empresa',
         ]);
 
         $plantilla = PlantillaImpresion::updateOrCreate(
