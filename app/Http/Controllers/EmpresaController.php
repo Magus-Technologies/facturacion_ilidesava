@@ -10,6 +10,58 @@ use Illuminate\Support\Facades\Storage;
 class EmpresaController extends Controller
 {
     /**
+     * Optimizar logo: redimensionar a max 500px y guardar como JPG comprimido.
+     */
+    private function optimizarLogo(string $sourcePath, string $destPath): void
+    {
+        $info = getimagesize($sourcePath);
+        if (!$info) return;
+
+        $mime = $info['mime'];
+        $origW = $info[0];
+        $origH = $info[1];
+
+        // Crear imagen desde el archivo original
+        $image = match ($mime) {
+            'image/jpeg' => imagecreatefromjpeg($sourcePath),
+            'image/png'  => imagecreatefrompng($sourcePath),
+            'image/gif'  => imagecreatefromgif($sourcePath),
+            'image/webp' => imagecreatefromwebp($sourcePath),
+            default      => null,
+        };
+        if (!$image) return;
+
+        // Redimensionar si es mayor a 500px en cualquier lado
+        $maxDim = 500;
+        if ($origW > $maxDim || $origH > $maxDim) {
+            $ratio = min($maxDim / $origW, $maxDim / $origH);
+            $newW = (int) round($origW * $ratio);
+            $newH = (int) round($origH * $ratio);
+            $resized = imagecreatetruecolor($newW, $newH);
+
+            // Preservar transparencia para PNG
+            if ($mime === 'image/png') {
+                imagealphablending($resized, false);
+                imagesavealpha($resized, true);
+                $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
+                imagefilledrectangle($resized, 0, 0, $newW, $newH, $transparent);
+            }
+
+            imagecopyresampled($resized, $image, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
+            imagedestroy($image);
+            $image = $resized;
+        }
+
+        // Guardar según formato original
+        if ($mime === 'image/png') {
+            imagepng($image, $destPath, 7); // compresión 7 de 9
+        } else {
+            imagejpeg($image, $destPath, 85); // calidad 85%
+        }
+        imagedestroy($image);
+    }
+
+    /**
      * Listar todas las empresas
      */
     public function index()
@@ -90,8 +142,15 @@ class EmpresaController extends Controller
 
             if ($request->hasFile('logo')) {
                 $file = $request->file('logo');
-                $filename = 'logo_' . $data['ruc'] . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $ext = strtolower($file->getClientOriginalExtension());
+                $keepPng = $ext === 'png';
+                $finalExt = $keepPng ? 'png' : 'jpg';
+                $filename = 'logo_' . $data['ruc'] . '_' . time() . '.' . $finalExt;
                 $data['logo'] = $file->storeAs('empresasLogos', $filename, 'public');
+
+                // Optimizar logo (redimensionar y comprimir)
+                $fullPath = Storage::disk('public')->path($data['logo']);
+                $this->optimizarLogo($fullPath, $fullPath);
             }
 
             $empresa = Empresa::create($data);
@@ -156,11 +215,18 @@ class EmpresaController extends Controller
                     Storage::disk('public')->delete($empresa->logo);
                 }
 
-                // Guardar nuevo logo
+                // Guardar nuevo logo optimizado
                 $file = $request->file('logo');
-                $filename = 'logo_' . $empresa->ruc . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $ext = strtolower($file->getClientOriginalExtension());
+                $keepPng = $ext === 'png';
+                $finalExt = $keepPng ? 'png' : 'jpg';
+                $filename = 'logo_' . $empresa->ruc . '_' . time() . '.' . $finalExt;
                 $path = $file->storeAs('empresasLogos', $filename, 'public');
                 $data['logo'] = $path;
+
+                // Optimizar logo (redimensionar y comprimir)
+                $fullPath = Storage::disk('public')->path($path);
+                $this->optimizarLogo($fullPath, $fullPath);
             }
 
             $empresa->update($data);
