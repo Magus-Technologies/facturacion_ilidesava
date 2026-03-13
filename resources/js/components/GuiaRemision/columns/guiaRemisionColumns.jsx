@@ -96,6 +96,19 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
         ),
     },
     {
+        accessorKey: "mod_transporte",
+        header: "Transporte",
+        cell: ({ row }) => {
+            const mod = row.original.mod_transporte;
+            const isPublico = mod === "01";
+            return (
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${isPublico ? "bg-indigo-100 text-indigo-700" : "bg-teal-100 text-teal-700"}`}>
+                    {isPublico ? "Público" : "Privado"}
+                </span>
+            );
+        },
+    },
+    {
         accessorKey: "estado",
         header: "Estado",
         cell: ({ row }) => {
