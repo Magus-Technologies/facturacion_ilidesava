@@ -143,10 +143,7 @@ export const useClienteForm = (cliente, isOpen, onClose, onSuccess) => {
                     }));
                 }
             } else {
-                // No mostrar error en auto-consulta, solo en búsqueda manual
-                if (documento === null) {
-                    toast.error(result.message || 'No se encontró el documento');
-                }
+                toast.error(result.message || 'No se encontró el documento');
             }
         } catch (error) {
             console.error('Error al consultar documento:', error);

@@ -16,11 +16,15 @@ export const consultarDNI = async (dni) => {
             },
         });
 
-        if (!response.ok) {
-            throw new Error('DNI no encontrado');
+        const data = await response.json();
+
+        if (!response.ok || data.success === false || !data.nombres) {
+            return {
+                success: false,
+                message: data.message || 'DNI no encontrado',
+            };
         }
 
-        const data = await response.json();
         return {
             success: true,
             data: {
@@ -52,11 +56,15 @@ export const consultarRUC = async (ruc) => {
             },
         });
 
-        if (!response.ok) {
-            throw new Error('RUC no encontrado');
+        const data = await response.json();
+
+        if (!response.ok || data.success === false || !data.razonSocial) {
+            return {
+                success: false,
+                message: data.message || 'RUC no encontrado',
+            };
         }
 
-        const data = await response.json();
         return {
             success: true,
             data: {

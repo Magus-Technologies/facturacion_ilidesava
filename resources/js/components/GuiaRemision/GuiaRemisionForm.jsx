@@ -898,7 +898,7 @@ export default function GuiaRemisionForm() {
                                         />
                                     </div>
                                 </div>
-                                {/* Checkbox M1L también disponible en transporte público */}
+                                {/* Checkbox M1L en transporte público: placa y conductor opcionales, transportista sigue obligatorio */}
                                 <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-amber-50 border border-amber-200 mt-2">
                                     <input
                                         type="checkbox"
@@ -912,6 +912,11 @@ export default function GuiaRemisionForm() {
                                         Traslado en vehículos de categoría M1 o L (moto, mototaxi, auto particular)
                                     </span>
                                 </label>
+                                {form.vehiculo_m1l && (
+                                    <p className="text-xs text-amber-700 mt-1 ml-1">
+                                        RUC y razón social del transportista siguen siendo obligatorios. Placa y conductor son opcionales.
+                                    </p>
+                                )}
                                 </>
                             ) : (
                                 <div className="space-y-3">
