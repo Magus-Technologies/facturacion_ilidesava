@@ -112,22 +112,29 @@
                                 @if(!$hasExtras)
                                     {{-- Sin extras: logo solo --}}
                                     @if($venta->empresa && $venta->empresa->logo && file_exists(public_path('storage/' . $venta->empresa->logo)))
-                                        <img src="storage/{{ $venta->empresa->logo }}" alt="Logo" style="height: 110px; width: auto;">
+                                        @php
+                                            $logoPath = public_path('storage/' . $venta->empresa->logo);
+                                            $logoData = base64_encode(file_get_contents($logoPath));
+                                            $logoMime = mime_content_type($logoPath);
+                                        @endphp
+                                        <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="height: 110px; width: auto;">
                                     @endif
                                 @else
                                     {{-- Con extras: logo principal + extras en grilla de 2 columnas --}}
                                     @php
                                         $allLogos = [];
                                         if ($venta->empresa && $venta->empresa->logo && file_exists(public_path('storage/' . $venta->empresa->logo))) {
+                                            $logoPath = public_path('storage/' . $venta->empresa->logo);
                                             $allLogos[] = [
-                                                'src' => 'storage/' . $venta->empresa->logo,
+                                                'src' => 'data:' . mime_content_type($logoPath) . ';base64,' . base64_encode(file_get_contents($logoPath)),
                                                 'alt' => 'Logo',
                                             ];
                                         }
                                         foreach ($logosEmpresas as $logoEmp) {
                                             if ($logoEmp->logo && file_exists(public_path('storage/' . $logoEmp->logo))) {
+                                                $lPath = public_path('storage/' . $logoEmp->logo);
                                                 $allLogos[] = [
-                                                    'src' => 'storage/' . $logoEmp->logo,
+                                                    'src' => 'data:' . mime_content_type($lPath) . ';base64,' . base64_encode(file_get_contents($lPath)),
                                                     'alt' => $logoEmp->comercial ?? 'Logo',
                                                 ];
                                             }

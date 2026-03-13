@@ -79,10 +79,8 @@ class VentaPdfController extends Controller
             $options->set('isRemoteEnabled', true);
             $options->set('isHtml5ParserEnabled', true);
             $options->set('tempDir', storage_path('app/mpdf'));
-            $options->set('chroot', public_path());
 
             $dompdf = new Dompdf($options);
-            $dompdf->setBasePath(public_path());
             $dompdf->loadHtml($html);
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
