@@ -184,8 +184,8 @@ export default function ProductosList() {
             accessorKey: "nombre",
             header: "Producto",
             cell: ({ row }) => (
-                <div>
-                    <p className="font-medium text-gray-900">
+                <div className="max-w-[350px]">
+                    <p className="font-medium text-gray-900 line-clamp-2" title={row.getValue("nombre")}>
                         {row.getValue("nombre")}
                     </p>
                     {row.original.categoria?.nombre && (

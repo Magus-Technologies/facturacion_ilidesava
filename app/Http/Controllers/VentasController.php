@@ -148,6 +148,14 @@ class VentasController extends Controller
                 ], 422);
             }
 
+            // Reintentar hasta 3 veces en caso de deadlock por concurrencia
+            $maxIntentos = 3;
+            $intento = 0;
+
+            retry:
+            $intento++;
+
+            try {
             return DB::transaction(function () use ($validated, $user, $request) {
                 $idCliente = $validated['id_cliente'] ?? null;
 
@@ -179,16 +187,19 @@ class VentasController extends Controller
                     $idCliente = $clienteModel->id_cliente;
                 }
 
-                // Obtener el próximo número para la serie
+                // Obtener el próximo número con bloqueo para evitar duplicados
+                // lockForUpdate() bloquea la fila en documentos_empresas hasta que termine la transacción
+                $docEmpresa = DB::table('documentos_empresas')
+                    ->where('id_empresa', $user->id_empresa)
+                    ->where('serie', $validated['serie'])
+                    ->lockForUpdate()
+                    ->first();
+
+                $numeroBase = $docEmpresa->numero ?? 0;
+
                 $ultimaVenta = Venta::where('id_empresa', $user->id_empresa)
                     ->where('serie', $validated['serie'])
                     ->max('numero') ?? 0;
-
-                // Consultar documentos_empresas como número base configurable
-                $numeroBase = DB::table('documentos_empresas')
-                    ->where('id_empresa', $user->id_empresa)
-                    ->where('serie', $validated['serie'])
-                    ->value('numero') ?? 0;
 
                 $proximoNumero = max($ultimaVenta, $numeroBase) + 1;
 
@@ -358,6 +369,22 @@ class VentasController extends Controller
                     ],
                 ], 201);
             });
+        } catch (\Illuminate\Database\QueryException $e) {
+                // Deadlock o duplicate entry: reintentar
+                if ($intento < $maxIntentos && (
+                    str_contains($e->getMessage(), 'Deadlock') ||
+                    str_contains($e->getMessage(), 'Duplicate entry')
+                )) {
+                    Log::warning("Venta: reintentando por concurrencia (intento {$intento})", [
+                        'serie' => $validated['serie'],
+                        'error' => $e->getMessage(),
+                    ]);
+                    usleep(100000 * $intento); // 100ms, 200ms, 300ms
+                    goto retry;
+                }
+                throw $e;
+            }
+
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -365,10 +392,15 @@ class VentasController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            Log::error('Error al crear venta: ' . $e->getMessage());
+            Log::error('Error al crear venta: ' . $e->getMessage(), [
+                'serie' => $validated['serie'] ?? '',
+                'id_tido' => $validated['id_tido'] ?? '',
+                'id_empresa' => $user->id_empresa ?? '',
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear la venta',
+                'message' => 'Error al crear la venta: ' . (config('app.debug') ? $e->getMessage() : 'Intente nuevamente'),
             ], 500);
         }
     }

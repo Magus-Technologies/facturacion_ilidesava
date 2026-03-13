@@ -43,17 +43,38 @@ export default function Login({ onLoginSuccess }) {
                 });
 
                 if (response.ok) {
-                    // Token válido, redirigir al dashboard
-                    window.location.href = "/inicio";
+                    // Iniciar sesión web (cookies) para que las rutas protegidas funcionen
+                    const loginResponse = await fetch("/api/login-session", {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            Accept: "application/json",
+                            "Content-Type": "application/json",
+                        },
+                    });
+
+                    if (loginResponse.ok) {
+                        window.location.href = "/inicio";
+                    } else {
+                        // No se pudo crear sesión, limpiar todo
+                        localStorage.removeItem("auth_token");
+                        localStorage.removeItem("user");
+                        localStorage.removeItem("empresa_activa");
+                        localStorage.removeItem("empresas");
+                    }
                 } else {
                     // Token inválido, limpiar localStorage
                     localStorage.removeItem("auth_token");
                     localStorage.removeItem("user");
+                    localStorage.removeItem("empresa_activa");
+                    localStorage.removeItem("empresas");
                 }
             } catch (error) {
                 console.error("Error verificando token:", error);
                 localStorage.removeItem("auth_token");
                 localStorage.removeItem("user");
+                localStorage.removeItem("empresa_activa");
+                localStorage.removeItem("empresas");
             }
         };
 

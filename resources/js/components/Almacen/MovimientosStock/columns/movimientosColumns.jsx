@@ -53,8 +53,8 @@ export const getMovimientosColumns = () => [
         id: "producto",
         header: "Producto",
         cell: ({ row }) => (
-            <div>
-                <p className="font-medium text-sm">{row.original.producto_nombre || "-"}</p>
+            <div className="max-w-[300px]">
+                <p className="font-medium text-sm line-clamp-2" title={row.original.producto_nombre}>{row.original.producto_nombre || "-"}</p>
                 <p className="text-xs text-gray-500">{row.original.producto_codigo || ""}</p>
             </div>
         ),

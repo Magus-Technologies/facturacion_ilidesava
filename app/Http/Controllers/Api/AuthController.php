@@ -204,6 +204,20 @@ class AuthController extends Controller
     }
 
     /**
+     * Crear sesión web a partir de un token API válido
+     * Resuelve el loop login cuando la sesión de cookies expira pero el token sigue válido
+     */
+    public function loginSession(Request $request)
+    {
+        \Illuminate\Support\Facades\Auth::login($request->user());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sesión web iniciada',
+        ]);
+    }
+
+    /**
      * Verificar si el token es válido
      */
     public function verify(Request $request)
