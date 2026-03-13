@@ -44,7 +44,7 @@ class VentaPdfController extends Controller
                 $logosEmpresas = Empresa::whereIn('id_empresa', $plantilla->logos_nota_venta)
                     ->whereNotNull('logo')
                     ->where('logo', '!=', '')
-                    ->get(['id_empresa', 'comercial', 'razon_social', 'logo']);
+                    ->get(['id_empresa', 'comercial', 'razon_social', 'ruc', 'logo']);
             }
 
             // Renderizar vista Blade a HTML

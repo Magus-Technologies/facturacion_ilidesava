@@ -179,6 +179,13 @@
                     <div style="border: 2px solid #bfc4cc; border-radius: 10px; overflow: hidden; width: 240px; float: right;">
                         <div style="text-align: center; padding: 8px 10px; font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; color: #000;">
                             R.U.C. {{ $venta->empresa->ruc ?? '' }}
+                            @if(!empty($logosEmpresas) && count($logosEmpresas) > 0)
+                                @foreach($logosEmpresas as $logoEmp)
+                                    @if(!empty($logoEmp->ruc))
+                                        <br>R.U.C. {{ $logoEmp->ruc }}
+                                    @endif
+                                @endforeach
+                            @endif
                         </div>
                         <div style="background: #bfc4cc; text-align: center; padding: 10px; font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; color: #000;">
                             {{ strtoupper($venta->tipoDocumento->nombre ?? 'VENTA') }}
