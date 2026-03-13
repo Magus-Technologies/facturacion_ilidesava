@@ -112,7 +112,7 @@
                                 @if(!$hasExtras)
                                     {{-- Sin extras: logo solo --}}
                                     @if($venta->empresa && $venta->empresa->logo && file_exists(public_path('storage/' . $venta->empresa->logo)))
-                                        <img src="{{ public_path('storage/' . $venta->empresa->logo) }}" alt="Logo" style="height: 110px; width: auto;">
+                                        <img src="storage/{{ $venta->empresa->logo }}" alt="Logo" style="height: 110px; width: auto;">
                                     @endif
                                 @else
                                     {{-- Con extras: logo principal + extras en grilla de 2 columnas --}}
@@ -120,15 +120,15 @@
                                         $allLogos = [];
                                         if ($venta->empresa && $venta->empresa->logo && file_exists(public_path('storage/' . $venta->empresa->logo))) {
                                             $allLogos[] = [
-                                                'path' => public_path('storage/' . $venta->empresa->logo),
-                                                'alt'  => 'Logo',
+                                                'src' => 'storage/' . $venta->empresa->logo,
+                                                'alt' => 'Logo',
                                             ];
                                         }
                                         foreach ($logosEmpresas as $logoEmp) {
                                             if ($logoEmp->logo && file_exists(public_path('storage/' . $logoEmp->logo))) {
                                                 $allLogos[] = [
-                                                    'path' => public_path('storage/' . $logoEmp->logo),
-                                                    'alt'  => $logoEmp->comercial ?? 'Logo',
+                                                    'src' => 'storage/' . $logoEmp->logo,
+                                                    'alt' => $logoEmp->comercial ?? 'Logo',
                                                 ];
                                             }
                                         }
@@ -140,7 +140,7 @@
                                             <tr>
                                                 @foreach($chunk as $logo)
                                                     <td style="vertical-align: middle; padding: 2px 4px;">
-                                                        <img src="{{ $logo['path'] }}" alt="{{ $logo['alt'] }}" style="height: {{ $lH }}px; width: auto;">
+                                                        <img src="{{ $logo['src'] }}" alt="{{ $logo['alt'] }}" style="height: {{ $lH }}px; width: auto;">
                                                     </td>
                                                 @endforeach
                                             </tr>
