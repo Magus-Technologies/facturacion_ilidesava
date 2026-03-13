@@ -190,13 +190,17 @@
         <!-- Conductor / Transportista -->
         <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 10px;">
             <tr>
+                @if($guia->mod_transporte === '02')
+                {{-- Transporte Privado: mostrar conductor/vehículo --}}
                 <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 8px 10px;">
                     <div class="section-title">CONDUCTOR / VEHICULO</div>
                     <table style="width: 100%; border-collapse: collapse;">
+                        @if($guia->conductor_licencia)
                         <tr>
                             <td class="label" style="padding-bottom: 3px; width: 45%;">LICENCIA DE CONDUCIR:</td>
-                            <td class="value" style="padding-bottom: 3px;">{{ $guia->conductor_licencia ?? '' }}</td>
+                            <td class="value" style="padding-bottom: 3px;">{{ $guia->conductor_licencia }}</td>
                         </tr>
+                        @endif
                         @if($guia->conductor_documento)
                         <tr>
                             <td class="label" style="padding-bottom: 3px;">DNI CONDUCTOR:</td>
@@ -213,10 +217,16 @@
                             <td class="value">{{ $guia->vehiculo_placa }}</td>
                         </tr>
                         @endif
+                        @if(!$guia->conductor_documento && !$guia->vehiculo_placa && !$guia->conductor_licencia)
+                        <tr>
+                            <td class="value" colspan="2" style="font-style: italic; color: #888;">Vehículo categoría M1/L</td>
+                        </tr>
+                        @endif
                     </table>
                 </td>
                 <td style="width: 4%;"></td>
-                <td style="width: 48%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 8px 10px;">
+                @endif
+                <td style="width: {{ $guia->mod_transporte === '01' ? '100' : '48' }}%; vertical-align: top; border: 1px solid #777; border-radius: 10px; padding: 8px 10px;">
                     <div class="section-title">TRANSPORTISTA</div>
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
@@ -227,10 +237,12 @@
                             <td class="label" style="padding-bottom: 3px;">RUC/DNI TRANSPORTISTA:</td>
                             <td class="value" style="padding-bottom: 3px;">{{ $guia->transportista_documento ?? '' }}</td>
                         </tr>
+                        @if($guia->transportista_nro_mtc)
                         <tr>
                             <td class="label">N° REGISTRO DEL MTC:</td>
-                            <td class="value">{{ $guia->transportista_nro_mtc ?? '' }}</td>
+                            <td class="value">{{ $guia->transportista_nro_mtc }}</td>
                         </tr>
+                        @endif
                     </table>
                 </td>
             </tr>
@@ -254,7 +266,7 @@
         <!-- Traslado en vehiculos M1 o L -->
         <div style="font-size: 8pt; margin-bottom: 8px;">
             <span class="label">TRASLADO EN VEHICULOS DE CATEGORÍA M1 O L:</span>
-            <span class="value" style="margin-left: 5px;">No</span>
+            <span class="value" style="margin-left: 5px;">{{ $guia->vehiculo_m1l ? 'Sí' : 'No' }}</span>
         </div>
 
         <!-- Items Table -->
