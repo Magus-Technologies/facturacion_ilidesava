@@ -52,9 +52,13 @@ class VentaPdfController extends Controller
 
             // Crear PDF con Dompdf
             $options = new Options();
-            $options->set('isRemoteEnabled', true);
+            $options->set('isRemoteEnabled', false);
             $options->set('isHtml5ParserEnabled', true);
-            $options->set('tempDir', storage_path('app/mpdf'));
+            $options->set('tempDir', storage_path('app/dompdf'));
+            $options->set('fontDir', storage_path('app/dompdf/fonts'));
+            $options->set('fontCache', storage_path('app/dompdf/fonts'));
+            $options->set('defaultFont', 'Arial');
+            $options->set('isFontSubsettingEnabled', true);
 
             $dompdf = new Dompdf($options);
             $dompdf->loadHtml($html);
