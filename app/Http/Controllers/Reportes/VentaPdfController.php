@@ -19,6 +19,30 @@ class VentaPdfController extends Controller
     public function generarA4($id)
     {
         try {
+            // Verificar si hay PDF cacheado (válido si el archivo es más reciente que la venta)
+            $cachePath = storage_path("app/pdf-cache/venta-a4-{$id}.pdf");
+            if (file_exists($cachePath) && !request()->has('nocache')) {
+                $venta = Venta::with(['tipoDocumento'])->findOrFail($id);
+                $cacheTime = filemtime($cachePath);
+                $ventaTime = $venta->updated_at ? $venta->updated_at->timestamp : 0;
+                // También verificar plantilla
+                $plantillaTime = 0;
+                if ($venta->id_empresa) {
+                    $plt = PlantillaImpresion::where('empresa_id', $venta->id_empresa)->first();
+                    $plantillaTime = $plt && $plt->updated_at ? $plt->updated_at->timestamp : 0;
+                }
+                if ($cacheTime > $ventaTime && $cacheTime > $plantillaTime) {
+                    $filename = ($venta->tipoDocumento->nombre ?? 'Venta') .
+                        "-" . $venta->serie .
+                        "-" . str_pad($venta->numero, 6, "0", STR_PAD_LEFT) .
+                        ".pdf";
+                    return response(file_get_contents($cachePath), 200, [
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => 'inline; filename="' . $filename . '"',
+                    ]);
+                }
+            }
+
             $venta = Venta::with([
                 "cliente",
                 "tipoDocumento",
@@ -61,12 +85,21 @@ class VentaPdfController extends Controller
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
 
+            $pdfOutput = $dompdf->output();
+
+            // Guardar en caché
+            $cacheDir = storage_path('app/pdf-cache');
+            if (!is_dir($cacheDir)) {
+                mkdir($cacheDir, 0755, true);
+            }
+            file_put_contents($cachePath, $pdfOutput);
+
             $filename = $venta->tipoDocumento->nombre .
                 "-" . $venta->serie .
                 "-" . str_pad($venta->numero, 6, "0", STR_PAD_LEFT) .
                 ".pdf";
 
-            return response($dompdf->output(), 200, [
+            return response($pdfOutput, 200, [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="' . $filename . '"',
             ]);
@@ -150,6 +183,17 @@ class VentaPdfController extends Controller
                 "error" => $e->getMessage(),
                 "trace" => config('app.debug') ? $e->getTrace() : null
             ], 500);
+        }
+    }
+
+    /**
+     * Eliminar PDF cacheado de una venta (llamar cuando se edita la venta)
+     */
+    public static function invalidarCache(int $ventaId): void
+    {
+        $path = storage_path("app/pdf-cache/venta-a4-{$ventaId}.pdf");
+        if (file_exists($path)) {
+            unlink($path);
         }
     }
 }

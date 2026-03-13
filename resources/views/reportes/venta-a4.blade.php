@@ -112,32 +112,22 @@
                                 @if(!$hasExtras)
                                     {{-- Sin extras: logo solo --}}
                                     @if($venta->empresa && $venta->empresa->logo && file_exists(public_path('storage/' . $venta->empresa->logo)))
-                                        @php
-                                            $logoPath = public_path('storage/' . $venta->empresa->logo);
-                                            $logoData = base64_encode(file_get_contents($logoPath));
-                                            $logoMime = mime_content_type($logoPath);
-                                        @endphp
-                                        <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="height: 110px; width: auto;">
+                                        <img src="{{ public_path('storage/' . $venta->empresa->logo) }}" alt="Logo" style="height: 110px; width: auto;">
                                     @endif
                                 @else
                                     {{-- Con extras: logo principal + extras en grilla de 2 columnas --}}
                                     @php
-                                        // Juntar logo principal + extras en un solo array de imágenes base64
                                         $allLogos = [];
                                         if ($venta->empresa && $venta->empresa->logo && file_exists(public_path('storage/' . $venta->empresa->logo))) {
-                                            $logoPath = public_path('storage/' . $venta->empresa->logo);
                                             $allLogos[] = [
-                                                'data' => base64_encode(file_get_contents($logoPath)),
-                                                'mime' => mime_content_type($logoPath),
+                                                'path' => public_path('storage/' . $venta->empresa->logo),
                                                 'alt'  => 'Logo',
                                             ];
                                         }
                                         foreach ($logosEmpresas as $logoEmp) {
                                             if ($logoEmp->logo && file_exists(public_path('storage/' . $logoEmp->logo))) {
-                                                $lPath = public_path('storage/' . $logoEmp->logo);
                                                 $allLogos[] = [
-                                                    'data' => base64_encode(file_get_contents($lPath)),
-                                                    'mime' => mime_content_type($lPath),
+                                                    'path' => public_path('storage/' . $logoEmp->logo),
                                                     'alt'  => $logoEmp->comercial ?? 'Logo',
                                                 ];
                                             }
@@ -150,7 +140,7 @@
                                             <tr>
                                                 @foreach($chunk as $logo)
                                                     <td style="vertical-align: middle; padding: 2px 4px;">
-                                                        <img src="data:{{ $logo['mime'] }};base64,{{ $logo['data'] }}" alt="{{ $logo['alt'] }}" style="height: {{ $lH }}px; width: auto;">
+                                                        <img src="{{ $logo['path'] }}" alt="{{ $logo['alt'] }}" style="height: {{ $lH }}px; width: auto;">
                                                     </td>
                                                 @endforeach
                                             </tr>
