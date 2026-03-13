@@ -137,40 +137,40 @@ Route::middleware('auth')->group(function () {
         return view('notaCredito.nota-credito-add');
     })->name('nota-credito.add');
 
-    // --- REPORTES Y EXPORTACIONES ---
-
-    // PDFs de ventas
-    Route::get('/reporteNV/ticket.php', function (Request $request) {
-        return app(\App\Http\Controllers\Reportes\VentaPdfController::class)->generarTicket($request->get('id'));
-    });
-    Route::get('/reporteNV/a4.php', function (Request $request) {
-        return app(\App\Http\Controllers\Reportes\VentaPdfController::class)->generarA4($request->get('id'));
-    });
-
-    // PDFs de compras
-    Route::get('/reporteOC/ticket.php', function (Request $request) {
-        return app(\App\Http\Controllers\Reportes\CompraPdfController::class)->generarTicket($request->get('id'));
-    });
-    Route::get('/reporteOC/a4.php', function (Request $request) {
-        return app(\App\Http\Controllers\Reportes\CompraPdfController::class)->generarA4($request->get('id'));
-    });
-
-    // PDFs de cotizaciones
-    Route::get('/reporteCOT/ticket.php', function (Request $request) {
-        return app(\App\Http\Controllers\Reportes\CotizacionPdfController::class)->generarTicket($request->get('id'));
-    });
-    Route::get('/reporteCOT/a4.php', function (Request $request) {
-        return app(\App\Http\Controllers\Reportes\CotizacionPdfController::class)->generarA4($request->get('id'));
-    });
-
-    // Exportaciones Excel/PDF
+    // Exportaciones Excel/PDF (requieren auth)
     Route::get('compras/descargar-excel', [\App\Http\Controllers\Exports\CompraExportController::class, 'exportExcel']);
     Route::get('compras/descargar-pdf', [\App\Http\Controllers\Exports\CompraExportController::class, 'exportPdf']);
     Route::get('proveedores/descargar-excel', [\App\Http\Controllers\Exports\ProveedorExportController::class, 'exportExcel']);
     Route::get('proveedores/descargar-pdf', [\App\Http\Controllers\Exports\ProveedorExportController::class, 'exportPdf']);
+});
 
-    // PDFs de guías de remisión
-    Route::get('/reporteGR/a4.php', function (Request $request) {
-        return app(\App\Http\Controllers\Reportes\GuiaRemisionPdfController::class)->generarA4($request->get('id'));
-    });
+// --- REPORTES PDF PÚBLICOS (accesibles sin login para clientes) ---
+
+// PDFs de ventas
+Route::get('/reporteNV/ticket.php', function (Request $request) {
+    return app(\App\Http\Controllers\Reportes\VentaPdfController::class)->generarTicket($request->get('id'));
+});
+Route::get('/reporteNV/a4.php', function (Request $request) {
+    return app(\App\Http\Controllers\Reportes\VentaPdfController::class)->generarA4($request->get('id'));
+});
+
+// PDFs de compras
+Route::get('/reporteOC/ticket.php', function (Request $request) {
+    return app(\App\Http\Controllers\Reportes\CompraPdfController::class)->generarTicket($request->get('id'));
+});
+Route::get('/reporteOC/a4.php', function (Request $request) {
+    return app(\App\Http\Controllers\Reportes\CompraPdfController::class)->generarA4($request->get('id'));
+});
+
+// PDFs de cotizaciones
+Route::get('/reporteCOT/ticket.php', function (Request $request) {
+    return app(\App\Http\Controllers\Reportes\CotizacionPdfController::class)->generarTicket($request->get('id'));
+});
+Route::get('/reporteCOT/a4.php', function (Request $request) {
+    return app(\App\Http\Controllers\Reportes\CotizacionPdfController::class)->generarA4($request->get('id'));
+});
+
+// PDFs de guías de remisión
+Route::get('/reporteGR/a4.php', function (Request $request) {
+    return app(\App\Http\Controllers\Reportes\GuiaRemisionPdfController::class)->generarA4($request->get('id'));
 });
