@@ -184,12 +184,40 @@ class GuiaRemisionController extends Controller
 
                 $resultado = $this->sunatService->generarGuiaRemisionXml($guia);
 
+                // Enviar automáticamente a SUNAT después de generar el XML
+                $envio = null;
+                $ticket = null;
+                if ($resultado['success'] ?? false) {
+                    try {
+                        $guia->refresh();
+                        $envio = $this->sunatService->enviarGuiaRemision($guia);
+
+                        // Si el envío fue exitoso y hay ticket, consultar automáticamente
+                        if (($envio['success'] ?? false) && $guia->ticket) {
+                            sleep(2); // Esperar un momento para que SUNAT procese
+                            try {
+                                $ticket = $this->sunatService->consultarTicketGuia($guia);
+                            } catch (\Exception $e) {
+                                $ticket = ['success' => false, 'en_proceso' => true, 'message' => 'Enviado, pero la consulta del ticket está en proceso.'];
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('SUNAT - No se pudo enviar guía automáticamente', [
+                            'guia' => $guia->serie . '-' . $guia->numero,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $envio = ['success' => false, 'message' => 'XML generado pero no se pudo enviar: ' . $e->getMessage()];
+                    }
+                }
+
                 $guia->load(['detalles']);
 
                 return response()->json([
                     'success' => true,
                     'data' => $guia,
                     'xml' => $resultado,
+                    'envio' => $envio,
+                    'ticket' => $ticket,
                 ], 201);
             });
         } catch (\Exception $e) {
