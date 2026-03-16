@@ -17,16 +17,31 @@ export const useSunat = (fetchVentas) => {
         return resultado;
     };
 
-    const handleEnviarSunat = async (venta) => {
-        const resultado = await enviarSunat(venta.id_venta);
-
-        if (resultado.success) {
-            toast.success(`Enviado a SUNAT: ${resultado.mensaje || 'Aceptado'}`);
-            if (fetchVentas) fetchVentas();
-        } else {
-            toast.error(resultado.message || 'Error al enviar a SUNAT');
+    const mostrarResultadoSunat = (resultado) => {
+        if (!resultado.success) {
+            const codigo = resultado.codigo || '';
+            if (codigo === 'HTTP' || codigo === 'SOAP' || codigo === 'ERROR') {
+                toast.error('Los servidores de SUNAT no están disponibles en este momento. Intente nuevamente en unos minutos.');
+            } else {
+                toast.error(resultado.message || 'Error al enviar a SUNAT');
+            }
+            return;
         }
 
+        const mensaje = resultado.mensaje || '';
+        const tieneObservaciones = mensaje.includes('Detalle:') || mensaje.includes('error:') || (resultado.codigo && String(resultado.codigo) !== '0');
+
+        if (tieneObservaciones) {
+            toast.warning(`Comprobante aceptado por SUNAT con observaciones.\n\nSe recomienda revisar los datos del comprobante.`, 'Aceptado con observaciones');
+        } else {
+            toast.success('Comprobante enviado y aceptado por SUNAT correctamente.');
+        }
+    };
+
+    const handleEnviarSunat = async (venta) => {
+        const resultado = await enviarSunat(venta.id_venta);
+        mostrarResultadoSunat(resultado);
+        if (resultado.success && fetchVentas) fetchVentas();
         return resultado;
     };
 
@@ -38,13 +53,8 @@ export const useSunat = (fetchVentas) => {
         }
 
         const envioResult = await enviarSunat(venta.id_venta);
-        if (envioResult.success) {
-            toast.success(`Enviado a SUNAT: ${envioResult.mensaje || 'Aceptado'}`);
-            if (fetchVentas) fetchVentas();
-        } else {
-            toast.error(envioResult.message || 'Error al enviar a SUNAT');
-        }
-
+        mostrarResultadoSunat(envioResult);
+        if (envioResult.success && fetchVentas) fetchVentas();
         return envioResult;
     };
 

@@ -269,7 +269,46 @@ class SunatService
         $nombreArchivo = pathinfo($xmlPath, PATHINFO_FILENAME);
 
         $see = $this->getSee($empresa);
-        $result = $see->sendXml(Invoice::class, $nombreArchivo, $xmlContent);
+
+        Log::info('SUNAT - Enviando comprobante', [
+            'venta' => $venta->serie . '-' . $venta->numero,
+            'archivo' => $nombreArchivo,
+            'endpoint' => $this->getEndpoint($empresa),
+            'modo' => $empresa->modo,
+        ]);
+
+        try {
+            $result = $see->sendXml(Invoice::class, $nombreArchivo, $xmlContent);
+        } catch (\SoapFault $e) {
+            Log::error('SUNAT - SoapFault al enviar comprobante', [
+                'venta' => $venta->serie . '-' . $venta->numero,
+                'faultcode' => $e->faultcode ?? null,
+                'faultstring' => $e->faultstring ?? null,
+                'message' => $e->getMessage(),
+                'detail' => $e->detail ?? null,
+            ]);
+            $venta->update([
+                'estado_sunat' => '3',
+                'codigo_sunat' => 'SOAP',
+                'mensaje_sunat' => $e->getMessage(),
+                'intentos' => ($venta->intentos ?? 0) + 1,
+            ]);
+            return ['success' => false, 'codigo' => 'SOAP', 'message' => $e->getMessage()];
+        } catch (\Exception $e) {
+            Log::error('SUNAT - Excepción al enviar comprobante', [
+                'venta' => $venta->serie . '-' . $venta->numero,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $venta->update([
+                'estado_sunat' => '3',
+                'codigo_sunat' => 'ERROR',
+                'mensaje_sunat' => $e->getMessage(),
+                'intentos' => ($venta->intentos ?? 0) + 1,
+            ]);
+            return ['success' => false, 'codigo' => 'ERROR', 'message' => $e->getMessage()];
+        }
 
         if ($result->isSuccess()) {
             $cdr = $result->getCdrResponse();
@@ -289,6 +328,12 @@ class SunatService
                 'mensaje_sunat' => $cdr->getDescription(),
             ]);
 
+            Log::info('SUNAT - Comprobante aceptado', [
+                'venta' => $venta->serie . '-' . $venta->numero,
+                'codigo' => $cdr->getCode(),
+                'mensaje' => $cdr->getDescription(),
+            ]);
+
             return [
                 'success' => true,
                 'codigo' => $cdr->getCode(),
@@ -302,6 +347,8 @@ class SunatService
             'venta' => $venta->serie . '-' . $venta->numero,
             'codigo' => $error->getCode(),
             'mensaje' => $error->getMessage(),
+            'endpoint' => $this->getEndpoint($empresa),
+            'modo' => $empresa->modo,
         ]);
         $venta->update([
             'estado_sunat' => '3',
@@ -393,7 +440,27 @@ class SunatService
 
         $xmlContent = file_get_contents($xmlPath);
         $see = $this->getSee($empresa);
-        $result = $see->sendXml(Note::class, $nota->nombre_xml, $xmlContent);
+
+        try {
+            $result = $see->sendXml(Note::class, $nota->nombre_xml, $xmlContent);
+        } catch (\SoapFault $e) {
+            Log::error('SUNAT - SoapFault al enviar nota de crédito', [
+                'nota' => $nota->serie . '-' . $nota->numero,
+                'faultcode' => $e->faultcode ?? null,
+                'faultstring' => $e->faultstring ?? null,
+                'message' => $e->getMessage(),
+            ]);
+            $nota->update(['estado' => 'rechazado', 'codigo_sunat' => 'SOAP', 'mensaje_sunat' => $e->getMessage()]);
+            return ['success' => false, 'codigo' => 'SOAP', 'message' => 'Error de conexión con SUNAT: ' . $e->getMessage()];
+        } catch (\Exception $e) {
+            Log::error('SUNAT - Excepción al enviar nota de crédito', [
+                'nota' => $nota->serie . '-' . $nota->numero,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
+            $nota->update(['estado' => 'rechazado', 'codigo_sunat' => 'ERROR', 'mensaje_sunat' => $e->getMessage()]);
+            return ['success' => false, 'codigo' => 'ERROR', 'message' => $e->getMessage()];
+        }
 
         if ($result->isSuccess()) {
             $cdr = $result->getCdrResponse();
@@ -430,6 +497,7 @@ class SunatService
             'nota' => $nota->serie . '-' . $nota->numero,
             'codigo' => $error->getCode(),
             'mensaje' => $error->getMessage(),
+            'endpoint' => $this->getEndpoint($empresa),
         ]);
         $nota->update([
             'estado' => 'rechazado',
@@ -520,7 +588,27 @@ class SunatService
 
         $xmlContent = file_get_contents($xmlPath);
         $see = $this->getSee($empresa);
-        $result = $see->sendXml(Note::class, $nota->nombre_xml, $xmlContent);
+
+        try {
+            $result = $see->sendXml(Note::class, $nota->nombre_xml, $xmlContent);
+        } catch (\SoapFault $e) {
+            Log::error('SUNAT - SoapFault al enviar nota de débito', [
+                'nota' => $nota->serie . '-' . $nota->numero,
+                'faultcode' => $e->faultcode ?? null,
+                'faultstring' => $e->faultstring ?? null,
+                'message' => $e->getMessage(),
+            ]);
+            $nota->update(['estado' => 'rechazado', 'codigo_sunat' => 'SOAP', 'mensaje_sunat' => $e->getMessage()]);
+            return ['success' => false, 'codigo' => 'SOAP', 'message' => 'Error de conexión con SUNAT: ' . $e->getMessage()];
+        } catch (\Exception $e) {
+            Log::error('SUNAT - Excepción al enviar nota de débito', [
+                'nota' => $nota->serie . '-' . $nota->numero,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
+            $nota->update(['estado' => 'rechazado', 'codigo_sunat' => 'ERROR', 'mensaje_sunat' => $e->getMessage()]);
+            return ['success' => false, 'codigo' => 'ERROR', 'message' => $e->getMessage()];
+        }
 
         if ($result->isSuccess()) {
             $cdr = $result->getCdrResponse();
@@ -551,6 +639,7 @@ class SunatService
             'nota' => $nota->serie . '-' . $nota->numero,
             'codigo' => $error->getCode(),
             'mensaje' => $error->getMessage(),
+            'endpoint' => $this->getEndpoint($empresa),
         ]);
         $nota->update([
             'estado' => 'rechazado',
