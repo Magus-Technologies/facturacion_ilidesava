@@ -91,7 +91,13 @@ export const useGuiasRemision = () => {
             });
             const data = await res.json();
 
-            if (data.success) {
+            if (data.success && data.estado === 'aceptado') {
+                toast.success(data.message || 'Guía aceptada por SUNAT');
+                fetchGuias();
+            } else if (data.success && data.en_proceso) {
+                toast.info(data.message || 'Enviada. SUNAT aún está procesando.', 'En proceso');
+                fetchGuias();
+            } else if (data.success) {
                 toast.success(data.message || 'Guía enviada a SUNAT');
                 fetchGuias();
             } else {

@@ -246,6 +246,48 @@ class GuiaRemisionController extends Controller
 
         try {
             $resultado = $this->sunatService->enviarGuiaRemision($guia);
+
+            // Si el envío fue exitoso y hay ticket, consultar automáticamente
+            if (($resultado['success'] ?? false) && $guia->fresh()->ticket) {
+                sleep(2);
+                try {
+                    $guia->refresh();
+                    $ticketResult = $this->sunatService->consultarTicketGuia($guia);
+
+                    if ($ticketResult['success'] ?? false) {
+                        return response()->json([
+                            'success' => true,
+                            'message' => $ticketResult['mensaje'] ?? 'Guía aceptada por SUNAT',
+                            'estado' => 'aceptado',
+                        ]);
+                    } elseif ($ticketResult['en_proceso'] ?? false) {
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'Guía enviada. SUNAT aún está procesando, consulte el ticket en unos momentos.',
+                            'estado' => 'enviado',
+                            'en_proceso' => true,
+                        ]);
+                    } else {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $ticketResult['message'] ?? 'Guía rechazada por SUNAT',
+                            'estado' => 'rechazado',
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('SUNAT - Guía enviada pero falló consulta de ticket', [
+                        'guia' => $guia->serie . '-' . $guia->numero,
+                        'error' => $e->getMessage(),
+                    ]);
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Guía enviada a SUNAT. Consulte el ticket para confirmar el estado.',
+                        'estado' => 'enviado',
+                        'en_proceso' => true,
+                    ]);
+                }
+            }
+
             return response()->json($resultado);
         } catch (\Exception $e) {
             Log::error('SUNAT - Error al enviar guía de remisión', [
