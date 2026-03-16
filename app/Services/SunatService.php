@@ -173,7 +173,7 @@ class SunatService
         $apliIgv = (float) $venta->igv > 0;
 
         $montoGravada = $apliIgv ? round($total / ($igvRate + 1), 2) : 0;
-        $igvMonto = $apliIgv ? round($total / ($igvRate + 1) * $igvRate, 2) : 0;
+        $igvMonto = $apliIgv ? round($total - $montoGravada, 2) : 0;
         $impVenta = round($total, 2);
 
         $invoice = new Invoice();
@@ -329,7 +329,7 @@ class SunatService
 
         $total = (float) $nota->monto_total;
         $montoGravada = round($total / ($igvRate + 1), 2);
-        $igvMonto = round($total / ($igvRate + 1) * $igvRate, 2);
+        $igvMonto = round($total - $montoGravada, 2);
 
         $note = new Note();
         $note->setUblVersion('2.1')
@@ -456,7 +456,7 @@ class SunatService
 
         $total = (float) $nota->monto_total;
         $montoGravada = round($total / ($igvRate + 1), 2);
-        $igvMonto = round($total / ($igvRate + 1) * $igvRate, 2);
+        $igvMonto = round($total - $montoGravada, 2);
 
         $note = new Note();
         $note->setUblVersion('2.1')
@@ -872,9 +872,10 @@ class SunatService
                 ->setCantidad($cantidad);
 
             if ($apliIgv) {
-                $valorUnitario = round($precio / ($igvRate + 1), 2);
-                $valorVenta = round($precio * $cantidad / ($igvRate + 1), 2);
-                $igvItem = round($precio * $cantidad / ($igvRate + 1) * $igvRate, 2);
+                $valorUnitario = round($precio / ($igvRate + 1), 10);
+                $valorVenta = round($valorUnitario * $cantidad, 2);
+                $valorUnitario = round($valorUnitario, 2);
+                $igvItem = round($valorVenta * $igvRate, 2);
 
                 $detail->setMtoValorUnitario($valorUnitario)
                     ->setMtoValorVenta($valorVenta)
@@ -908,9 +909,10 @@ class SunatService
         foreach ($venta->productosVentas as $item) {
             $precio = (float) $item->precio_unitario;
             $cantidad = (float) $item->cantidad;
-            $valorUnitario = round($precio / ($igvRate + 1), 2);
-            $valorVenta = round($precio * $cantidad / ($igvRate + 1), 2);
-            $igvItem = round($precio * $cantidad / ($igvRate + 1) * $igvRate, 2);
+            $valorUnitario = round($precio / ($igvRate + 1), 10);
+            $valorVenta = round($valorUnitario * $cantidad, 2);
+            $valorUnitario = round($valorUnitario, 2);
+            $igvItem = round($valorVenta * $igvRate, 2);
 
             $detail = new SaleDetail();
             $detail->setCodProducto($item->codigo_producto ?? 'P001')
@@ -1036,7 +1038,7 @@ class SunatService
             $apliIgv = (float) $venta->igv > 0;
 
             $montoGravada = $apliIgv ? round($total / ($igvRate + 1), 2) : 0;
-            $igvMonto = $apliIgv ? round($total / ($igvRate + 1) * $igvRate, 2) : 0;
+            $igvMonto = $apliIgv ? round($total - $montoGravada, 2) : 0;
             $montoExonerada = $apliIgv ? 0 : $total;
 
             $cliente = $venta->cliente;
