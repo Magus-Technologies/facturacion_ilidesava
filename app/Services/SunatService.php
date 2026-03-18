@@ -172,9 +172,19 @@ class SunatService
         $total = (float) $venta->total;
         $apliIgv = (float) $venta->igv > 0;
 
-        $montoGravada = $apliIgv ? round($total / ($igvRate + 1), 2) : 0;
-        $igvMonto = $apliIgv ? round($total - $montoGravada, 2) : 0;
-        $impVenta = round($total, 2);
+        // Primero construir detalles para sumar desde las líneas (evita inconsistencias de redondeo)
+        $details = $this->buildSaleDetails($venta, $igvRate, $apliIgv);
+
+        // Calcular totales sumando desde las líneas para que coincidan exactamente
+        $montoGravada = 0;
+        $igvMonto = 0;
+        foreach ($details as $detail) {
+            $montoGravada += $detail->getMtoValorVenta();
+            $igvMonto += $detail->getIgv();
+        }
+        $montoGravada = round($montoGravada, 2);
+        $igvMonto = round($igvMonto, 2);
+        $impVenta = round($montoGravada + $igvMonto, 2);
 
         $invoice = new Invoice();
         $invoice->setUblVersion('2.1')
@@ -220,7 +230,6 @@ class SunatService
             $invoice->setCuotas($cuotasGreenter);
         }
 
-        $details = $this->buildSaleDetails($venta, $igvRate, $apliIgv);
         $invoice->setDetails($details);
 
         $invoice->setLegends([
@@ -375,8 +384,19 @@ class SunatService
         $client = $this->buildClient($cliente);
 
         $total = (float) $nota->monto_total;
-        $montoGravada = round($total / ($igvRate + 1), 2);
-        $igvMonto = round($total - $montoGravada, 2);
+
+        // Construir detalles primero y sumar desde las líneas para consistencia
+        $details = $this->buildSaleDetailsFromVenta($nota->venta, $igvRate);
+
+        $montoGravada = 0;
+        $igvMonto = 0;
+        foreach ($details as $detail) {
+            $montoGravada += $detail->getMtoValorVenta();
+            $igvMonto += $detail->getIgv();
+        }
+        $montoGravada = round($montoGravada, 2);
+        $igvMonto = round($igvMonto, 2);
+        $impVenta = round($montoGravada + $igvMonto, 2);
 
         $note = new Note();
         $note->setUblVersion('2.1')
@@ -394,9 +414,8 @@ class SunatService
             ->setMtoOperGravadas($montoGravada)
             ->setMtoIGV($igvMonto)
             ->setTotalImpuestos($igvMonto)
-            ->setMtoImpVenta(round($total, 2));
+            ->setMtoImpVenta($impVenta);
 
-        $details = $this->buildSaleDetailsFromVenta($nota->venta, $igvRate);
         $note->setDetails($details);
 
         $note->setLegends([
@@ -523,8 +542,19 @@ class SunatService
         $client = $this->buildClient($cliente);
 
         $total = (float) $nota->monto_total;
-        $montoGravada = round($total / ($igvRate + 1), 2);
-        $igvMonto = round($total - $montoGravada, 2);
+
+        // Construir detalles primero y sumar desde las líneas para consistencia
+        $details = $this->buildSaleDetailsFromVenta($nota->venta, $igvRate);
+
+        $montoGravada = 0;
+        $igvMonto = 0;
+        foreach ($details as $detail) {
+            $montoGravada += $detail->getMtoValorVenta();
+            $igvMonto += $detail->getIgv();
+        }
+        $montoGravada = round($montoGravada, 2);
+        $igvMonto = round($igvMonto, 2);
+        $impVenta = round($montoGravada + $igvMonto, 2);
 
         $note = new Note();
         $note->setUblVersion('2.1')
@@ -542,9 +572,8 @@ class SunatService
             ->setMtoOperGravadas($montoGravada)
             ->setMtoIGV($igvMonto)
             ->setTotalImpuestos($igvMonto)
-            ->setMtoImpVenta(round($total, 2));
+            ->setMtoImpVenta($impVenta);
 
-        $details = $this->buildSaleDetailsFromVenta($nota->venta, $igvRate);
         $note->setDetails($details);
 
         $note->setLegends([
@@ -961,9 +990,9 @@ class SunatService
                 ->setCantidad($cantidad);
 
             if ($apliIgv) {
+                // Mantener 10 decimales en valor unitario para que cantidad × valorUnitario ≈ valorVenta
                 $valorUnitario = round($precio / ($igvRate + 1), 10);
                 $valorVenta = round($valorUnitario * $cantidad, 2);
-                $valorUnitario = round($valorUnitario, 2);
                 $igvItem = round($valorVenta * $igvRate, 2);
 
                 $detail->setMtoValorUnitario($valorUnitario)
@@ -1000,7 +1029,6 @@ class SunatService
             $cantidad = (float) $item->cantidad;
             $valorUnitario = round($precio / ($igvRate + 1), 10);
             $valorVenta = round($valorUnitario * $cantidad, 2);
-            $valorUnitario = round($valorUnitario, 2);
             $igvItem = round($valorVenta * $igvRate, 2);
 
             $detail = new SaleDetail();
