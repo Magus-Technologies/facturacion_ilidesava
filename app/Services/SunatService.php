@@ -197,8 +197,11 @@ class SunatService
 
             if ($diffVenta != 0 || $diffIgv != 0) {
                 $lastDetail = $details[count($details) - 1];
-                $lastDetail->setMtoValorVenta(round($lastDetail->getMtoValorVenta() + $diffVenta, 2));
-                $lastDetail->setMtoBaseIgv(round($lastDetail->getMtoBaseIgv() + $diffVenta, 2));
+                $newValorVenta = round($lastDetail->getMtoValorVenta() + $diffVenta, 2);
+                $lastDetail->setMtoValorVenta($newValorVenta);
+                $lastDetail->setMtoBaseIgv($newValorVenta);
+                // Recalcular valorUnitario para que cantidad × valorUnitario ≈ valorVenta ajustado
+                $lastDetail->setMtoValorUnitario(round($newValorVenta / $lastDetail->getCantidad(), 10));
                 $lastDetail->setIgv(round($lastDetail->getIgv() + $diffIgv, 2));
                 $lastDetail->setTotalImpuestos(round($lastDetail->getIgv(), 2));
             }
@@ -450,8 +453,11 @@ class SunatService
             $diffIgv = round($igvMonto - round($sumaIgv, 2), 2);
             if ($diffVenta != 0 || $diffIgv != 0) {
                 $lastDetail = $details[count($details) - 1];
-                $lastDetail->setMtoValorVenta(round($lastDetail->getMtoValorVenta() + $diffVenta, 2));
-                $lastDetail->setMtoBaseIgv(round($lastDetail->getMtoBaseIgv() + $diffVenta, 2));
+                $newValorVenta = round($lastDetail->getMtoValorVenta() + $diffVenta, 2);
+                $lastDetail->setMtoValorVenta($newValorVenta);
+                $lastDetail->setMtoBaseIgv($newValorVenta);
+                // Recalcular valorUnitario para que cantidad × valorUnitario ≈ valorVenta ajustado
+                $lastDetail->setMtoValorUnitario(round($newValorVenta / $lastDetail->getCantidad(), 10));
                 $lastDetail->setIgv(round($lastDetail->getIgv() + $diffIgv, 2));
                 $lastDetail->setTotalImpuestos(round($lastDetail->getIgv(), 2));
             }
@@ -618,8 +624,11 @@ class SunatService
             $diffIgv = round($igvMonto - round($sumaIgv, 2), 2);
             if ($diffVenta != 0 || $diffIgv != 0) {
                 $lastDetail = $details[count($details) - 1];
-                $lastDetail->setMtoValorVenta(round($lastDetail->getMtoValorVenta() + $diffVenta, 2));
-                $lastDetail->setMtoBaseIgv(round($lastDetail->getMtoBaseIgv() + $diffVenta, 2));
+                $newValorVenta = round($lastDetail->getMtoValorVenta() + $diffVenta, 2);
+                $lastDetail->setMtoValorVenta($newValorVenta);
+                $lastDetail->setMtoBaseIgv($newValorVenta);
+                // Recalcular valorUnitario para que cantidad × valorUnitario ≈ valorVenta ajustado
+                $lastDetail->setMtoValorUnitario(round($newValorVenta / $lastDetail->getCantidad(), 10));
                 $lastDetail->setIgv(round($lastDetail->getIgv() + $diffIgv, 2));
                 $lastDetail->setTotalImpuestos(round($lastDetail->getIgv(), 2));
             }
