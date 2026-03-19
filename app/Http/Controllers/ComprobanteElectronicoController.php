@@ -44,16 +44,29 @@ class ComprobanteElectronicoController extends Controller
 
     public function enviar(int $ventaId): JsonResponse
     {
-        $venta = Venta::with(['empresa', 'tipoDocumento'])->findOrFail($ventaId);
-
-        if (!$venta->xml_url && !$venta->hash_cpe) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Primero debe generar el XML del comprobante.',
-            ], 422);
-        }
+        $venta = Venta::with(['empresa', 'cliente', 'productosVentas', 'tipoDocumento'])->findOrFail($ventaId);
 
         try {
+            // Regenerar XML si fue rechazado o tiene error, para aplicar correcciones de cálculo
+            if (in_array($venta->estado_sunat, ['3', null, ''])) {
+                $xmlResult = $this->sunatService->generarXml($venta);
+                if ($xmlResult['success']) {
+                    $venta->update([
+                        'hash_cpe' => $xmlResult['hash'],
+                        'xml_url' => $xmlResult['xml_url'],
+                        'nombre_xml' => $xmlResult['nombre_archivo'],
+                    ]);
+                    $venta->refresh();
+                }
+            }
+
+            if (!$venta->xml_url && !$venta->hash_cpe) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo generar el XML del comprobante.',
+                ], 422);
+            }
+
             $resultado = $this->sunatService->enviarComprobante($venta);
             return response()->json($resultado);
         } catch (\Exception $e) {

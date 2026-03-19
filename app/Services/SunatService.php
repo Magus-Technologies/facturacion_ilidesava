@@ -172,19 +172,37 @@ class SunatService
         $total = (float) $venta->total;
         $apliIgv = (float) $venta->igv > 0;
 
-        // Primero construir detalles para sumar desde las líneas (evita inconsistencias de redondeo)
+        // Totales del comprobante partiendo del total real (lo que pagó el cliente)
+        $impVenta = round($total, 2);
+        $montoGravada = $apliIgv ? round($total / ($igvRate + 1), 2) : 0;
+        $igvMonto = $apliIgv ? round($impVenta - $montoGravada, 2) : 0;
+
+        // Construir detalles y ajustar para que las líneas sumen exactamente los totales del comprobante
         $details = $this->buildSaleDetails($venta, $igvRate, $apliIgv);
 
-        // Calcular totales sumando desde las líneas para que coincidan exactamente
-        $montoGravada = 0;
-        $igvMonto = 0;
-        foreach ($details as $detail) {
-            $montoGravada += $detail->getMtoValorVenta();
-            $igvMonto += $detail->getIgv();
+        if ($apliIgv && count($details) > 0) {
+            // Sumar valorVenta e IGV de todas las líneas
+            $sumaValorVenta = 0;
+            $sumaIgv = 0;
+            foreach ($details as $detail) {
+                $sumaValorVenta += $detail->getMtoValorVenta();
+                $sumaIgv += $detail->getIgv();
+            }
+            $sumaValorVenta = round($sumaValorVenta, 2);
+            $sumaIgv = round($sumaIgv, 2);
+
+            // Ajustar la última línea para absorber diferencias de redondeo
+            $diffVenta = round($montoGravada - $sumaValorVenta, 2);
+            $diffIgv = round($igvMonto - $sumaIgv, 2);
+
+            if ($diffVenta != 0 || $diffIgv != 0) {
+                $lastDetail = $details[count($details) - 1];
+                $lastDetail->setMtoValorVenta(round($lastDetail->getMtoValorVenta() + $diffVenta, 2));
+                $lastDetail->setMtoBaseIgv(round($lastDetail->getMtoBaseIgv() + $diffVenta, 2));
+                $lastDetail->setIgv(round($lastDetail->getIgv() + $diffIgv, 2));
+                $lastDetail->setTotalImpuestos(round($lastDetail->getIgv(), 2));
+            }
         }
-        $montoGravada = round($montoGravada, 2);
-        $igvMonto = round($igvMonto, 2);
-        $impVenta = round($montoGravada + $igvMonto, 2);
 
         $invoice = new Invoice();
         $invoice->setUblVersion('2.1')
@@ -384,19 +402,29 @@ class SunatService
         $client = $this->buildClient($cliente);
 
         $total = (float) $nota->monto_total;
+        $impVenta = round($total, 2);
+        $montoGravada = round($total / ($igvRate + 1), 2);
+        $igvMonto = round($impVenta - $montoGravada, 2);
 
-        // Construir detalles primero y sumar desde las líneas para consistencia
         $details = $this->buildSaleDetailsFromVenta($nota->venta, $igvRate);
 
-        $montoGravada = 0;
-        $igvMonto = 0;
-        foreach ($details as $detail) {
-            $montoGravada += $detail->getMtoValorVenta();
-            $igvMonto += $detail->getIgv();
+        if (count($details) > 0) {
+            $sumaValorVenta = 0;
+            $sumaIgv = 0;
+            foreach ($details as $detail) {
+                $sumaValorVenta += $detail->getMtoValorVenta();
+                $sumaIgv += $detail->getIgv();
+            }
+            $diffVenta = round($montoGravada - round($sumaValorVenta, 2), 2);
+            $diffIgv = round($igvMonto - round($sumaIgv, 2), 2);
+            if ($diffVenta != 0 || $diffIgv != 0) {
+                $lastDetail = $details[count($details) - 1];
+                $lastDetail->setMtoValorVenta(round($lastDetail->getMtoValorVenta() + $diffVenta, 2));
+                $lastDetail->setMtoBaseIgv(round($lastDetail->getMtoBaseIgv() + $diffVenta, 2));
+                $lastDetail->setIgv(round($lastDetail->getIgv() + $diffIgv, 2));
+                $lastDetail->setTotalImpuestos(round($lastDetail->getIgv(), 2));
+            }
         }
-        $montoGravada = round($montoGravada, 2);
-        $igvMonto = round($igvMonto, 2);
-        $impVenta = round($montoGravada + $igvMonto, 2);
 
         $note = new Note();
         $note->setUblVersion('2.1')
@@ -542,19 +570,29 @@ class SunatService
         $client = $this->buildClient($cliente);
 
         $total = (float) $nota->monto_total;
+        $impVenta = round($total, 2);
+        $montoGravada = round($total / ($igvRate + 1), 2);
+        $igvMonto = round($impVenta - $montoGravada, 2);
 
-        // Construir detalles primero y sumar desde las líneas para consistencia
         $details = $this->buildSaleDetailsFromVenta($nota->venta, $igvRate);
 
-        $montoGravada = 0;
-        $igvMonto = 0;
-        foreach ($details as $detail) {
-            $montoGravada += $detail->getMtoValorVenta();
-            $igvMonto += $detail->getIgv();
+        if (count($details) > 0) {
+            $sumaValorVenta = 0;
+            $sumaIgv = 0;
+            foreach ($details as $detail) {
+                $sumaValorVenta += $detail->getMtoValorVenta();
+                $sumaIgv += $detail->getIgv();
+            }
+            $diffVenta = round($montoGravada - round($sumaValorVenta, 2), 2);
+            $diffIgv = round($igvMonto - round($sumaIgv, 2), 2);
+            if ($diffVenta != 0 || $diffIgv != 0) {
+                $lastDetail = $details[count($details) - 1];
+                $lastDetail->setMtoValorVenta(round($lastDetail->getMtoValorVenta() + $diffVenta, 2));
+                $lastDetail->setMtoBaseIgv(round($lastDetail->getMtoBaseIgv() + $diffVenta, 2));
+                $lastDetail->setIgv(round($lastDetail->getIgv() + $diffIgv, 2));
+                $lastDetail->setTotalImpuestos(round($lastDetail->getIgv(), 2));
+            }
         }
-        $montoGravada = round($montoGravada, 2);
-        $igvMonto = round($igvMonto, 2);
-        $impVenta = round($montoGravada + $igvMonto, 2);
 
         $note = new Note();
         $note->setUblVersion('2.1')
