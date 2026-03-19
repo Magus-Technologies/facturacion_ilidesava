@@ -295,8 +295,6 @@ class SunatService
         $xmlContent = file_get_contents($xmlPath);
         $nombreArchivo = pathinfo($xmlPath, PATHINFO_FILENAME);
 
-        $see = $this->getSee($empresa);
-
         Log::info('SUNAT - Enviando comprobante', [
             'venta' => $venta->serie . '-' . $venta->numero,
             'archivo' => $nombreArchivo,
@@ -304,37 +302,70 @@ class SunatService
             'modo' => $empresa->modo,
         ]);
 
-        try {
-            $result = $see->sendXml(Invoice::class, $nombreArchivo, $xmlContent);
-        } catch (\SoapFault $e) {
-            Log::error('SUNAT - SoapFault al enviar comprobante', [
+        // Reintentar hasta 3 veces si SUNAT devuelve error HTTP (servidor caído)
+        $maxRetries = 3;
+        $result = null;
+        $lastException = null;
+
+        for ($intento = 1; $intento <= $maxRetries; $intento++) {
+            try {
+                $see = $this->getSee($empresa);
+                $result = $see->sendXml(Invoice::class, $nombreArchivo, $xmlContent);
+
+                // Si obtuvo respuesta (exitosa o error de SUNAT), salir del loop
+                if ($result->isSuccess()) {
+                    break;
+                }
+
+                $error = $result->getError();
+                // Solo reintentar si es error HTTP (servidor caído), no errores de validación
+                if ($error && $error->getCode() !== 'HTTP') {
+                    break;
+                }
+
+                Log::warning("SUNAT - Intento {$intento}/{$maxRetries} falló (HTTP error)", [
+                    'venta' => $venta->serie . '-' . $venta->numero,
+                ]);
+
+                if ($intento < $maxRetries) {
+                    sleep($intento * 2); // Esperar 2s, 4s antes de reintentar
+                }
+            } catch (\SoapFault $e) {
+                $lastException = $e;
+                Log::warning("SUNAT - SoapFault intento {$intento}/{$maxRetries}", [
+                    'venta' => $venta->serie . '-' . $venta->numero,
+                    'message' => $e->getMessage(),
+                ]);
+                if ($intento < $maxRetries) {
+                    sleep($intento * 2);
+                }
+            } catch (\Exception $e) {
+                $lastException = $e;
+                Log::warning("SUNAT - Excepción intento {$intento}/{$maxRetries}", [
+                    'venta' => $venta->serie . '-' . $venta->numero,
+                    'message' => $e->getMessage(),
+                ]);
+                if ($intento < $maxRetries) {
+                    sleep($intento * 2);
+                }
+            }
+        }
+
+        // Si todos los intentos fallaron con excepción
+        if ($result === null && $lastException !== null) {
+            Log::error('SUNAT - Todos los intentos fallaron', [
                 'venta' => $venta->serie . '-' . $venta->numero,
-                'faultcode' => $e->faultcode ?? null,
-                'faultstring' => $e->faultstring ?? null,
-                'message' => $e->getMessage(),
-                'detail' => $e->detail ?? null,
+                'intentos' => $maxRetries,
+                'ultimo_error' => $lastException->getMessage(),
             ]);
+            $codigo = $lastException instanceof \SoapFault ? 'SOAP' : 'ERROR';
             $venta->update([
                 'estado_sunat' => '3',
-                'codigo_sunat' => 'SOAP',
-                'mensaje_sunat' => $e->getMessage(),
+                'codigo_sunat' => $codigo,
+                'mensaje_sunat' => $lastException->getMessage(),
                 'intentos' => ($venta->intentos ?? 0) + 1,
             ]);
-            return ['success' => false, 'codigo' => 'SOAP', 'message' => $e->getMessage()];
-        } catch (\Exception $e) {
-            Log::error('SUNAT - Excepción al enviar comprobante', [
-                'venta' => $venta->serie . '-' . $venta->numero,
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            $venta->update([
-                'estado_sunat' => '3',
-                'codigo_sunat' => 'ERROR',
-                'mensaje_sunat' => $e->getMessage(),
-                'intentos' => ($venta->intentos ?? 0) + 1,
-            ]);
-            return ['success' => false, 'codigo' => 'ERROR', 'message' => $e->getMessage()];
+            return ['success' => false, 'codigo' => $codigo, 'message' => $lastException->getMessage()];
         }
 
         if ($result->isSuccess()) {
