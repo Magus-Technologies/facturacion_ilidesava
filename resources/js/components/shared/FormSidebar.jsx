@@ -36,25 +36,12 @@ export default function FormSidebar({
     children,
 }) {
     const handleTipoDocChange = (value) => {
-        // Determinar si necesitamos cambiar la serie
-        const tipoDocActual = formData.id_tido || formData.tipo_doc;
-        let nuevaSerie = "B001"; // Por defecto Boleta
-
-        if (value === "1") {
-            nuevaSerie = "B001"; // Boleta
-        } else if (value === "2") {
-            nuevaSerie = "F001"; // Factura
-        } else if (value === "6") {
-            nuevaSerie = "NV01"; // Nota de Venta
-        }
-
-        // Actualizar ambos campos para compatibilidad
+        // Actualizar tipo de documento — la serie real se obtiene del backend
+        // via obtenerProximoNumero() que consulta documentos_empresas
         onFormDataChange({
             ...formData,
             id_tido: value,
             tipo_doc: value,
-            // Solo cambiar serie si es diferente al tipo actual
-            ...(tipoDocActual !== value && { serie: nuevaSerie }),
         });
     };
 
