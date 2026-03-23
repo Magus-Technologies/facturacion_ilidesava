@@ -21,6 +21,7 @@ export default function Login({ onLoginSuccess }) {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [checkingAuth, setCheckingAuth] = useState(() => !!localStorage.getItem("auth_token"));
     const [error, setError] = useState("");
     const { setPermissions } = usePermissionsStore();
 
@@ -30,10 +31,10 @@ export default function Login({ onLoginSuccess }) {
             const token = localStorage.getItem("auth_token");
 
             if (!token) {
-                return; // No hay token, mostrar login normal
+                setCheckingAuth(false);
+                return;
             }
 
-            // Verificar si el token es válido
             try {
                 const response = await fetch("/api/verify", {
                     headers: {
@@ -43,7 +44,6 @@ export default function Login({ onLoginSuccess }) {
                 });
 
                 if (response.ok) {
-                    // Iniciar sesión web (cookies) para que las rutas protegidas funcionen
                     const loginResponse = await fetch("/api/login-session", {
                         method: "POST",
                         headers: {
@@ -55,20 +55,15 @@ export default function Login({ onLoginSuccess }) {
 
                     if (loginResponse.ok) {
                         window.location.href = "/inicio";
-                    } else {
-                        // No se pudo crear sesión, limpiar todo
-                        localStorage.removeItem("auth_token");
-                        localStorage.removeItem("user");
-                        localStorage.removeItem("empresa_activa");
-                        localStorage.removeItem("empresas");
+                        return; // No quitar checkingAuth, se está redirigiendo
                     }
-                } else {
-                    // Token inválido, limpiar localStorage
-                    localStorage.removeItem("auth_token");
-                    localStorage.removeItem("user");
-                    localStorage.removeItem("empresa_activa");
-                    localStorage.removeItem("empresas");
                 }
+
+                // Token inválido o sesión falló
+                localStorage.removeItem("auth_token");
+                localStorage.removeItem("user");
+                localStorage.removeItem("empresa_activa");
+                localStorage.removeItem("empresas");
             } catch (error) {
                 console.error("Error verificando token:", error);
                 localStorage.removeItem("auth_token");
@@ -76,6 +71,8 @@ export default function Login({ onLoginSuccess }) {
                 localStorage.removeItem("empresa_activa");
                 localStorage.removeItem("empresas");
             }
+
+            setCheckingAuth(false);
         };
 
         checkExistingAuth();
@@ -159,6 +156,14 @@ export default function Login({ onLoginSuccess }) {
         
         return false;
     };
+
+    if (checkingAuth) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-linear-to-tr from-primary-500 to-primary-600">
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+            </div>
+        );
+    }
 
     return (
         <div
