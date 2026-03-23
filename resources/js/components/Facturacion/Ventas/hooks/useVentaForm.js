@@ -146,12 +146,21 @@ export const useVentaForm = (ventaId = null) => {
     /**
      * Obtiene el próximo número de venta
      */
-    const obtenerProximoNumero = async (serie = null) => {
+    const obtenerProximoNumero = async (serieOIdTido = null) => {
         try {
-            const serieAUsar = serie || formData.serie;
             const token = localStorage.getItem('auth_token');
+            // Si es un id_tido numérico (1, 2, 6, 11), buscar por tipo de documento
+            const idTido = serieOIdTido && ['1', '2', '3', '6', '11'].includes(String(serieOIdTido))
+                ? serieOIdTido
+                : null;
+            const serie = idTido ? null : (serieOIdTido || formData.serie);
+
+            const params = new URLSearchParams();
+            if (idTido) params.set('id_tido', idTido);
+            if (serie) params.set('serie', serie);
+
             const response = await fetch(
-                `/api/ventas/proximo-numero?serie=${serieAUsar}`,
+                `/api/ventas/proximo-numero?${params.toString()}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -161,7 +170,11 @@ export const useVentaForm = (ventaId = null) => {
             );
             const data = await response.json();
             if (data.success) {
-                setFormData((prev) => ({ ...prev, numero: data.numero }));
+                setFormData((prev) => ({
+                    ...prev,
+                    numero: data.numero,
+                    ...(data.serie ? { serie: data.serie } : {}),
+                }));
             }
         } catch (error) {
             console.error('Error obteniendo número:', error);

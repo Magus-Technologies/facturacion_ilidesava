@@ -45,17 +45,21 @@ class NotaCreditoController extends Controller
                 $motivo = MotivoNota::findOrFail($request->motivo_id);
 
                 $tipDocAfectado = $venta->tipoDocumento->cod_sunat;
-                $serieNC = $tipDocAfectado === '01' ? 'FC01' : 'BC01';
+                // Obtener serie de nota de crédito desde documentos_empresas
+                $serieNCDefault = $tipDocAfectado === '01' ? 'FC01' : 'BC01';
+                $docEmpresa = DB::table('documentos_empresas')
+                    ->where('id_empresa', $empresa->id_empresa)
+                    ->where('id_tido', 3) // Nota de Crédito
+                    ->where('serie', 'LIKE', $tipDocAfectado === '01' ? 'FC%' : 'BC%')
+                    ->first();
+                $serieNC = $docEmpresa->serie ?? $serieNCDefault;
 
                 $ultimoNumero = NotaCredito::where('serie', $serieNC)
                     ->where('id_empresa', $empresa->id_empresa)
                     ->max('numero') ?? 0;
 
                 // Consultar documentos_empresas como número base configurable
-                $numeroBase = DB::table('documentos_empresas')
-                    ->where('id_empresa', $empresa->id_empresa)
-                    ->where('serie', $serieNC)
-                    ->value('numero') ?? 0;
+                $numeroBase = $docEmpresa->numero ?? 0;
 
                 $ultimoNumero = max($ultimoNumero, $numeroBase);
 

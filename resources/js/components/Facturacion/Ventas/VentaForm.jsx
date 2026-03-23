@@ -56,22 +56,20 @@ export default function VentaForm({ ventaId = null }) {
             const notaVentaIdParam = urlParams.get("nota_venta_id");
 
             const tipoMap = { boleta: "1", factura: "2", nota: "6" };
-            const serieMap = { boleta: "B001", factura: "F001", nota: "NV01" };
 
             const idTido = tipoParam ? tipoMap[tipoParam] : "1";
-            const serie = tipoParam ? serieMap[tipoParam] : "B001";
 
             // Configurar tipo de documento inicial
-            if (idTido && serie) {
+            if (idTido) {
                 setFormData((prev) => ({
                     ...prev,
                     id_tido: idTido,
-                    serie: serie,
                     _tipoFijo: !!tipoParam && !cotizacionIdParam,
                     cotizacion_id: cotizacionIdParam || null,
                     nota_venta_id: notaVentaIdParam || null,
                 }));
-                obtenerProximoNumero(serie);
+                // El backend devuelve la serie correcta según la empresa
+                obtenerProximoNumero(idTido);
             }
 
             // Si hay cotizacion_id, cargar datos desde la API
@@ -208,7 +206,7 @@ export default function VentaForm({ ventaId = null }) {
             }
 
             if (!tipoParam) {
-                obtenerProximoNumero("B001");
+                obtenerProximoNumero("1"); // Boleta por defecto, backend devuelve la serie real
             }
         }
     }, [isEditing]);
@@ -246,23 +244,12 @@ export default function VentaForm({ ventaId = null }) {
     };
 
     const handleTipoDocChange = (value) => {
-        let nuevaSerie = "B001"; // Por defecto Boleta
-
-        if (value === "1") {
-            nuevaSerie = "B001"; // Boleta
-        } else if (value === "2") {
-            nuevaSerie = "F001"; // Factura
-        } else if (value === "6") {
-            nuevaSerie = "NV01"; // Nota de Venta
-        }
-
         setFormData((prev) => ({
             ...prev,
             id_tido: value,
-            serie: nuevaSerie,
         }));
-        // Obtener nuevo número para la nueva serie
-        obtenerProximoNumero(nuevaSerie);
+        // El backend devuelve la serie correcta según empresa y tipo de documento
+        obtenerProximoNumero(value);
     };
 
     if (loading) {

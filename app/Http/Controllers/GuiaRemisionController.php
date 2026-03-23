@@ -110,22 +110,25 @@ class GuiaRemisionController extends Controller
                 $idEmpresa = $request->user()->id_empresa;
                 $empresa = Empresa::findOrFail($idEmpresa);
 
-                $ultimoNumero = GuiaRemision::where('serie', 'T001')
+                // Obtener serie real de documentos_empresas
+                $docEmpresaGuia = DB::table('documentos_empresas')
+                    ->where('id_empresa', $idEmpresa)
+                    ->where('id_tido', 11)
+                    ->first();
+                $serieGuia = $docEmpresaGuia->serie ?? 'T001';
+
+                $ultimoNumero = GuiaRemision::where('serie', $serieGuia)
                     ->where('id_empresa', $idEmpresa)
                     ->max('numero') ?? 0;
 
-                // Consultar documentos_empresas como número base configurable
-                $numeroBase = DB::table('documentos_empresas')
-                    ->where('id_empresa', $idEmpresa)
-                    ->where('serie', 'T001')
-                    ->value('numero') ?? 0;
+                $numeroBase = $docEmpresaGuia->numero ?? 0;
 
                 $ultimoNumero = max($ultimoNumero, $numeroBase);
 
                 // Sincronizar documentos_empresas
                 DB::table('documentos_empresas')
                     ->where('id_empresa', $idEmpresa)
-                    ->where('serie', 'T001')
+                    ->where('id_tido', 11)
                     ->update(['numero' => $ultimoNumero + 1]);
 
                 // Partida: usar la dirección del request si viene, sino la de la empresa
@@ -140,7 +143,7 @@ class GuiaRemisionController extends Controller
                     'id_empresa' => $idEmpresa,
                     'id_usuario' => $request->user()->id,
                     'id_venta' => $request->id_venta,
-                    'serie' => 'T001',
+                    'serie' => $serieGuia,
                     'numero' => $ultimoNumero + 1,
                     'fecha_emision' => now()->toDateString(),
                     'destinatario_tipo_doc' => $request->destinatario_tipo_doc,
@@ -327,22 +330,26 @@ class GuiaRemisionController extends Controller
     public function proximoNumero(Request $request): JsonResponse
     {
         $idEmpresa = $request->user()->id_empresa;
-        $serie = 'T001';
+
+        // Obtener serie real de documentos_empresas (puede ser T001, T002, etc.)
+        $docEmpresa = DB::table('documentos_empresas')
+            ->where('id_empresa', $idEmpresa)
+            ->where('id_tido', 11) // Guía de Remisión
+            ->first();
+
+        $serie = $docEmpresa->serie ?? 'T001';
+        $numeroBase = $docEmpresa->numero ?? 0;
 
         $ultimoNumero = GuiaRemision::where('serie', $serie)
             ->where('id_empresa', $idEmpresa)
             ->max('numero') ?? 0;
-
-        $numeroBase = DB::table('documentos_empresas')
-            ->where('id_empresa', $idEmpresa)
-            ->where('serie', $serie)
-            ->value('numero') ?? 0;
 
         $proximoNumero = max($ultimoNumero, $numeroBase) + 1;
 
         return response()->json([
             'success' => true,
             'numero' => $proximoNumero,
+            'serie' => $serie,
             'numero_completo' => $serie . '-' . str_pad($proximoNumero, 8, '0', STR_PAD_LEFT),
         ]);
     }

@@ -46,11 +46,29 @@ class NotaDebitoController extends Controller
                 $igvRate = (float) ($empresa->igv ?? config('sunat.igv'));
 
                 $tipDocAfectado = $venta->tipoDocumento->cod_sunat;
-                $serieND = $tipDocAfectado === '01' ? 'FC01' : 'BC01';
+                // Obtener serie de nota de débito desde documentos_empresas
+                $serieNDDefault = $tipDocAfectado === '01' ? 'FC01' : 'BC01';
+                $docEmpresa = DB::table('documentos_empresas')
+                    ->where('id_empresa', $empresa->id_empresa)
+                    ->where('id_tido', 4) // Nota de Débito
+                    ->where('serie', 'LIKE', $tipDocAfectado === '01' ? 'FC%' : 'BC%')
+                    ->first();
+                $serieND = $docEmpresa->serie ?? $serieNDDefault;
 
                 $ultimoNumero = NotaDebito::where('serie', $serieND)
                     ->where('id_empresa', $empresa->id_empresa)
                     ->max('numero') ?? 0;
+
+                // Consultar documentos_empresas como número base configurable
+                $numeroBase = $docEmpresa->numero ?? 0;
+
+                $ultimoNumero = max($ultimoNumero, $numeroBase);
+
+                // Sincronizar documentos_empresas
+                DB::table('documentos_empresas')
+                    ->where('id_empresa', $empresa->id_empresa)
+                    ->where('serie', $serieND)
+                    ->update(['numero' => $ultimoNumero + 1]);
 
                 $total = (float) $request->monto_total;
                 $subtotal = round($total / ($igvRate + 1), 2);

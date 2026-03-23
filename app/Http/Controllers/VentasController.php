@@ -638,23 +638,39 @@ class VentasController extends Controller
     {
         try {
             $user = $request->user();
-            $serie = $request->input('serie', 'F001');
+            $idTido = $request->input('id_tido');
+            $serieFront = $request->input('serie');
+
+            // Si viene id_tido, buscar la serie real de documentos_empresas
+            if ($idTido) {
+                $docEmpresa = DB::table('documentos_empresas')
+                    ->where('id_empresa', $user->id_empresa)
+                    ->where('id_tido', $idTido)
+                    ->first();
+
+                // Fallback por tipo: 1=boleta, 2=factura, 6=nota venta
+                $defaultSeries = ['1' => 'B001', '2' => 'F001', '6' => 'NV01', '11' => 'T001', '3' => 'FC01'];
+                $serie = $docEmpresa->serie ?? $serieFront ?? ($defaultSeries[$idTido] ?? 'F001');
+                $numeroBase = $docEmpresa->numero ?? 0;
+            } else {
+                // Fallback: buscar por serie (compatibilidad)
+                $serie = $serieFront ?? 'F001';
+                $numeroBase = DB::table('documentos_empresas')
+                    ->where('id_empresa', $user->id_empresa)
+                    ->where('serie', $serie)
+                    ->value('numero') ?? 0;
+            }
 
             $ultimaVenta = Venta::where('id_empresa', $user->id_empresa)
                 ->where('serie', $serie)
                 ->max('numero') ?? 0;
-
-            // Consultar documentos_empresas como número base configurable
-            $numeroBase = DB::table('documentos_empresas')
-                ->where('id_empresa', $user->id_empresa)
-                ->where('serie', $serie)
-                ->value('numero') ?? 0;
 
             $proximoNumero = max($ultimaVenta, $numeroBase) + 1;
 
             return response()->json([
                 'success' => true,
                 'numero' => $proximoNumero,
+                'serie' => $serie,
                 'numero_completo' => $serie . '-' . str_pad($proximoNumero, 6, '0', STR_PAD_LEFT),
             ]);
         } catch (\Exception $e) {
