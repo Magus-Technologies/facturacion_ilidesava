@@ -335,11 +335,11 @@ class GuiaRemisionController extends Controller
         try {
             $guia = GuiaRemision::findOrFail($id);
 
-            // Solo permitir eliminar guías que NO fueron aceptadas por SUNAT
-            if (in_array($guia->estado, ['aceptado', 'enviado'])) {
+            // Solo las guías aceptadas por SUNAT no se pueden eliminar
+            if ($guia->estado === 'aceptado') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No se puede eliminar una guía que ya fue enviada/aceptada por SUNAT',
+                    'message' => 'No se puede eliminar una guía aceptada por SUNAT',
                 ], 422);
             }
 

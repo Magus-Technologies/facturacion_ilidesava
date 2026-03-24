@@ -151,7 +151,7 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
             const puedeEnviar = guia.estado === "pendiente" && guia.nombre_xml;
             const puedeConsultar = guia.estado === "enviado" && guia.ticket_sunat;
             const puedeCdr = guia.estado === "aceptado" && guia.cdr_url;
-            const puedeEliminar = guia.estado === "pendiente" || guia.estado === "rechazado";
+            const puedeEliminar = guia.estado !== "aceptado";
             const isEnviando = enviandoId === guia.id;
 
             if (isEnviando) {
