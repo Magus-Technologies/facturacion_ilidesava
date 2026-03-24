@@ -244,9 +244,14 @@ class SunatService
         if ($tipoPago != '1' && $venta->cuotas && $venta->cuotas->count() > 0) {
             $cuotasGreenter = [];
             foreach ($venta->cuotas as $cuota) {
+                $fechaPago = $cuota->fecha instanceof \DateTimeInterface
+                    ? $cuota->fecha
+                    : (\DateTime::createFromFormat('Y-m-d', $cuota->fecha)
+                        ?: \DateTime::createFromFormat('d/m/Y', $cuota->fecha)
+                        ?: new \DateTime($cuota->fecha));
                 $cuotasGreenter[] = (new Cuota())
                     ->setMonto((float) $cuota->monto)
-                    ->setFechaPago(\DateTime::createFromFormat('Y-m-d', $cuota->fecha));
+                    ->setFechaPago($fechaPago);
             }
             $invoice->setCuotas($cuotasGreenter);
         }

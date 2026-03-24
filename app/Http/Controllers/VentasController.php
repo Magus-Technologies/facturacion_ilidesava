@@ -51,7 +51,7 @@ class VentasController extends Controller
                         'total' => $venta->total,
                         'tipo_moneda' => $venta->tipo_moneda,
                         'id_tipo_pago' => $venta->id_tipo_pago,
-                        'metodo_pago' => $pago ? $pago->id_tipo_pago : null,
+                        'metodo_pago' => $venta->id_tipo_pago == 1 ? ($pago ? $pago->id_tipo_pago : null) : null,
                         'voucher' => $pago && $pago->voucher ? $pago->voucher : null,
                         'estado' => $venta->estado,
                         'estado_sunat' => $venta->estado_sunat,

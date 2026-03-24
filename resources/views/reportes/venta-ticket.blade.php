@@ -262,7 +262,7 @@
                 <span class="client-label">VENCE:</span> {{ $venta->fecha_vencimiento->format('d/m/Y') }}
             </div>
             @endif
-            @if($pago)
+            @if($pago && $venta->id_tipo_pago == 1)
             <div class="client-row">
                 <span class="client-label">MÉTODO:</span> {{ $metodosPago[$pago->id_tipo_pago] ?? 'OTRO' }}
             </div>

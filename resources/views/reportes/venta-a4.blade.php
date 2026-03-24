@@ -245,7 +245,7 @@
                     <br><span style="font-weight: bold; font-size: 8pt; color: #000;">FECHA VENCIMIENTO: </span>
                     <span style="font-size: 8pt; color: #000;">{{ $venta->fecha_vencimiento->format('d/m/Y') }}</span>
                     @endif
-                    @if($pago)
+                    @if($pago && $venta->id_tipo_pago == 1)
                     <br><span style="font-weight: bold; font-size: 8pt; color: #000;">MÉTODO PAGO: </span>
                     <span style="font-size: 8pt; color: #000;">{{ $metodosPago[$pago->id_tipo_pago] ?? 'OTRO' }}</span>
                     @if($pago->numero_operacion)

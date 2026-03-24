@@ -253,6 +253,16 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                     4: { label: "Transfer.", icon: Building2, color: "text-purple-600" },
                     5: { label: "Yape/Plin", icon: Smartphone, color: "text-pink-600" },
                 };
+                const tipo = row.original.id_tipo_pago;
+                const esCredito = tipo === 2 || tipo === "2";
+                if (esCredito) {
+                    return (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+                            <CreditCard className="h-3.5 w-3.5" />
+                            Crédito
+                        </span>
+                    );
+                }
                 const info = config[metodo];
                 if (!info) return <span className="text-xs text-gray-400">—</span>;
                 const Icon = info.icon;
