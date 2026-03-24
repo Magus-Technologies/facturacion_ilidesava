@@ -52,7 +52,11 @@ class MigrarProductosAlmacenMadre extends Command
         $bar->start();
 
         foreach ($productosPorCodigo as $codigo => $prod) {
+            // Buscar por código primero, luego por nombre (evitar duplicados por nombre con códigos distintos)
             $existente = ProductoMadre::where('codigo', $codigo)->first();
+            if (!$existente) {
+                $existente = ProductoMadre::where('nombre', $prod->nombre)->first();
+            }
 
             if ($existente) {
                 // Actualizar datos del producto existente
@@ -70,13 +74,7 @@ class MigrarProductosAlmacenMadre extends Command
                 if ($prod->stock_minimo && $existente->stock_minimo !== (int) $prod->stock_minimo) $cambios['stock_minimo'] = $prod->stock_minimo;
                 if ($prod->stock_maximo && $existente->stock_maximo !== (int) $prod->stock_maximo) $cambios['stock_maximo'] = $prod->stock_maximo;
 
-                // Sumar stock de todas las empresas que tengan ese código
-                $stockTotal = Producto::where('codigo', $codigo)
-                    ->where('estado', '1')
-                    ->sum('cantidad');
-                if ((int) $existente->cantidad !== (int) $stockTotal) {
-                    $cambios['cantidad'] = (int) $stockTotal;
-                }
+                // NO tocar el stock al actualizar — el stock madre se maneja independientemente
 
                 if (!empty($cambios)) {
                     if (!$dryRun) {
