@@ -314,7 +314,7 @@ export default function ClienteAutocomplete({
                                     ${selectedIndex === index ? "bg-orange-50 border-l-4 border-l-orange-500" : ""}
                                 `}
                             >
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
                                     isDNI ? "bg-blue-100" : isCE ? "bg-purple-100" : "bg-green-100"
                                 }`}>
                                     {isDNI ? (
