@@ -60,6 +60,7 @@ export const useVentaForm = (ventaId = null) => {
         nom_cli: '',
         dir_cli: '',
         aplicar_igv: true,
+        observaciones: '',
         empresas_ids: [], // IDs de empresas seleccionadas
         almacen: '1', // Almacén por defecto
     });
@@ -133,6 +134,7 @@ export const useVentaForm = (ventaId = null) => {
                     tipo_moneda: venta.tipo_moneda,
                     tipo_cambio: venta.tipo_cambio || '1.00',
                     aplicar_igv: true,
+                    observaciones: venta.observaciones || '',
                 }));
             }
         } catch (error) {

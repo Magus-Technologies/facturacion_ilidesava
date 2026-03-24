@@ -493,7 +493,7 @@ function AjustarStockModal({ producto, onClose, onSuccess }) {
                         min="0"
                         value={cantidad}
                         onChange={(e) => setCantidad(e.target.value)}
-                        className="w-full rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300 text-lg font-bold text-center"
+                        className="w-full rounded-lg px-3 py-2 sm:text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300 text-lg font-bold text-center"
                         autoFocus
                     />
                 </div>

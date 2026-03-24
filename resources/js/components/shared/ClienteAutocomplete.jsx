@@ -88,14 +88,8 @@ export default function ClienteAutocomplete({
             });
             const data = await response.json();
             if (data.success && data.data) {
-                let resultados = data.data;
-                if (tipoComprobante === "2" || tipoComprobante === 2) {
-                    resultados = resultados.filter((c) => c.documento?.length === 11);
-                } else if (tipoComprobante === "1" || tipoComprobante === 1) {
-                    resultados = resultados.filter((c) => c.documento?.length !== 11);
-                }
-                setClientes(resultados);
-                setShowDropdown(resultados.length > 0);
+                setClientes(data.data);
+                setShowDropdown(data.data.length > 0);
                 setSelectedIndex(-1);
             } else {
                 setClientes([]);
@@ -227,9 +221,6 @@ export default function ClienteAutocomplete({
 
     const handleInputChange = (e) => {
         let val = e.target.value;
-        if (tipoDoc === "DNI" || tipoDoc === "RUC") {
-            val = val.replace(/\D/g, ""); // solo dígitos
-        }
         setSearchTerm(val);
         onDocumentoChange?.(val);
     };
@@ -292,7 +283,7 @@ export default function ClienteAutocomplete({
                         onClick={handleConsultarDocumento}
                         disabled={consultando || !searchTerm.trim() || tipoDoc === "CE"}
                         size="icon"
-                        className="flex-shrink-0"
+                        className="shrink-0"
                         title={tipoDoc === "CE" ? "No hay consulta automática para CE" : "Consultar"}
                     >
                         {consultando ? (
@@ -306,7 +297,7 @@ export default function ClienteAutocomplete({
 
             {/* Dropdown de resultados */}
             {showDropdown && clientes.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[400px] overflow-y-auto">
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-100 overflow-y-auto">
                     {clientes.map((cliente, index) => {
                         const tipoDocCliente = getTipoDocumento(cliente);
                         const isDNI = tipoDocCliente === "DNI";

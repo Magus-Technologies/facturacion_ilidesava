@@ -185,6 +185,7 @@ export const prepararDatosVenta = (cliente, formData, productos, totales) => {
         afecta_stock: formData.id_tido === '6' ? (formData.afecta_stock ? 1 : 0) : 1,
         cotizacion_id: formData.cotizacion_id || null,
         nota_venta_id: formData.nota_venta_id || null,
+        observaciones: formData.observaciones || null,
         empresas_ids: formData.empresas_ids || [],
         fecha_vencimiento: formData.fecha_vencimiento || null,
         tiene_inicial: formData.tiene_inicial ? 1 : 0,

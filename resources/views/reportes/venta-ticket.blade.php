@@ -201,8 +201,13 @@
             <div class="client-row">
                 <span class="client-label">DOC:</span> {{ $venta->cliente->documento }}
             </div>
+            @if($venta->observaciones)
+            <div class="client-row">
+                <span class="client-label">OBS:</span> {{ $venta->observaciones }}
+            </div>
+            @endif
         </div>
-        
+
         <div class="divider"></div>
         
         <!-- Products -->

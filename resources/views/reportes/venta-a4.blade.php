@@ -233,6 +233,10 @@
                     <br><span style="font-weight: bold; font-size: 8pt; color: #000;">REF. COT.: </span>
                     <span style="font-size: 8pt; color: #000;">COT-{{ str_pad($venta->cotizacion->numero, 6, '0', STR_PAD_LEFT) }}</span>
                     @endif
+                    @if($venta->observaciones)
+                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">OBSERVACIONES: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->observaciones }}</span>
+                    @endif
                 </td>
                 <td style="width: 48%; vertical-align: top; border: 1.2px solid #777; border-radius: 10px; padding: 10px;">
                     <span style="font-weight: bold; font-size: 8pt; color: #000;">FECHA EMISIÓN: </span>
