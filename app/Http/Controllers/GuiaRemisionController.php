@@ -20,7 +20,7 @@ class GuiaRemisionController extends Controller
     {
         $idEmpresa = $request->user()->id_empresa;
 
-        $guias = GuiaRemision::with(['venta.cliente', 'detalles'])
+        $guias = GuiaRemision::with(['venta.tipoDocumento', 'venta.cliente', 'detalles'])
             ->where('id_empresa', $idEmpresa)
             ->orderBy('id', 'desc')
             ->paginate(15);
@@ -324,6 +324,57 @@ class GuiaRemisionController extends Controller
                 'success' => false,
                 'message' => 'Error al consultar: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Eliminar guía de remisión (solo pendiente o rechazado)
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        try {
+            $guia = GuiaRemision::findOrFail($id);
+
+            // Solo permitir eliminar guías que NO fueron aceptadas por SUNAT
+            if (in_array($guia->estado, ['aceptado', 'enviado'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede eliminar una guía que ya fue enviada/aceptada por SUNAT',
+                ], 422);
+            }
+
+            return DB::transaction(function () use ($guia) {
+                $serie = $guia->serie;
+                $numero = str_pad($guia->numero, 8, '0', STR_PAD_LEFT);
+                $empresa = Empresa::find($guia->id_empresa);
+                $ruc = $empresa->ruc ?? '';
+
+                // Eliminar archivos XML y CDR si existen
+                if ($guia->xml_url && file_exists(storage_path('app/' . $guia->xml_url))) {
+                    unlink(storage_path('app/' . $guia->xml_url));
+                }
+                if ($guia->cdr_url && file_exists(storage_path('app/' . $guia->cdr_url))) {
+                    unlink(storage_path('app/' . $guia->cdr_url));
+                }
+
+                // Los detalles se eliminan automáticamente (cascadeOnDelete)
+                $guia->delete();
+
+                Log::info("Guía de remisión eliminada: {$serie}-{$numero}", [
+                    'id' => $guia->id,
+                    'empresa' => $ruc,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Guía {$serie}-{$numero} eliminada correctamente",
+                ]);
+            });
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['success' => false, 'message' => 'Guía no encontrada'], 404);
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar guía: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 

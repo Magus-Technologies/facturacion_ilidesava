@@ -134,6 +134,28 @@ export const useGuiasRemision = () => {
         }
     };
 
+    const eliminarGuia = async (id) => {
+        try {
+            const res = await fetch(`/api/guias-remision/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success(data.message || 'Guía eliminada correctamente');
+                fetchGuias();
+            } else {
+                toast.error(data.message || 'Error al eliminar la guía');
+            }
+
+            return data;
+        } catch (err) {
+            toast.error('Error de conexión');
+            return { success: false, message: err.message };
+        }
+    };
+
     const buscarUbigeos = async (query) => {
         try {
             const res = await fetch(`/api/guias-remision/ubigeos?q=${encodeURIComponent(query)}`, {
@@ -154,6 +176,7 @@ export const useGuiasRemision = () => {
         crearGuia,
         enviarGuia,
         consultarTicket,
+        eliminarGuia,
         buscarUbigeos,
     };
 };

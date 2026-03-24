@@ -285,7 +285,7 @@ export default function ListaProductosModal({ isOpen, onClose, productos, warnin
 
                 {/* ── Tabla de productos ── */}
                 <div className="border rounded-lg overflow-hidden">
-                    <div className="max-h-[380px] overflow-y-auto overflow-x-auto">
+                    <div className="max-h-95 overflow-y-auto overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <tr>
@@ -317,7 +317,7 @@ export default function ListaProductosModal({ isOpen, onClose, productos, warnin
                                                         <Input value={item.codigoProd || ""} onChange={(e) => handleCambioProducto(indexOriginal, 'codigoProd', e.target.value)} className="w-24" />
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Input value={item.producto || ""} onChange={(e) => handleCambioProducto(indexOriginal, 'producto', e.target.value)} className="min-w-[160px]" />
+                                                        <Input value={item.producto || ""} onChange={(e) => handleCambioProducto(indexOriginal, 'producto', e.target.value)} className="min-w-40" />
                                                     </TableCell>
                                                     {tieneDetalle && (
                                                         <TableCell>

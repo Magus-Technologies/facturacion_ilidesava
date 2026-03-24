@@ -11,6 +11,7 @@ import {
     MoreHorizontal,
     Loader2,
     Search,
+    Trash2,
 } from "lucide-react";
 import { Button } from "../../ui/button";
 import {
@@ -49,6 +50,24 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
                 </span>
             </div>
         ),
+    },
+    {
+        id: "comprobante",
+        header: "Comprobante",
+        cell: ({ row }) => {
+            const venta = row.original.venta;
+            if (!venta) return <span className="text-gray-400 text-xs">—</span>;
+            const abrev = venta.tipo_documento?.abreviatura || (venta.id_tido == 2 ? "FT" : venta.id_tido == 1 ? "BT" : "NV");
+            const numero = String(venta.numero).padStart(6, "0");
+            const isFact = venta.id_tido == 2;
+            return (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium ${
+                    isFact ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700"
+                }`}>
+                    {venta.serie}-{numero}
+                </span>
+            );
+        },
     },
     {
         accessorKey: "fecha_emision",
@@ -132,6 +151,7 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
             const puedeEnviar = guia.estado === "pendiente" && guia.nombre_xml;
             const puedeConsultar = guia.estado === "enviado" && guia.ticket_sunat;
             const puedeCdr = guia.estado === "aceptado" && guia.cdr_url;
+            const puedeEliminar = guia.estado === "pendiente" || guia.estado === "rechazado";
             const isEnviando = enviandoId === guia.id;
 
             if (isEnviando) {
@@ -192,6 +212,15 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
                                 >
                                     <Search className="mr-2 h-4 w-4" />
                                     Consultar ticket
+                                </DropdownMenuItem>
+                            )}
+                            {puedeEliminar && handlers.handleEliminar && (
+                                <DropdownMenuItem
+                                    onClick={() => handlers.handleEliminar(guia)}
+                                    className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar
                                 </DropdownMenuItem>
                             )}
                         </DropdownMenuContent>

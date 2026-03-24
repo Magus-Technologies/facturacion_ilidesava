@@ -185,6 +185,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::get('guias-remision/{id}', [\App\Http\Controllers\GuiaRemisionController::class, 'show']);
     Route::post('guias-remision/{id}/enviar', [\App\Http\Controllers\GuiaRemisionController::class, 'enviar']);
     Route::get('guias-remision/{id}/ticket', [\App\Http\Controllers\GuiaRemisionController::class, 'consultarTicket']);
+    Route::delete('guias-remision/{id}', [\App\Http\Controllers\GuiaRemisionController::class, 'destroy']);
     Route::get('guias-remision/xml/{nombre}', [\App\Http\Controllers\GuiaRemisionController::class, 'xml'])->where('nombre', '.*');
 
     // Comunicación de Baja (anular facturas, NC, ND)

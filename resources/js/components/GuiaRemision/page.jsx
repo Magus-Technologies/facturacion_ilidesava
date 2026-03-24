@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import MainLayout from "../Layout/MainLayout";
 import { useGuiasRemision } from "./hooks/useGuiasRemision";
+import { confirmDelete } from "@/lib/sweetalert";
 import { getGuiaRemisionColumns } from "./columns/guiaRemisionColumns";
 import DetallesGuiaModal from "./DetallesGuiaModal";
 
@@ -19,6 +20,7 @@ export default function GuiaRemisionPage() {
         fetchGuias,
         enviarGuia,
         consultarTicket,
+        eliminarGuia,
     } = useGuiasRemision();
 
     const [enviandoId, setEnviandoId] = useState(null);
@@ -102,6 +104,18 @@ export default function GuiaRemisionPage() {
         }
     };
 
+    const handleEliminar = (guia) => {
+        const doc = `${guia.serie}-${String(guia.numero).padStart(6, "0")}`;
+        confirmDelete({
+            title: "¿Eliminar guía de remisión?",
+            message: `Se eliminará permanentemente la guía <b>${doc}</b>. Esta acción no se puede deshacer.`,
+            confirmText: "Sí, eliminar",
+            onConfirm: async () => {
+                await eliminarGuia(guia.id);
+            },
+        });
+    };
+
     const handleExportar = async () => {
         const token = localStorage.getItem("auth_token");
         try {
@@ -139,6 +153,7 @@ export default function GuiaRemisionPage() {
         handleVerXml,
         handleConsultarTicket,
         handleDescargarCdr,
+        handleEliminar,
     };
 
     const columns = getGuiaRemisionColumns(handlers, enviandoId);
