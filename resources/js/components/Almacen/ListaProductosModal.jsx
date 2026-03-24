@@ -6,7 +6,7 @@ import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from ".
 import { toast } from "@/lib/sweetalert";
 import { Loader2, Search, Edit, Eye, Trash2, Warehouse, AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react";
 
-export default function ListaProductosModal({ isOpen, onClose, productos, warnings = [], onSuccess, almacen = "1" }) {
+export default function ListaProductosModal({ isOpen, onClose, productos, warnings = [], onSuccess, almacen = "1", modo = "normal" }) {
     const [loading, setLoading] = useState(false);
     const [almacenDestino, setAlmacenDestino] = useState(almacen);
     const [busqueda, setBusqueda] = useState("");
@@ -103,7 +103,8 @@ export default function ListaProductosModal({ isOpen, onClose, productos, warnin
                 headers['X-Empresa-Activa'] = empresaActiva.id_empresa;
             }
 
-            const response = await fetch("/api/productos/importar-lista", {
+            const url = modo === "madre" ? "/api/almacen-madre/importar-lista" : "/api/productos/importar-lista";
+            const response = await fetch(url, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({

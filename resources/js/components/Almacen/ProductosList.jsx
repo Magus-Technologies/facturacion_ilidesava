@@ -421,7 +421,37 @@ export default function ProductosList() {
                         </p>
                     </div>
 
-                    {/* Almacén 2 (Real) fue reemplazado por Almacén Madre (/almacen-madre) */}
+                    {/* Selector almacén 1/2 para empresas con almacén propio */}
+                    {(() => {
+                        try {
+                            const emp = JSON.parse(localStorage.getItem("empresa_activa") || "{}");
+                            if (!emp.usa_almacen_propio) return null;
+                            return (
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setAlmacenActivo("1")}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                            almacenActivo === "1"
+                                                ? "bg-orange-500 text-white"
+                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                        }`}
+                                    >
+                                        Almacén 1 (SUNAT)
+                                    </button>
+                                    <button
+                                        onClick={() => setAlmacenActivo("2")}
+                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                            almacenActivo === "2"
+                                                ? "bg-blue-500 text-white"
+                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                        }`}
+                                    >
+                                        Almacén 2 (Real)
+                                    </button>
+                                </div>
+                            );
+                        } catch { return null; }
+                    })()}
                 </div>
 
                 {/* Botones de acción */}

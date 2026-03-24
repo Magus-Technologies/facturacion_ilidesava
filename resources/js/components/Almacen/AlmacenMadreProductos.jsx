@@ -12,6 +12,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import ProductoModal from "./ProductoModal";
+import ImportarExcelModal from "./ImportarExcelModal";
 import {
     Warehouse,
     Package,
@@ -47,6 +48,7 @@ export default function AlmacenMadreProductos() {
     const [productos, setProductos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showImportar, setShowImportar] = useState(false);
+    const [showImportarExcel, setShowImportarExcel] = useState(false);
     const [showCrear, setShowCrear] = useState(false);
     const [editProduct, setEditProduct] = useState(null);
     const [stockProduct, setStockProduct] = useState(null);
@@ -262,6 +264,9 @@ export default function AlmacenMadreProductos() {
                 <div className="flex justify-between items-center">
                     <p className="text-sm text-gray-500">{filteredProductos.length} producto(s)</p>
                     <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setShowImportarExcel(true)}>
+                            <FileSpreadsheet className="h-4 w-4 mr-2" /> Importar Excel
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => setShowImportar(true)}>
                             <Download className="h-4 w-4 mr-2" /> Importar desde empresa
                         </Button>
@@ -305,6 +310,13 @@ export default function AlmacenMadreProductos() {
                     producto={stockProduct}
                     onClose={() => setStockProduct(null)}
                     onSuccess={fetchProductos}
+                />
+
+                <ImportarExcelModal
+                    isOpen={showImportarExcel}
+                    onClose={() => setShowImportarExcel(false)}
+                    onSuccess={fetchProductos}
+                    modo="madre"
                 />
             </div>
         </MainLayout>

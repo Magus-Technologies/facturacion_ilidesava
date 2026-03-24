@@ -72,6 +72,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::get('almacen-madre/exportar-movimientos', [\App\Http\Controllers\Exports\AlmacenMadreExportController::class, 'descargarMovimientos']);
     Route::get('almacen-madre/empresas-importar', [\App\Http\Controllers\AlmacenMadreController::class, 'empresasParaImportar']);
     Route::post('almacen-madre/importar-empresa', [\App\Http\Controllers\AlmacenMadreController::class, 'importarDesdeEmpresa']);
+    Route::post('almacen-madre/importar-lista', [\App\Http\Controllers\AlmacenMadreController::class, 'importarLista']);
 
     // Cuentas por Cobrar
     Route::get('cuentas-por-cobrar', [\App\Http\Controllers\CuentasPorCobrarController::class, 'index']);

@@ -497,6 +497,112 @@ class AlmacenMadreController extends Controller
     /**
      * Importar productos existentes de una empresa (almacén 2) al almacén madre
      */
+    /**
+     * Importar lista de productos desde Excel al almacén madre
+     */
+    public function importarLista(Request $request): JsonResponse
+    {
+        $request->validate([
+            'lista' => 'required|array|min:1',
+            'lista.*.producto' => 'required|string',
+        ]);
+
+        try {
+            return DB::transaction(function () use ($request) {
+                $lista = $request->lista;
+                $importados = 0;
+                $actualizados = 0;
+
+                // Cache de categorías y unidades
+                $categoriasCache = DB::table('categorias')->where('estado', '1')
+                    ->get(['id', 'nombre'])->keyBy(fn($c) => strtolower(trim($c->nombre)));
+                $unidadesCache = DB::table('unidades')->where('estado', '1')
+                    ->get(['id', 'nombre'])->keyBy(fn($u) => strtolower(trim($u->nombre)));
+                $unidadDefault = $unidadesCache['unidad'] ?? $unidadesCache->first();
+                $unidadDefaultId = $unidadDefault?->id;
+
+                foreach ($lista as $item) {
+                    $codigo = trim($item['codigoProd'] ?? '');
+                    $nombre = trim($item['producto'] ?? '');
+                    if (!$nombre) continue;
+
+                    // Resolver categoría
+                    $categoriaId = null;
+                    $catNombre = trim($item['categoria'] ?? '');
+                    if ($catNombre) {
+                        $clave = strtolower($catNombre);
+                        if (isset($categoriasCache[$clave])) {
+                            $categoriaId = $categoriasCache[$clave]->id;
+                        } else {
+                            $nuevaId = DB::table('categorias')->insertGetId([
+                                'nombre' => $catNombre, 'estado' => '1',
+                                'created_at' => now(), 'updated_at' => now(),
+                            ]);
+                            $categoriaId = $nuevaId;
+                            $categoriasCache[$clave] = (object)['id' => $nuevaId, 'nombre' => $catNombre];
+                        }
+                    }
+
+                    // Resolver unidad
+                    $unidadId = $unidadDefaultId;
+                    $uniNombre = trim($item['unidad'] ?? '');
+                    if ($uniNombre) {
+                        $clave = strtolower($uniNombre);
+                        if (isset($unidadesCache[$clave])) {
+                            $unidadId = $unidadesCache[$clave]->id;
+                        }
+                    }
+
+                    $datos = [
+                        'nombre' => $nombre,
+                        'descripcion' => trim($item['descripcicon'] ?? ''),
+                        'precio' => floatval($item['precio_unidad'] ?? 0),
+                        'precio_unidad' => floatval($item['precio_unidad'] ?? 0),
+                        'precio_mayor' => floatval($item['precio_mayor'] ?? 0),
+                        'precio_menor' => floatval($item['precio_menor'] ?? 0),
+                        'costo' => floatval($item['costo'] ?? 0),
+                        'cantidad' => floatval($item['cantidad'] ?? 0),
+                        'categoria_id' => $categoriaId,
+                        'unidad_id' => $unidadId,
+                        'moneda' => strtoupper(trim($item['moneda'] ?? 'PEN')),
+                    ];
+
+                    // Buscar existente por código o nombre
+                    $existente = null;
+                    if ($codigo) {
+                        $existente = ProductoMadre::where('codigo', $codigo)->first();
+                    }
+                    if (!$existente) {
+                        $existente = ProductoMadre::where('nombre', $nombre)->first();
+                    }
+
+                    if ($existente) {
+                        $existente->update($datos);
+                        $actualizados++;
+                    } else {
+                        $datos['codigo'] = $codigo ?: null;
+                        $datos['codsunat'] = '51121703';
+                        $datos['fecha_registro'] = now();
+                        $datos['estado'] = '1';
+                        ProductoMadre::create($datos);
+                        $importados++;
+                    }
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Importación al almacén madre: {$importados} creado(s), {$actualizados} actualizado(s)",
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error importando lista al almacén madre: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function importarDesdeEmpresa(Request $request): JsonResponse
     {
         $request->validate([
