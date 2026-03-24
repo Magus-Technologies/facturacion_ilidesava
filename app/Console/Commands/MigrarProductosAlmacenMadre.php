@@ -23,15 +23,24 @@ class MigrarProductosAlmacenMadre extends Command
             $this->warn('*** MODO DRY-RUN: No se ejecutarán cambios ***');
         }
 
+        // Excluir empresas que usan almacén propio (independiente)
+        $empresasExcluidas = \App\Models\Empresa::where('usa_almacen_propio', true)
+            ->pluck('id_empresa', 'comercial');
+
+        if ($empresasExcluidas->isNotEmpty()) {
+            $this->warn("Empresas excluidas (almacén propio): " . $empresasExcluidas->keys()->implode(', '));
+        }
+
         $query = Producto::where('estado', '1')
             ->whereNotNull('codigo')
-            ->where('codigo', '!=', '');
+            ->where('codigo', '!=', '')
+            ->whereNotIn('id_empresa', $empresasExcluidas->values());
 
         if ($empresaId) {
             $query->where('id_empresa', $empresaId);
             $this->info("Filtrando empresa ID: {$empresaId}");
         } else {
-            $this->info("Migrando de TODAS las empresas");
+            $this->info("Migrando de TODAS las empresas (excepto almacén propio)");
         }
 
         // Agrupar por código — tomar el de mayor stock como referencia

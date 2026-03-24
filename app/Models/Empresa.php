@@ -34,11 +34,13 @@ class Empresa extends Model
         'igv',
         'propaganda',
         'es_almacen_madre',
+        'usa_almacen_propio',
     ];
 
     protected $casts = [
         'igv' => 'decimal:2',
         'es_almacen_madre' => 'boolean',
+        'usa_almacen_propio' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

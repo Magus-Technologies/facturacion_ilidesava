@@ -559,39 +559,47 @@ class VentasController extends Controller
                 ->where('id_empresa', $user->id_empresa)
                 ->findOrFail($id);
 
-            // Verificar si hay productos en almacén madre
-            $hayMadre = \App\Models\ProductoMadre::where('estado', '1')->exists();
+            $empresa = \App\Models\Empresa::find($user->id_empresa);
+            $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
 
             $items = [];
             foreach ($venta->productosVentas as $detalle) {
                 $productoOriginal = $detalle->producto;
                 $codigo = $productoOriginal?->codigo;
 
-                $productoMadre = null;
+                $productoReal = null;
 
-                // Buscar en tabla productos_madre por código
-                if ($codigo && $hayMadre) {
-                    $productoMadre = \App\Models\ProductoMadre::where('codigo', $codigo)
-                        ->where('estado', '1')
-                        ->first();
-                }
+                if ($codigo) {
+                    if ($usaAlmacenPropio) {
+                        // Empresa con almacén propio: buscar en almacén 2
+                        $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                            ->where('almacen', '2')
+                            ->where('codigo', $codigo)
+                            ->first();
+                    } else {
+                        // Buscar en productos_madre
+                        $productoReal = \App\Models\ProductoMadre::where('codigo', $codigo)
+                            ->where('estado', '1')
+                            ->first();
 
-                // Fallback: buscar en almacén 2 de la misma empresa (compatibilidad)
-                if (!$productoMadre && $codigo) {
-                    $productoMadre = \App\Models\Producto::where('id_empresa', $user->id_empresa)
-                        ->where('almacen', '2')
-                        ->where('codigo', $codigo)
-                        ->first();
+                        // Fallback: almacén 2
+                        if (!$productoReal) {
+                            $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                                ->where('almacen', '2')
+                                ->where('codigo', $codigo)
+                                ->first();
+                        }
+                    }
                 }
 
                 $items[] = [
                     'codigo' => $codigo ?? '-',
                     'nombre' => $productoOriginal?->nombre ?? $detalle->descripcion ?? '-',
                     'cantidad_venta' => $detalle->cantidad,
-                    'encontrado' => $productoMadre !== null,
-                    'stock_almacen2' => $productoMadre?->cantidad ?? 0,
-                    'stock_despues' => $productoMadre
-                        ? $productoMadre->cantidad - $detalle->cantidad
+                    'encontrado' => $productoReal !== null,
+                    'stock_almacen2' => $productoReal?->cantidad ?? 0,
+                    'stock_despues' => $productoReal
+                        ? $productoReal->cantidad - $detalle->cantidad
                         : null,
                 ];
             }
@@ -600,7 +608,7 @@ class VentasController extends Controller
                 'success' => true,
                 'data' => $items,
                 'stock_real_descontado' => (bool) $venta->stock_real_descontado,
-                'almacen_madre' => $hayMadre ? 'Almacén Madre' : null,
+                'almacen_madre' => $usaAlmacenPropio ? 'Almacén 2' : 'Almacén Madre',
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -625,7 +633,8 @@ class VentasController extends Controller
                     ->where('stock_real_descontado', false)
                     ->findOrFail($id);
 
-                $hayMadre = \App\Models\ProductoMadre::where('estado', '1')->exists();
+                $empresa = \App\Models\Empresa::find($user->id_empresa);
+                $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
 
                 $numeroCompleto = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
 
@@ -636,41 +645,52 @@ class VentasController extends Controller
 
                     if (!$codigoProducto) continue;
 
-                    $productoMadre = null;
+                    $productoReal = null;
 
-                    // Buscar en tabla productos_madre
-                    if ($hayMadre) {
-                        $productoMadre = \App\Models\ProductoMadre::where('codigo', $codigoProducto)
-                            ->where('estado', '1')
-                            ->first();
-                    }
-
-                    // Fallback: almacén 2 de la misma empresa
-                    if (!$productoMadre) {
-                        $productoMadre = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                    if ($usaAlmacenPropio) {
+                        // Empresa con almacén propio: buscar en almacén 2 de la misma empresa
+                        $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
                             ->where('almacen', '2')
                             ->where('codigo', $codigoProducto)
                             ->first();
+                    } else {
+                        // Buscar en tabla productos_madre
+                        $productoReal = \App\Models\ProductoMadre::where('codigo', $codigoProducto)
+                            ->where('estado', '1')
+                            ->first();
+
+                        // Fallback: almacén 2 de la misma empresa
+                        if (!$productoReal) {
+                            $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                                ->where('almacen', '2')
+                                ->where('codigo', $codigoProducto)
+                                ->first();
+                        }
                     }
 
-                    if ($productoMadre) {
-                        $stockAnterior = (float) $productoMadre->cantidad;
-                        $productoMadre->decrement('cantidad', $detalle->cantidad);
-                        $productoMadre->update(['ultima_salida' => now()]);
+                    if ($productoReal) {
+                        $stockAnterior = (float) $productoReal->cantidad;
+                        $productoReal->decrement('cantidad', $detalle->cantidad);
+                        if (method_exists($productoReal, 'getTable') || isset($productoReal->ultima_salida)) {
+                            $productoReal->update(['ultima_salida' => now()]);
+                        }
 
-                        // Registrar movimiento
+                        $tipoAlmacen = $usaAlmacenPropio ? 'almacen_2' : 'almacen_madre';
+
                         \App\Models\MovimientoStock::create([
                             'id_producto' => $detalle->id_producto,
                             'tipo_movimiento' => 'salida',
                             'cantidad' => $detalle->cantidad,
                             'stock_anterior' => $stockAnterior,
                             'stock_nuevo' => $stockAnterior - $detalle->cantidad,
-                            'tipo_documento' => 'almacen_madre',
+                            'tipo_documento' => $tipoAlmacen,
                             'id_documento' => $venta->id_venta,
                             'documento_referencia' => $numeroCompleto,
-                            'motivo' => 'Descuento almacén madre por venta',
-                            'observaciones' => 'Producto madre: ' . $productoMadre->codigo,
-                            'id_almacen' => 0,
+                            'motivo' => $usaAlmacenPropio
+                                ? 'Descuento almacén 2 por venta'
+                                : 'Descuento almacén madre por venta',
+                            'observaciones' => 'Producto: ' . $productoReal->codigo,
+                            'id_almacen' => $usaAlmacenPropio ? 2 : 0,
                             'id_empresa' => $venta->id_empresa,
                             'id_usuario' => $user?->id,
                             'fecha_movimiento' => now(),
@@ -682,9 +702,9 @@ class VentasController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => $hayMadre
-                        ? 'Stock descontado del almacén madre exitosamente'
-                        : 'Stock descontado del almacén real exitosamente',
+                    'message' => $usaAlmacenPropio
+                        ? 'Stock descontado del almacén 2 exitosamente'
+                        : 'Stock descontado del almacén madre exitosamente',
                 ]);
             });
         } catch (\Exception $e) {

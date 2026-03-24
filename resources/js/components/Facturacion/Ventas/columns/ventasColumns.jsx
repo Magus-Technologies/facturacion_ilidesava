@@ -406,7 +406,12 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         className="text-amber-600 focus:bg-amber-50 focus:text-amber-700"
                                     >
                                         <PackageMinus className="mr-2 h-4 w-4" />
-                                        Descontar Almacén Madre
+                                        {(() => {
+                                            try {
+                                                const emp = JSON.parse(localStorage.getItem("empresa_activa") || "{}");
+                                                return emp.usa_almacen_propio ? "Descontar Almacén 2" : "Descontar Almacén Madre";
+                                            } catch { return "Descontar Almacén Madre"; }
+                                        })()}
                                     </DropdownMenuItem>
                                 )}
                                 {puedeGenerarXml && handlers.handleGenerarXml && (

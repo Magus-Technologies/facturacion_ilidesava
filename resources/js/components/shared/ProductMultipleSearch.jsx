@@ -236,7 +236,7 @@ export default function ProductMultipleSearch({
 
                 {/* Lista de productos */}
                 <div className="rounded-lg">
-                    <div className="max-h-[400px] overflow-y-auto">
+                    <div className="max-h-100 overflow-y-auto">
                         {loading && (
                             <div className="p-8 text-center text-gray-500">
                                 Buscando productos...
@@ -292,7 +292,7 @@ export default function ProductMultipleSearch({
                                             {/* Checkbox visual */}
                                             <div
                                                 className={`
-                                                flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center
+                                                shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center
                                                 ${
                                                     selected
                                                         ? "bg-orange-500 border-orange-500"
@@ -310,14 +310,14 @@ export default function ProductMultipleSearch({
                                                 <img
                                                     src={`/storage/productos/${producto.imagen}`}
                                                     alt={producto.nombre}
-                                                    className="w-12 h-12 object-cover rounded flex-shrink-0"
+                                                    className="w-12 h-12 object-cover rounded shrink-0"
                                                     onError={(e) => {
                                                         e.target.style.display =
                                                             "none";
                                                     }}
                                                 />
                                             ) : (
-                                                <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                                                <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center shrink-0">
                                                     <Package className="h-6 w-6 text-gray-400" />
                                                 </div>
                                             )}
