@@ -11,6 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import ProductoModal from "./ProductoModal";
 import {
     Warehouse,
     Package,
@@ -23,6 +24,8 @@ import {
     Search,
     FileSpreadsheet,
     History,
+    Pencil,
+    PackagePlus,
 } from "lucide-react";
 
 const getToken = () => localStorage.getItem("auth_token");
@@ -45,6 +48,8 @@ export default function AlmacenMadreProductos() {
     const [loading, setLoading] = useState(true);
     const [showImportar, setShowImportar] = useState(false);
     const [showCrear, setShowCrear] = useState(false);
+    const [editProduct, setEditProduct] = useState(null);
+    const [stockProduct, setStockProduct] = useState(null);
 
     // Filtros
     const [search, setSearch] = useState("");
@@ -162,6 +167,28 @@ export default function AlmacenMadreProductos() {
             header: "Costo",
             cell: ({ row }) => `S/ ${parseFloat(row.original.costo || 0).toFixed(2)}`,
         },
+        {
+            id: "acciones",
+            header: "Acciones",
+            cell: ({ row }) => (
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => setEditProduct(row.original)}
+                        className="p-1.5 rounded-md hover:bg-orange-100 text-gray-500 hover:text-orange-700 transition-colors"
+                        title="Editar producto"
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={() => setStockProduct(row.original)}
+                        className="p-1.5 rounded-md hover:bg-green-100 text-gray-500 hover:text-green-700 transition-colors"
+                        title="Ajustar stock"
+                    >
+                        <PackagePlus className="h-4 w-4" />
+                    </button>
+                </div>
+            ),
+        },
     ];
 
     return (
@@ -266,9 +293,17 @@ export default function AlmacenMadreProductos() {
                     onSuccess={fetchProductos}
                 />
 
-                <CrearProductoModal
-                    isOpen={showCrear}
-                    onClose={() => setShowCrear(false)}
+                <ProductoModal
+                    isOpen={showCrear || !!editProduct}
+                    onClose={() => { setShowCrear(false); setEditProduct(null); }}
+                    producto={editProduct || null}
+                    onSuccess={fetchProductos}
+                    modo="madre"
+                />
+
+                <AjustarStockModal
+                    producto={stockProduct}
+                    onClose={() => setStockProduct(null)}
                     onSuccess={fetchProductos}
                 />
             </div>
@@ -393,113 +428,80 @@ function ImportarModal({ isOpen, onClose, onSuccess }) {
     );
 }
 
-function CrearProductoModal({ isOpen, onClose, onSuccess }) {
-    const [form, setForm] = useState({ nombre: "", codigo: "", precio: "", costo: "", cantidad: "" });
+
+function AjustarStockModal({ producto, onClose, onSuccess }) {
+    const [cantidad, setCantidad] = useState("");
     const [saving, setSaving] = useState(false);
 
+    useEffect(() => {
+        if (producto) {
+            setCantidad(producto.cantidad || 0);
+        }
+    }, [producto]);
+
     const handleSubmit = async () => {
-        if (!form.nombre || !form.precio) {
-            toast.warning("Nombre y precio son obligatorios");
+        if (cantidad === "" || cantidad < 0) {
+            toast.warning("Ingrese una cantidad valida");
             return;
         }
         setSaving(true);
-        const data = await apiFetch("/api/almacen-madre/productos", {
-            method: "POST",
-            body: JSON.stringify({
-                nombre: form.nombre,
-                codigo: form.codigo || null,
-                precio: parseFloat(form.precio),
-                costo: form.costo ? parseFloat(form.costo) : 0,
-                cantidad: form.cantidad ? parseInt(form.cantidad) : 0,
-            }),
+        const data = await apiFetch(`/api/almacen-madre/productos/${producto.id_producto}/stock`, {
+            method: "PUT",
+            body: JSON.stringify({ cantidad: parseInt(cantidad) }),
         });
         setSaving(false);
         if (data.success) {
-            toast.success(data.message);
-            setForm({ nombre: "", codigo: "", precio: "", costo: "", cantidad: "" });
+            toast.success(`Stock actualizado: ${data.stock_anterior} → ${data.stock_nuevo}`);
             onSuccess();
             onClose();
         } else {
-            toast.error(data.message || "Error al crear");
+            toast.error(data.message || "Error al actualizar stock");
         }
     };
 
+    const stockActual = producto?.cantidad || 0;
+    const diferencia = cantidad !== "" ? parseInt(cantidad) - stockActual : 0;
+
     return (
         <Modal
-            isOpen={isOpen}
+            isOpen={!!producto}
             onClose={onClose}
-            title="Nuevo producto en Almacen Madre"
-            size="md"
+            title="Ajustar stock"
+            size="sm"
             footer={
                 <div className="flex justify-end gap-3">
                     <Button variant="outline" onClick={onClose}>Cancelar</Button>
-                    <Button onClick={handleSubmit} disabled={saving}>
+                    <Button onClick={handleSubmit} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white">
                         {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        Crear y replicar
+                        Actualizar stock
                     </Button>
                 </div>
             }
         >
-            <div className="space-y-3">
-                <p className="text-sm text-gray-500">
-                    El producto se creara en el almacen madre y se replicara a todas las empresas (con stock 0).
-                </p>
+            <div className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-sm text-gray-500">Producto</p>
+                    <p className="font-medium">{producto?.nombre}</p>
+                    <p className="text-xs text-gray-400 font-mono">{producto?.codigo}</p>
+                </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nueva cantidad (stock actual: <span className="font-bold">{stockActual}</span>)
+                    </label>
                     <input
-                        type="text"
-                        value={form.nombre}
-                        onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                        className="w-full rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                        placeholder="Nombre del producto"
+                        type="number"
+                        min="0"
+                        value={cantidad}
+                        onChange={(e) => setCantidad(e.target.value)}
+                        className="w-full rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-green-300 text-lg font-bold text-center"
+                        autoFocus
                     />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Codigo</label>
-                        <input
-                            type="text"
-                            value={form.codigo}
-                            onChange={(e) => setForm({ ...form, codigo: e.target.value })}
-                            className="w-full rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                            placeholder="Auto-generado si vacio"
-                        />
+                {diferencia !== 0 && (
+                    <div className={`text-center text-sm font-medium ${diferencia > 0 ? "text-green-600" : "text-red-600"}`}>
+                        {diferencia > 0 ? `+${diferencia} unidades` : `${diferencia} unidades`}
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
-                        <input
-                            type="number"
-                            value={form.cantidad}
-                            onChange={(e) => setForm({ ...form, cantidad: e.target.value })}
-                            className="w-full rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                            placeholder="0"
-                        />
-                    </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Precio *</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={form.precio}
-                            onChange={(e) => setForm({ ...form, precio: e.target.value })}
-                            className="w-full rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                            placeholder="0.00"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Costo</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={form.costo}
-                            onChange={(e) => setForm({ ...form, costo: e.target.value })}
-                            className="w-full rounded-lg px-3 py-2 text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                            placeholder="0.00"
-                        />
-                    </div>
-                </div>
+                )}
             </div>
         </Modal>
     );

@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/lib/sweetalert";
 import MainLayout from "../Layout/MainLayout";
 import {
@@ -10,6 +17,7 @@ import {
     RefreshCw,
     CheckCircle,
     History,
+    Search,
 } from "lucide-react";
 
 const getToken = () => localStorage.getItem("auth_token");
@@ -32,6 +40,8 @@ export default function AlmacenMadrePendientes() {
     const [loading, setLoading] = useState(true);
     const [selected, setSelected] = useState([]);
     const [descontando, setDescontando] = useState(false);
+    const [filterEmpresa, setFilterEmpresa] = useState("todas");
+    const [searchText, setSearchText] = useState("");
 
     const fetchVentas = async () => {
         setLoading(true);
@@ -44,11 +54,27 @@ export default function AlmacenMadrePendientes() {
         fetchVentas();
     }, []);
 
+    // Extraer empresas únicas
+    const empresas = [...new Set(ventas.map((v) => v.empresa).filter(Boolean))].sort();
+
+    // Filtrar ventas
+    const filteredVentas = ventas.filter((v) => {
+        if (filterEmpresa !== "todas" && v.empresa !== filterEmpresa) return false;
+        if (searchText) {
+            const s = searchText.toLowerCase();
+            if (
+                !v.numero_completo?.toLowerCase().includes(s) &&
+                !v.cliente?.toLowerCase().includes(s)
+            ) return false;
+        }
+        return true;
+    });
+
     const handleSelectAll = () => {
-        if (selected.length === ventas.length) {
+        if (selected.length === filteredVentas.length) {
             setSelected([]);
         } else {
-            setSelected(ventas.map((v) => v.id_venta));
+            setSelected(filteredVentas.map((v) => v.id_venta));
         }
     };
 
@@ -69,7 +95,27 @@ export default function AlmacenMadrePendientes() {
             body: JSON.stringify({ venta_ids: selected }),
         });
         if (data.success) {
-            toast.success(data.message);
+            if (data.no_encontrados && data.no_encontrados.length > 0) {
+                const listaHtml = data.no_encontrados
+                    .slice(0, 10)
+                    .map((p) => `<li class="text-sm text-red-700">${p}</li>`)
+                    .join("");
+                const { default: Swal } = await import("sweetalert2");
+                Swal.fire({
+                    icon: data.descontados > 0 ? "warning" : "error",
+                    title: data.descontados > 0 ? "Descuento parcial" : "No se desconto nada",
+                    html: `<p class="mb-2">${data.message}</p>
+                        <div class="text-left mt-3 p-3 bg-red-50 rounded-lg">
+                            <p class="font-medium text-red-800 mb-1">Productos no encontrados en almacen madre:</p>
+                            <ul class="list-disc pl-4">${listaHtml}</ul>
+                            ${data.no_encontrados.length > 10 ? `<p class="text-xs text-red-500 mt-1">...y ${data.no_encontrados.length - 10} mas</p>` : ""}
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Estos productos deben existir en almacen madre con el mismo codigo para poder descontar.</p>`,
+                    confirmButtonColor: "#ea580c",
+                });
+            } else {
+                toast.success(data.message);
+            }
             setSelected([]);
             fetchVentas();
         } else {
@@ -116,16 +162,43 @@ export default function AlmacenMadrePendientes() {
                     <NavLink href="/almacen-madre/movimientos" label="Movimientos" icon={History} />
                 </div>
 
+                {/* Filtros */}
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative flex-1 min-w-48 max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar comprobante o cliente..."
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                        />
+                    </div>
+                    <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
+                        <SelectTrigger className="w-52 bg-white shadow-sm">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="todas">Todas las empresas</SelectItem>
+                            {empresas.map((e) => (
+                                <SelectItem key={e} value={e}>{e}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
                 {/* Actions */}
                 <div className="flex justify-between items-center">
                     <p className="text-sm text-gray-500">
-                        {ventas.length} venta(s) pendientes de descontar del almacen madre
+                        {filteredVentas.length} venta(s) pendientes
+                        {filterEmpresa !== "todas" ? ` de ${filterEmpresa}` : ""}
+                        {ventas.length !== filteredVentas.length ? ` (${ventas.length} total)` : ""}
                     </p>
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={fetchVentas}>
                             <RefreshCw className="h-4 w-4 mr-2" /> Actualizar
                         </Button>
-                        {ventas.length > 0 && (
+                        {filteredVentas.length > 0 && (
                             <Button
                                 onClick={handleDescontar}
                                 disabled={descontando || selected.length === 0}
@@ -177,7 +250,7 @@ export default function AlmacenMadrePendientes() {
                     <div className="flex items-center justify-center h-32">
                         <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
                     </div>
-                ) : ventas.length === 0 ? (
+                ) : filteredVentas.length === 0 ? (
                     <div className="text-center py-12 bg-green-50 rounded-lg">
                         <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
                         <p className="text-green-700 font-medium">No hay ventas pendientes de descontar</p>
@@ -190,7 +263,7 @@ export default function AlmacenMadrePendientes() {
                                     <th className="px-3 py-2 text-left">
                                         <input
                                             type="checkbox"
-                                            checked={selected.length === ventas.length && ventas.length > 0}
+                                            checked={selected.length === filteredVentas.length && filteredVentas.length > 0}
                                             onChange={handleSelectAll}
                                             className="rounded"
                                         />
@@ -203,7 +276,7 @@ export default function AlmacenMadrePendientes() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {ventas.map((venta) => (
+                                {filteredVentas.map((venta) => (
                                     <tr
                                         key={venta.id_venta}
                                         className={selected.includes(venta.id_venta) ? "bg-orange-50" : "hover:bg-gray-50"}

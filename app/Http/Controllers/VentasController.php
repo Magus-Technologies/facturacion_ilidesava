@@ -627,6 +627,8 @@ class VentasController extends Controller
 
                 $hayMadre = \App\Models\ProductoMadre::where('estado', '1')->exists();
 
+                $numeroCompleto = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
+
                 foreach ($venta->productosVentas as $detalle) {
                     $codigoProducto = DB::table('productos')
                         ->where('id_producto', $detalle->id_producto)
@@ -652,9 +654,27 @@ class VentasController extends Controller
                     }
 
                     if ($productoMadre) {
-                        $stockAnterior = $productoMadre->cantidad;
+                        $stockAnterior = (float) $productoMadre->cantidad;
                         $productoMadre->decrement('cantidad', $detalle->cantidad);
                         $productoMadre->update(['ultima_salida' => now()]);
+
+                        // Registrar movimiento
+                        \App\Models\MovimientoStock::create([
+                            'id_producto' => $detalle->id_producto,
+                            'tipo_movimiento' => 'salida',
+                            'cantidad' => $detalle->cantidad,
+                            'stock_anterior' => $stockAnterior,
+                            'stock_nuevo' => $stockAnterior - $detalle->cantidad,
+                            'tipo_documento' => 'almacen_madre',
+                            'id_documento' => $venta->id_venta,
+                            'documento_referencia' => $numeroCompleto,
+                            'motivo' => 'Descuento almacén madre por venta',
+                            'observaciones' => 'Producto madre: ' . $productoMadre->codigo,
+                            'id_almacen' => 0,
+                            'id_empresa' => $venta->id_empresa,
+                            'id_usuario' => $user?->id,
+                            'fecha_movimiento' => now(),
+                        ]);
                     }
                 }
 

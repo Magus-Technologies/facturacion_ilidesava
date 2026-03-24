@@ -20,7 +20,9 @@ export default function ProductoModal({
     producto,
     almacen,
     onSuccess,
+    modo, // "madre" para almacén madre
 }) {
+    const esMadre = modo === "madre";
     const isEditing = !!producto;
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
@@ -187,9 +189,9 @@ export default function ProductoModal({
         try {
             const token = localStorage.getItem("auth_token");
             const empresaActiva = JSON.parse(localStorage.getItem("empresa_activa") || "{}");
-            const url = isEditing
-                ? `/api/productos/${producto.id_producto}`
-                : "/api/productos";
+            const url = esMadre
+                ? (isEditing ? `/api/almacen-madre/productos/${producto.id_producto}` : "/api/almacen-madre/productos")
+                : (isEditing ? `/api/productos/${producto.id_producto}` : "/api/productos");
 
             // Usar FormData para enviar archivos
             const formDataToSend = new FormData();

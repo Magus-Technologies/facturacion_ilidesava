@@ -503,7 +503,7 @@ class AlmacenMadreExportController extends Controller
                 $query->whereDate('fecha_movimiento', '<=', $hasta);
             }
             if ($search = $request->get('search')) {
-                $productoIds = ProductoMadre::where('nombre', 'LIKE', "%{$search}%")
+                $productoIds = \App\Models\Producto::where('nombre', 'LIKE', "%{$search}%")
                     ->orWhere('codigo', 'LIKE', "%{$search}%")
                     ->pluck('id_producto');
                 $query->where(function ($q) use ($search, $productoIds) {
@@ -552,7 +552,7 @@ class AlmacenMadreExportController extends Controller
             $row = 4;
             $totalDescontado = 0;
             foreach ($movimientos as $m) {
-                $producto = ProductoMadre::find($m->id_producto);
+                $producto = \App\Models\Producto::find($m->id_producto);
                 $empresa = \App\Models\Empresa::find($m->id_empresa);
 
                 $sheet->setCellValue("A{$row}", $m->fecha_movimiento?->format('Y-m-d H:i'));

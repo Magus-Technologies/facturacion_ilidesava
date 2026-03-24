@@ -114,6 +114,7 @@ class AlmacenMadreController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'precio' => 'required|numeric|min:0',
+            'imagen' => 'nullable|image|max:2048',
         ]);
 
         try {
@@ -125,6 +126,11 @@ class AlmacenMadreController extends Controller
                     'costo', 'cantidad', 'stock_minimo', 'stock_maximo',
                     'moneda', 'codsunat', 'usar_barra', 'usar_multiprecio',
                 ]);
+
+                // Manejar imagen si viene
+                if ($request->hasFile('imagen')) {
+                    $data['imagen'] = $request->file('imagen')->store('productos', 'public');
+                }
 
                 // Generar código si no viene
                 if (empty($data['codigo'])) {
@@ -171,7 +177,7 @@ class AlmacenMadreController extends Controller
                             'precio_menor' => $data['precio_menor'] ?? 0,
                             'precio_unidad' => $data['precio_unidad'] ?? 0,
                             'costo' => $data['costo'] ?? 0,
-                            'cantidad' => 0, // Hijas empiezan con stock 0
+                            'cantidad' => $data['cantidad'] ?? 0,
                             'stock_minimo' => $data['stock_minimo'] ?? 0,
                             'stock_maximo' => $data['stock_maximo'] ?? 0,
                             'moneda' => $data['moneda'] ?? 'PEN',
@@ -209,14 +215,20 @@ class AlmacenMadreController extends Controller
     {
         try {
             $producto = ProductoMadre::findOrFail($id);
-            $producto->update($request->only([
+
+            $data = $request->only([
                 'nombre', 'descripcion', 'codigo', 'cod_barra',
                 'categoria_id', 'unidad_id',
                 'precio', 'precio_mayor', 'precio_menor', 'precio_unidad',
                 'costo', 'cantidad', 'stock_minimo', 'stock_maximo',
                 'moneda', 'codsunat',
-            ]));
+            ]);
 
+            if ($request->hasFile('imagen')) {
+                $data['imagen'] = $request->file('imagen')->store('productos', 'public');
+            }
+
+            $producto->update($data);
             $producto->load(['categoria', 'unidad']);
 
             return response()->json([
@@ -308,52 +320,82 @@ class AlmacenMadreController extends Controller
                     ->get();
 
                 $numeroCompleto = '';
+                $noEncontrados = [];
+
+                $sinDescontar = 0;
+
                 foreach ($ventas as $venta) {
                     $numeroCompleto = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
+                    $ventaDescontada = false;
 
                     foreach ($venta->productosVentas as $detalle) {
                         $codigoProducto = DB::table('productos')
                             ->where('id_producto', $detalle->id_producto)
                             ->value('codigo');
 
-                        if (!$codigoProducto) continue;
+                        if (!$codigoProducto) {
+                            $noEncontrados[] = "Producto ID {$detalle->id_producto} sin código";
+                            continue;
+                        }
 
                         $productoMadre = ProductoMadre::where('codigo', $codigoProducto)
                             ->where('estado', '1')
                             ->first();
 
-                        if ($productoMadre) {
-                            $stockAnterior = (float) $productoMadre->cantidad;
-                            $productoMadre->decrement('cantidad', $detalle->cantidad);
-                            $productoMadre->update(['ultima_salida' => now()]);
-
-                            // Registrar movimiento
-                            MovimientoStock::create([
-                                'id_producto' => $productoMadre->id_producto,
-                                'tipo_movimiento' => 'salida',
-                                'cantidad' => $detalle->cantidad,
-                                'stock_anterior' => $stockAnterior,
-                                'stock_nuevo' => $stockAnterior - $detalle->cantidad,
-                                'tipo_documento' => 'almacen_madre',
-                                'id_documento' => $venta->id_venta,
-                                'documento_referencia' => $numeroCompleto,
-                                'motivo' => 'Descuento almacén madre por venta',
-                                'id_almacen' => 0,
-                                'id_empresa' => $venta->id_empresa,
-                                'id_usuario' => $user?->id,
-                                'fecha_movimiento' => now(),
-                            ]);
+                        if (!$productoMadre) {
+                            $nombreProd = DB::table('productos')->where('id_producto', $detalle->id_producto)->value('nombre');
+                            $noEncontrados[] = "{$nombreProd} ({$codigoProducto})";
+                            continue;
                         }
+
+                        $stockAnterior = (float) $productoMadre->cantidad;
+                        $productoMadre->decrement('cantidad', $detalle->cantidad);
+                        $productoMadre->update(['ultima_salida' => now()]);
+                        $ventaDescontada = true;
+
+                        // Registrar movimiento usando el id_producto de la tabla productos (FK)
+                        MovimientoStock::create([
+                            'id_producto' => $detalle->id_producto,
+                            'tipo_movimiento' => 'salida',
+                            'cantidad' => $detalle->cantidad,
+                            'stock_anterior' => $stockAnterior,
+                            'stock_nuevo' => $stockAnterior - $detalle->cantidad,
+                            'tipo_documento' => 'almacen_madre',
+                            'id_documento' => $venta->id_venta,
+                            'documento_referencia' => $numeroCompleto,
+                            'motivo' => 'Descuento almacén madre por venta',
+                            'observaciones' => 'Producto madre: ' . $productoMadre->codigo,
+                            'id_almacen' => 0,
+                            'id_empresa' => $venta->id_empresa,
+                            'id_usuario' => $user?->id,
+                            'fecha_movimiento' => now(),
+                        ]);
                     }
 
-                    $venta->update(['stock_real_descontado' => true]);
-                    $descontados++;
+                    // Solo marcar como descontada si al menos 1 producto fue encontrado en almacén madre
+                    if ($ventaDescontada) {
+                        $venta->update(['stock_real_descontado' => true]);
+                        $descontados++;
+                    } else {
+                        $sinDescontar++;
+                    }
+                }
+
+                $mensaje = "Se descontó el stock de {$descontados} venta(s) del almacén madre";
+                if ($sinDescontar > 0) {
+                    $mensaje .= ". {$sinDescontar} venta(s) NO se descontaron porque sus productos no existen en almacén madre";
+                }
+                if (!empty($noEncontrados)) {
+                    $lista = array_unique($noEncontrados);
+                    $mensaje .= ". Productos no encontrados: " . implode(', ', array_slice($lista, 0, 5));
+                    if (count($lista) > 5) $mensaje .= '... y ' . (count($lista) - 5) . ' más';
                 }
 
                 return response()->json([
                     'success' => true,
-                    'message' => "Se descontó el stock de {$descontados} venta(s) del almacén madre",
+                    'message' => $mensaje,
                     'descontados' => $descontados,
+                    'no_encontrados' => array_unique($noEncontrados),
                 ]);
             });
         } catch (\Exception $e) {
@@ -374,7 +416,7 @@ class AlmacenMadreController extends Controller
             ->where('id_almacen', 0);
 
         if ($search = $request->get('search')) {
-            $productoIds = ProductoMadre::where('nombre', 'LIKE', "%{$search}%")
+            $productoIds = Producto::where('nombre', 'LIKE', "%{$search}%")
                 ->orWhere('codigo', 'LIKE', "%{$search}%")
                 ->pluck('id_producto');
             $query->where(function ($q) use ($search, $productoIds) {
@@ -394,7 +436,7 @@ class AlmacenMadreController extends Controller
             ->limit(200)
             ->get()
             ->map(function ($m) {
-                $producto = ProductoMadre::find($m->id_producto);
+                $producto = Producto::find($m->id_producto);
                 $empresa = \App\Models\Empresa::find($m->id_empresa);
                 return [
                     'id' => $m->id_movimiento,
