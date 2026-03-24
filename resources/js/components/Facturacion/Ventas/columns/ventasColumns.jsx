@@ -303,6 +303,11 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                       accessorKey: "estado_sunat",
                       header: "Sunat",
                       cell: ({ row }) => {
+                          // Notas de venta no van a SUNAT
+                          const idTido = String(row.original.id_tido);
+                          if (idTido === "6") {
+                              return <span className="text-xs text-gray-400">—</span>;
+                          }
                           const badge = getSunatBadge(
                               row.getValue("estado_sunat"),
                           );
@@ -357,12 +362,14 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                 const estaAnulada =
                     venta.estado === "2" || venta.estado === "A";
                 const estaVendida = venta.estado === "3";
+                const esNotaVenta = String(venta.id_tido) === "6";
                 const yaEnviado = venta.estado_sunat === "1" || venta.estado_sunat === "4";
                 const conObservaciones = venta.estado_sunat === "4";
                 const tieneXml = !!venta.nombre_xml;
                 const isSunatLoading = sunatLoadingId === venta.id_venta;
-                const puedeGenerarXml = !estaAnulada && !tieneXml && !ocultarSunat;
-                const puedeEnviar = !estaAnulada && tieneXml && !yaEnviado && !ocultarSunat;
+                const ocultarSunatFila = ocultarSunat || esNotaVenta;
+                const puedeGenerarXml = !estaAnulada && !tieneXml && !ocultarSunatFila;
+                const puedeEnviar = !estaAnulada && tieneXml && !yaEnviado && !ocultarSunatFila;
 
                 if (isSunatLoading) {
                     return (
@@ -445,7 +452,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         Enviar a SUNAT
                                     </DropdownMenuItem>
                                 )}
-                                {!ocultarSunat && tieneXml && handlers.handleVerXml && (
+                                {!ocultarSunatFila && tieneXml && handlers.handleVerXml && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleVerXml(venta)}
                                         className="text-emerald-600 focus:bg-emerald-50 focus:text-emerald-700"
@@ -454,7 +461,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         Ver XML
                                     </DropdownMenuItem>
                                 )}
-                                {!ocultarSunat && venta.cdr_url && handlers.handleDescargarCdr && (
+                                {!ocultarSunatFila && venta.cdr_url && handlers.handleDescargarCdr && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleDescargarCdr(venta)}
                                         className="text-teal-600 focus:bg-teal-50 focus:text-teal-700"
@@ -463,7 +470,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         Descargar CDR
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && !ocultarSunat && handlers.handleGenerarGuia && (
+                                {!estaAnulada && !ocultarSunatFila && handlers.handleGenerarGuia && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleGenerarGuia(venta)}
                                         className="text-purple-600 focus:bg-purple-50 focus:text-purple-700"
@@ -472,7 +479,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         Guía de Remisión
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && !estaVendida && ocultarSunat && (
+                                {!estaAnulada && !estaVendida && ocultarSunatFila && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleAnular(venta)}
                                         className="text-red-600 focus:bg-red-50 focus:text-red-700"

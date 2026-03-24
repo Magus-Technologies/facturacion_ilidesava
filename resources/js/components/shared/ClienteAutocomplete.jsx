@@ -59,10 +59,12 @@ export default function ClienteAutocomplete({
         }
     }, [tipoComprobante, initialTipoDoc]);
 
-    // Actualizar searchTerm cuando cambia el value externo
+    // Actualizar searchTerm cuando cambia el value externo (no por el usuario escribiendo)
     useEffect(() => {
-        isExternalUpdate.current = true;
-        setSearchTerm(value);
+        if (value !== searchTerm) {
+            isExternalUpdate.current = true;
+            setSearchTerm(value);
+        }
     }, [value]);
 
     // Búsqueda de clientes
