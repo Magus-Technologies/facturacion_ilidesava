@@ -9,43 +9,47 @@ use Illuminate\Console\Command;
 class MigrarProductosAlmacenMadre extends Command
 {
     protected $signature = 'almacen:migrar-productos
-                            {--empresa= : ID de empresa específica (obligatorio)}
+                            {--empresa= : ID de empresa específica (opcional, sin esto migra de todas)}
                             {--dry-run : Solo muestra qué haría sin ejecutar cambios}';
 
-    protected $description = 'Sincroniza productos de una empresa al almacén madre. Crea o actualiza TODO (stock, nombre, precio, etc.)';
+    protected $description = 'Sincroniza productos al almacén madre. Crea o actualiza TODO (stock, nombre, precio, etc.)';
 
     public function handle(): int
     {
         $dryRun = $this->option('dry-run');
         $empresaId = $this->option('empresa');
 
-        if (!$empresaId) {
-            $this->error('Debes indicar la empresa: --empresa=ID');
-            return Command::FAILURE;
-        }
-
         if ($dryRun) {
             $this->warn('*** MODO DRY-RUN: No se ejecutarán cambios ***');
         }
 
-        $productos = Producto::where('estado', '1')
-            ->where('id_empresa', $empresaId)
+        $query = Producto::where('estado', '1')
             ->whereNotNull('codigo')
-            ->where('codigo', '!=', '')
-            ->get();
+            ->where('codigo', '!=', '');
 
-        $this->info("Empresa ID: {$empresaId} — Productos encontrados: {$productos->count()}");
+        if ($empresaId) {
+            $query->where('id_empresa', $empresaId);
+            $this->info("Filtrando empresa ID: {$empresaId}");
+        } else {
+            $this->info("Migrando de TODAS las empresas");
+        }
+
+        // Agrupar por código — tomar el de mayor stock como referencia
+        $productosPorCodigo = $query->get()
+            ->groupBy('codigo')
+            ->map(fn($group) => $group->sortByDesc('cantidad')->first());
+
+        $this->info("Productos únicos por código: {$productosPorCodigo->count()}");
 
         $creados = 0;
         $actualizados = 0;
-        $sinCambios = 0;
 
-        $bar = $this->output->createProgressBar($productos->count());
+        $bar = $this->output->createProgressBar($productosPorCodigo->count());
         $bar->start();
 
-        foreach ($productos as $prod) {
+        foreach ($productosPorCodigo as $codigo => $prod) {
             // Buscar en madre por código, luego por nombre
-            $existente = ProductoMadre::where('codigo', $prod->codigo)->first();
+            $existente = ProductoMadre::where('codigo', $codigo)->first();
             if (!$existente) {
                 $existente = ProductoMadre::where('nombre', $prod->nombre)->first();
             }
@@ -70,13 +74,11 @@ class MigrarProductosAlmacenMadre extends Command
             ];
 
             if ($existente) {
-                // Actualizar TODO incluyendo stock
                 if (!$dryRun) {
                     $existente->update($datos);
                 }
                 $actualizados++;
             } else {
-                // Crear nuevo
                 $datos['usar_barra'] = $prod->usar_barra ?? '0';
                 $datos['usar_multiprecio'] = $prod->usar_multiprecio ?? '0';
                 $datos['imagen'] = $prod->imagen;
