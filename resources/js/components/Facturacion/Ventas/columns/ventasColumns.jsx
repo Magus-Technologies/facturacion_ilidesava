@@ -19,6 +19,7 @@ import {
     PackageCheck,
     Image,
     Loader2,
+    AlertTriangle,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -310,10 +311,13 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                               Pendiente: <Clock className="h-3 w-3" />,
                               "Anulado (NC)": <XCircle className="h-3 w-3" />,
                               Rechazado: <XCircle className="h-3 w-3" />,
+                              "Con Observaciones": <AlertTriangle className="h-3 w-3" />,
                           };
+                          const observaciones = row.original.sunat_observaciones;
                           return (
                               <span
                                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
+                                  title={observaciones || ""}
                               >
                                   {iconos[badge.text]}
                                   {badge.text}
@@ -353,7 +357,8 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                 const estaAnulada =
                     venta.estado === "2" || venta.estado === "A";
                 const estaVendida = venta.estado === "3";
-                const yaEnviado = venta.estado_sunat === "1";
+                const yaEnviado = venta.estado_sunat === "1" || venta.estado_sunat === "4";
+                const conObservaciones = venta.estado_sunat === "4";
                 const tieneXml = !!venta.nombre_xml;
                 const isSunatLoading = sunatLoadingId === venta.id_venta;
                 const puedeGenerarXml = !estaAnulada && !tieneXml && !ocultarSunat;
@@ -392,6 +397,14 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                     >
                                         <WhatsAppIcon className="mr-2 h-4 w-4" />
                                         Enviar por WhatsApp
+                                    </DropdownMenuItem>
+                                )}
+                                {conObservaciones && (
+                                    <DropdownMenuItem disabled className="text-amber-700 opacity-100 whitespace-normal">
+                                        <AlertTriangle className="mr-2 h-4 w-4 shrink-0" />
+                                        <span className="text-xs leading-tight">
+                                            SUNAT aceptó con observaciones. Se devolvió el stock. Haga NC y re-facture.
+                                        </span>
                                     </DropdownMenuItem>
                                 )}
                                 {!estaAnulada && venta.stock_real_descontado && (

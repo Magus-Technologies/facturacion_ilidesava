@@ -38,6 +38,7 @@ class Venta extends Model
         'estado_sunat',
         'codigo_sunat',
         'mensaje_sunat',
+        'sunat_observaciones',
         'intentos',
         'pdf_url',
         'xml_url',

@@ -388,25 +388,48 @@ class SunatService
             }
             file_put_contents("{$cdrDir}/R-{$nombreArchivo}.zip", $cdrZip);
 
+            // Detectar observaciones en el CDR
+            $notas = $cdr->getNotes() ?? [];
+            $tieneObservaciones = !empty($notas);
+            $observacionesTexto = $tieneObservaciones ? implode(' | ', $notas) : null;
+
+            // Si tiene observaciones: estado '4' (con observaciones), sino '1' (aceptado)
+            $estadoSunat = $tieneObservaciones ? '4' : '1';
+
             $venta->update([
-                'estado_sunat' => '1',
+                'estado_sunat' => $estadoSunat,
                 'hash_cpe' => $venta->hash_cpe,
                 'cdr_url' => "sunat/cdr/{$ruc}/R-{$nombreArchivo}.zip",
                 'codigo_sunat' => $cdr->getCode(),
                 'mensaje_sunat' => $cdr->getDescription(),
+                'sunat_observaciones' => $observacionesTexto,
             ]);
 
-            Log::info('SUNAT - Comprobante aceptado', [
-                'venta' => $venta->serie . '-' . $venta->numero,
-                'codigo' => $cdr->getCode(),
-                'mensaje' => $cdr->getDescription(),
-            ]);
+            if ($tieneObservaciones) {
+                Log::warning('SUNAT - Comprobante aceptado CON OBSERVACIONES', [
+                    'venta' => $venta->serie . '-' . $venta->numero,
+                    'codigo' => $cdr->getCode(),
+                    'mensaje' => $cdr->getDescription(),
+                    'observaciones' => $notas,
+                ]);
+
+                // Devolver stock al almacén de la empresa
+                $this->devolverStockPorObservaciones($venta);
+            } else {
+                Log::info('SUNAT - Comprobante aceptado', [
+                    'venta' => $venta->serie . '-' . $venta->numero,
+                    'codigo' => $cdr->getCode(),
+                    'mensaje' => $cdr->getDescription(),
+                ]);
+            }
 
             return [
-                'success' => true,
+                'success' => $tieneObservaciones ? false : true,
                 'codigo' => $cdr->getCode(),
                 'mensaje' => $cdr->getDescription(),
                 'cdr_url' => "sunat/cdr/{$ruc}/R-{$nombreArchivo}.zip",
+                'observaciones' => $tieneObservaciones,
+                'notas_observaciones' => $notas,
             ];
         }
 
@@ -1449,5 +1472,84 @@ class SunatService
         }
 
         return $resultado . ' CON ' . str_pad((string) (int) $decimales, 2, '0', STR_PAD_LEFT) . '/100';
+    }
+
+    /**
+     * Devolver stock al almacén cuando SUNAT acepta con observaciones.
+     * Revierte el stock de la empresa (almacen 1) y del almacén madre/propio si fue descontado.
+     */
+    private function devolverStockPorObservaciones(Venta $venta): void
+    {
+        try {
+            $venta->load(['productosVentas', 'empresa']);
+            $empresa = $venta->empresa;
+            $numeroCompleto = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
+
+            foreach ($venta->productosVentas as $detalle) {
+                // Devolver stock al almacén 1 de la empresa
+                $producto = \App\Models\Producto::find($detalle->id_producto);
+                if ($producto) {
+                    $stockAnterior = (float) $producto->cantidad;
+                    $producto->increment('cantidad', $detalle->cantidad);
+
+                    \App\Models\MovimientoStock::create([
+                        'id_producto' => $detalle->id_producto,
+                        'tipo_movimiento' => 'entrada',
+                        'cantidad' => $detalle->cantidad,
+                        'stock_anterior' => $stockAnterior,
+                        'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                        'tipo_documento' => 'devolucion_observacion',
+                        'id_documento' => $venta->id_venta,
+                        'documento_referencia' => $numeroCompleto,
+                        'motivo' => 'Devolución automática por observaciones SUNAT',
+                        'observaciones' => $venta->sunat_observaciones,
+                        'id_almacen' => 1,
+                        'id_empresa' => $venta->id_empresa,
+                        'id_usuario' => $venta->id_usuario,
+                        'fecha_movimiento' => now(),
+                    ]);
+                }
+            }
+
+            // Si ya se descontó del almacén madre/propio, devolver también
+            if ($venta->stock_real_descontado) {
+                $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
+
+                foreach ($venta->productosVentas as $detalle) {
+                    $producto = \App\Models\Producto::find($detalle->id_producto);
+                    if (!$producto || !$producto->codigo) continue;
+
+                    if ($usaAlmacenPropio) {
+                        // Devolver al almacén 2 de la misma empresa
+                        $prodAlmacen2 = \App\Models\Producto::where('id_empresa', $venta->id_empresa)
+                            ->where('codigo', $producto->codigo)
+                            ->where('almacen', '2')
+                            ->first();
+                        if ($prodAlmacen2) {
+                            $prodAlmacen2->increment('cantidad', $detalle->cantidad);
+                        }
+                    } else {
+                        // Devolver al almacén madre
+                        $productoMadre = \App\Models\ProductoMadre::where('codigo', $producto->codigo)
+                            ->where('estado', '1')
+                            ->first();
+                        if ($productoMadre) {
+                            $productoMadre->increment('cantidad', $detalle->cantidad);
+                        }
+                    }
+                }
+
+                $venta->update(['stock_real_descontado' => false]);
+            }
+
+            \Illuminate\Support\Facades\Log::info('Stock devuelto por observaciones SUNAT', [
+                'venta' => $numeroCompleto,
+                'observaciones' => $venta->sunat_observaciones,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error devolviendo stock por observaciones: ' . $e->getMessage(), [
+                'venta_id' => $venta->id_venta,
+            ]);
+        }
     }
 }

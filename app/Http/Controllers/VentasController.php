@@ -55,6 +55,7 @@ class VentasController extends Controller
                         'voucher' => $pago && $pago->voucher ? $pago->voucher : null,
                         'estado' => $venta->estado,
                         'estado_sunat' => $venta->estado_sunat,
+                        'sunat_observaciones' => $venta->sunat_observaciones,
                         'nombre_xml' => $venta->nombre_xml,
                         'cdr_url' => $venta->cdr_url,
                         'afecta_stock' => $venta->afecta_stock,

@@ -118,6 +118,10 @@ export const getSunatBadge = (estadoSunat) => {
             color: 'bg-orange-100 text-orange-800',
             text: 'Rechazado',
         },
+        '4': {
+            color: 'bg-amber-100 text-amber-800 border border-amber-300',
+            text: 'Con Observaciones',
+        },
     };
 
     return badges[estadoSunat] || badges['0'];

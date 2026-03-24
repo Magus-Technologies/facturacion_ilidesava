@@ -18,6 +18,17 @@ export const useSunat = (fetchVentas) => {
     };
 
     const mostrarResultadoSunat = (resultado) => {
+        // Caso especial: aceptado CON observaciones (stock devuelto automáticamente)
+        if (resultado.observaciones) {
+            const notas = resultado.notas_observaciones || [];
+            const detalle = notas.length > 0 ? notas.join('\n') : (resultado.mensaje || '');
+            toast.warning(
+                `SUNAT aceptó el comprobante CON OBSERVACIONES.\n\nEl stock fue devuelto automáticamente al almacén.\n\nSe recomienda hacer Nota de Crédito y re-facturar.\n\n${detalle}`,
+                'Aceptado con Observaciones'
+            );
+            return;
+        }
+
         if (!resultado.success) {
             const codigo = resultado.codigo || '';
             if (codigo === 'HTTP' || codigo === 'SOAP' || codigo === 'ERROR') {
@@ -28,20 +39,14 @@ export const useSunat = (fetchVentas) => {
             return;
         }
 
-        const mensaje = resultado.mensaje || '';
-        const tieneObservaciones = mensaje.includes('Detalle:') || mensaje.includes('error:') || (resultado.codigo && String(resultado.codigo) !== '0');
-
-        if (tieneObservaciones) {
-            toast.warning(`Comprobante aceptado por SUNAT con observaciones.\n\nSe recomienda revisar los datos del comprobante.`, 'Aceptado con observaciones');
-        } else {
-            toast.success('Comprobante enviado y aceptado por SUNAT correctamente.');
-        }
+        toast.success('Comprobante enviado y aceptado por SUNAT correctamente.');
     };
 
     const handleEnviarSunat = async (venta) => {
         const resultado = await enviarSunat(venta.id_venta);
         mostrarResultadoSunat(resultado);
-        if (resultado.success && fetchVentas) fetchVentas();
+        // Refrescar lista tanto si fue exitoso como si tuvo observaciones (cambió el estado)
+        if ((resultado.success || resultado.observaciones) && fetchVentas) fetchVentas();
         return resultado;
     };
 
@@ -54,7 +59,7 @@ export const useSunat = (fetchVentas) => {
 
         const envioResult = await enviarSunat(venta.id_venta);
         mostrarResultadoSunat(envioResult);
-        if (envioResult.success && fetchVentas) fetchVentas();
+        if ((envioResult.success || envioResult.observaciones) && fetchVentas) fetchVentas();
         return envioResult;
     };
 

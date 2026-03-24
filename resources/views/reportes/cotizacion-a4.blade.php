@@ -150,14 +150,54 @@
                     <!-- Logo and Slogan Header -->
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 2px;">
                         <tr>
+                            @php
+                                $hasExtras = !empty($logosEmpresas) && count($logosEmpresas) > 0;
+                            @endphp
                             <td style="width: 45%; vertical-align: top; text-align: left; padding-right: 5px;">
-                                @if($cotizacion->empresa && $cotizacion->empresa->logo && file_exists(public_path('storage/' . $cotizacion->empresa->logo)))
+                                @if(!$hasExtras)
+                                    {{-- Sin extras: logo solo --}}
+                                    @if($cotizacion->empresa && $cotizacion->empresa->logo && file_exists(public_path('storage/' . $cotizacion->empresa->logo)))
+                                        @php
+                                            $logoPath = public_path('storage/' . $cotizacion->empresa->logo);
+                                            $logoData = base64_encode(file_get_contents($logoPath));
+                                            $logoMime = mime_content_type($logoPath);
+                                        @endphp
+                                        <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="max-width: 100%; height: 110px; width: auto;">
+                                    @endif
+                                @else
+                                    {{-- Con extras: logo principal + extras en grilla de 2 columnas --}}
                                     @php
-                                        $logoPath = public_path('storage/' . $cotizacion->empresa->logo);
-                                        $logoData = base64_encode(file_get_contents($logoPath));
-                                        $logoMime = mime_content_type($logoPath);
+                                        $allLogos = [];
+                                        if ($cotizacion->empresa && $cotizacion->empresa->logo && file_exists(public_path('storage/' . $cotizacion->empresa->logo))) {
+                                            $logoPath = public_path('storage/' . $cotizacion->empresa->logo);
+                                            $allLogos[] = [
+                                                'src' => 'data:' . mime_content_type($logoPath) . ';base64,' . base64_encode(file_get_contents($logoPath)),
+                                                'alt' => 'Logo',
+                                            ];
+                                        }
+                                        foreach ($logosEmpresas as $logoEmp) {
+                                            if ($logoEmp->logo && file_exists(public_path('storage/' . $logoEmp->logo))) {
+                                                $lPath = public_path('storage/' . $logoEmp->logo);
+                                                $allLogos[] = [
+                                                    'src' => 'data:' . mime_content_type($lPath) . ';base64,' . base64_encode(file_get_contents($lPath)),
+                                                    'alt' => $logoEmp->comercial ?? 'Logo',
+                                                ];
+                                            }
+                                        }
+                                        $logoChunks = array_chunk($allLogos, 2);
+                                        $lH = count($allLogos) <= 2 ? 75 : (count($allLogos) <= 4 ? 60 : 50);
                                     @endphp
-                                    <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="max-width: 100%; height: 110px; width: auto;">
+                                    <table style="border-collapse: collapse;">
+                                        @foreach($logoChunks as $chunk)
+                                            <tr>
+                                                @foreach($chunk as $logo)
+                                                    <td style="vertical-align: middle; padding: 2px 4px;">
+                                                        <img src="{{ $logo['src'] }}" alt="{{ $logo['alt'] }}" style="height: {{ $lH }}px; width: auto;">
+                                                    </td>
+                                                @endforeach
+                                            </tr>
+                                        @endforeach
+                                    </table>
                                 @endif
                             </td>
                             <td style="width: 55%; vertical-align: top; text-align: left;">

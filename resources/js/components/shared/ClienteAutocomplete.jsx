@@ -43,6 +43,7 @@ export default function ClienteAutocomplete({
     const [loading, setLoading] = useState(false);
     const [consultando, setConsultando] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [searchDone, setSearchDone] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const inputRef = useRef(null);
     const dropdownRef = useRef(null);
@@ -73,6 +74,7 @@ export default function ClienteAutocomplete({
         if (searchTerm.length < 2) {
             setClientes([]);
             setShowDropdown(false);
+            setSearchDone(false);
             return;
         }
         const delay = setTimeout(() => buscarClientes(searchTerm), 300);
@@ -81,6 +83,7 @@ export default function ClienteAutocomplete({
 
     const buscarClientes = async (term) => {
         setLoading(true);
+        setSearchDone(false);
         try {
             const token = localStorage.getItem("auth_token");
             const response = await fetch(`/api/clientes?search=${encodeURIComponent(term)}`, {
@@ -89,16 +92,18 @@ export default function ClienteAutocomplete({
             const data = await response.json();
             if (data.success && data.data) {
                 setClientes(data.data);
-                setShowDropdown(data.data.length > 0);
+                setShowDropdown(true);
                 setSelectedIndex(-1);
             } else {
                 setClientes([]);
-                setShowDropdown(false);
+                setShowDropdown(true);
             }
         } catch {
             setClientes([]);
+            setShowDropdown(true);
         } finally {
             setLoading(false);
+            setSearchDone(true);
         }
     };
 
@@ -231,6 +236,7 @@ export default function ClienteAutocomplete({
         onDocumentoChange?.("");
         setClientes([]);
         setShowDropdown(false);
+        setSearchDone(false);
         inputRef.current?.focus();
     };
 
@@ -265,11 +271,10 @@ export default function ClienteAutocomplete({
                         onChange={handleInputChange}
                         onKeyDown={handleKeyDown}
                         placeholder={
-                            tipoDoc === "DNI" ? "8 dígitos..." :
-                            tipoDoc === "RUC" ? "20xxxxxxxxx..." :
-                            "Nro. carnet extranjería..."
+                            tipoDoc === "DNI" ? "DNI o nombre del cliente..." :
+                            tipoDoc === "RUC" ? "RUC o razón social..." :
+                            "CE o nombre del cliente..."
                         }
-                        maxLength={tipoDoc === "DNI" ? 8 : tipoDoc === "RUC" ? 11 : 12}
                         autoComplete="off"
                     />
                     {loading && (
@@ -342,14 +347,16 @@ export default function ClienteAutocomplete({
             )}
 
             {/* No hay resultados */}
-            {showDropdown && !loading && clientes.length === 0 && searchTerm.length >= 2 && (
+            {showDropdown && searchDone && !loading && clientes.length === 0 && searchTerm.length >= 2 && (
                 <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center">
-                    <p className="text-gray-500 text-sm">No se encontraron clientes</p>
+                    <p className="text-gray-500 text-sm">No se encontraron clientes para "{searchTerm}"</p>
                     {tipoDoc === "CE" ? (
                         <p className="text-gray-400 text-xs mt-1">Ingrese los datos manualmente en el campo de nombre</p>
-                    ) : showConsultarButton ? (
-                        <p className="text-gray-400 text-xs mt-1">Intente consultar con el botón "Consultar"</p>
-                    ) : null}
+                    ) : showConsultarButton && /^\d+$/.test(searchTerm.trim()) ? (
+                        <p className="text-gray-400 text-xs mt-1">Presione el botón de buscar para consultar en SUNAT/RENIEC</p>
+                    ) : (
+                        <p className="text-gray-400 text-xs mt-1">Puede buscar por documento o nombre</p>
+                    )}
                 </div>
             )}
         </div>

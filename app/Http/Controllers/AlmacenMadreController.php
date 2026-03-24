@@ -21,8 +21,12 @@ class AlmacenMadreController extends Controller
         $totalProductos = ProductoMadre::where('estado', '1')->count();
         $productosConStock = ProductoMadre::where('estado', '1')->where('cantidad', '>', 0)->count();
 
+        // Excluir empresas con almacén propio
+        $empresasAlmacenPropio = Empresa::where('usa_almacen_propio', true)->pluck('id_empresa');
+
         $ventasPendientes = \App\Models\Venta::where('stock_real_descontado', false)
             ->where('estado', '1')
+            ->whereNotIn('id_empresa', $empresasAlmacenPropio)
             ->count();
 
         // Valorización del inventario
@@ -53,9 +57,10 @@ class AlmacenMadreController extends Controller
             ->limit(8)
             ->get();
 
-        // Ventas pendientes por empresa
+        // Ventas pendientes por empresa (excluir almacén propio)
         $pendientesPorEmpresa = \App\Models\Venta::where('stock_real_descontado', false)
             ->where('ventas.estado', '1')
+            ->whereNotIn('ventas.id_empresa', $empresasAlmacenPropio)
             ->join('empresas', 'ventas.id_empresa', '=', 'empresas.id_empresa')
             ->selectRaw('COALESCE(empresas.comercial, empresas.razon_social) as empresa, COUNT(*) as total, SUM(ventas.total) as monto')
             ->groupBy('empresas.comercial', 'empresas.razon_social')
@@ -149,8 +154,13 @@ class AlmacenMadreController extends Controller
                 $data['fecha_registro'] = now();
                 $productoMadre = ProductoMadre::create($data);
 
-                // Replicar a todas las empresas activas
-                $empresas = Empresa::where('estado', '1')->pluck('id_empresa');
+                // Replicar a todas las empresas activas (excepto las que usan almacén propio)
+                $empresas = Empresa::where('estado', '1')
+                    ->where(function ($q) {
+                        $q->where('usa_almacen_propio', false)
+                          ->orWhereNull('usa_almacen_propio');
+                    })
+                    ->pluck('id_empresa');
                 $replicados = 0;
 
                 foreach ($empresas as $empresaId) {
@@ -269,9 +279,12 @@ class AlmacenMadreController extends Controller
      */
     public function ventasPendientes(): JsonResponse
     {
+        $empresasAlmacenPropio = Empresa::where('usa_almacen_propio', true)->pluck('id_empresa');
+
         $ventas = \App\Models\Venta::with(['cliente', 'empresa', 'productosVentas.producto'])
             ->where('stock_real_descontado', false)
             ->where('estado', '1')
+            ->whereNotIn('id_empresa', $empresasAlmacenPropio)
             ->orderBy('fecha_emision', 'desc')
             ->get()
             ->map(function ($v) {

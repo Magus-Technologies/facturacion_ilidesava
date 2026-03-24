@@ -220,7 +220,8 @@ function DashboardTab({ dashboard, onRefresh }) {
                     <li>Cada empresa tiene su propio stock para facturar</li>
                     <li>Al hacer una factura/boleta se descuenta del stock de la empresa</li>
                     <li>Al hacer click en "Descontar Almacen Madre" se descuenta de aqui</li>
-                    <li>Los productos creados aqui se replican a todas las empresas</li>
+                    <li>Los productos creados aqui se replican a las empresas que usan almacen madre</li>
+                    <li>Las empresas con almacen propio (independiente) no se ven afectadas</li>
                 </ul>
             </div>
         </div>

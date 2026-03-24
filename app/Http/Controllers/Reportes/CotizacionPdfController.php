@@ -76,8 +76,15 @@ class CotizacionPdfController extends Controller
                 ? PlantillaImpresion::obtenerPara($empresa->id_empresa)
                 : null;
 
+            // Cargar logos de todas las empresas activas (excepto la actual)
+            $logosEmpresas = \App\Models\Empresa::where('estado', '1')
+                ->where('id_empresa', '!=', $cotizacion->id_empresa)
+                ->whereNotNull('logo')
+                ->where('logo', '!=', '')
+                ->get(['id_empresa', 'comercial', 'logo']);
+
             // Renderizar vista Blade a HTML
-            $html = view('reportes.cotizacion-a4', compact('cotizacion', 'plantilla'))->render();
+            $html = view('reportes.cotizacion-a4', compact('cotizacion', 'plantilla', 'logosEmpresas'))->render();
 
             // Crear PDF con Dompdf
             $options = new Options();
