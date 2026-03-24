@@ -48,6 +48,12 @@
           "name": "Guías de Remisión",
           "icon": "Truck",
           "path": "/guia-remision"
+        },
+        {
+          "id": "cuentas-por-cobrar",
+          "name": "Cuentas por Cobrar",
+          "icon": "HandCoins",
+          "path": "/cuentas-por-cobrar"
         }
       ]
     },
@@ -76,10 +82,36 @@
       "path": "/proveedores"
     },
     {
-      "id": "productos",
-      "name": "Productos",
+      "id": "almacen",
+      "name": "Almacén",
       "icon": "Package",
-      "path": "/productos"
+      "path": "#",
+      "submodules": [
+        {
+          "id": "productos",
+          "name": "Productos",
+          "icon": "Package",
+          "path": "/productos"
+        },
+        {
+          "id": "almacen-madre",
+          "name": "Almacén Madre",
+          "icon": "Building2",
+          "path": "/almacen-madre"
+        },
+        {
+          "id": "almacen-madre-productos",
+          "name": "Productos (Madre)",
+          "icon": "PackageSearch",
+          "path": "/almacen-madre/productos"
+        },
+        {
+          "id": "almacen-madre-pendientes",
+          "name": "Pendientes (Madre)",
+          "icon": "PackageMinus",
+          "path": "/almacen-madre/pendientes"
+        }
+      ]
     },
     {
       "id": "configuracion",

@@ -58,6 +58,22 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::post('empresas/{id}', [\App\Http\Controllers\EmpresaController::class, 'update']); // POST para FormData con logo
     Route::delete('empresas/{id}/logo', [\App\Http\Controllers\EmpresaController::class, 'deleteLogo']);
 
+    // Almacén Madre
+    Route::get('almacen-madre/dashboard', [\App\Http\Controllers\AlmacenMadreController::class, 'dashboard']);
+    Route::get('almacen-madre/productos', [\App\Http\Controllers\AlmacenMadreController::class, 'productos']);
+    Route::post('almacen-madre/productos', [\App\Http\Controllers\AlmacenMadreController::class, 'crearProducto']);
+    Route::put('almacen-madre/productos/{id}', [\App\Http\Controllers\AlmacenMadreController::class, 'actualizarProducto']);
+    Route::put('almacen-madre/productos/{id}/stock', [\App\Http\Controllers\AlmacenMadreController::class, 'actualizarStock']);
+    Route::get('almacen-madre/ventas-pendientes', [\App\Http\Controllers\AlmacenMadreController::class, 'ventasPendientes']);
+    Route::post('almacen-madre/descontar-masivo', [\App\Http\Controllers\AlmacenMadreController::class, 'descontarMasivo']);
+    Route::get('almacen-madre/exportar-excel', [\App\Http\Controllers\Exports\AlmacenMadreExportController::class, 'descargarExcel']);
+    Route::get('almacen-madre/empresas-importar', [\App\Http\Controllers\AlmacenMadreController::class, 'empresasParaImportar']);
+    Route::post('almacen-madre/importar-empresa', [\App\Http\Controllers\AlmacenMadreController::class, 'importarDesdeEmpresa']);
+
+    // Cuentas por Cobrar
+    Route::get('cuentas-por-cobrar', [\App\Http\Controllers\CuentasPorCobrarController::class, 'index']);
+    Route::post('cuentas-por-cobrar/cuotas/{id}/pagar', [\App\Http\Controllers\CuentasPorCobrarController::class, 'registrarPago']);
+
     // Movimientos de Stock
     Route::get('movimientos-stock', [\App\Http\Controllers\MovimientosStockController::class, 'index'])->middleware('permission:productos.view');
 

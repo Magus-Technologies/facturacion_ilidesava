@@ -95,7 +95,7 @@ class ProductoController extends Controller
                 'success' => true,
                 'message' => $replicar
                     ? 'Producto creado y replicado a todas las empresas'
-                    : 'Producto creado exitosamente en ambos almacenes',
+                    : 'Producto creado exitosamente',
                 'data' => $producto,
             ], 201);
         } catch (\Exception $e) {

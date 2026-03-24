@@ -33,10 +33,12 @@ class Empresa extends Model
         'modo',
         'igv',
         'propaganda',
+        'es_almacen_madre',
     ];
 
     protected $casts = [
         'igv' => 'decimal:2',
+        'es_almacen_madre' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

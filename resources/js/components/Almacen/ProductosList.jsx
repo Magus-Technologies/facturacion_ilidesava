@@ -414,36 +414,14 @@ export default function ProductosList() {
                 <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">
-                            Productos - {almacenActivo === "1" ? "Facturación" : "Almacén Real"}
+                            Productos
                         </h1>
                         <p className="text-gray-600 mt-1">
                             Gestiona tu inventario de productos
                         </p>
                     </div>
 
-                    {/* Selector de Almacén */}
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant={
-                                almacenActivo === "1" ? "default" : "outline"
-                            }
-                            onClick={() => setAlmacenActivo("1")}
-                            className="gap-2"
-                        >
-                            <Package className="h-4 w-4" />
-                            Facturación
-                        </Button>
-                        <Button
-                            variant={
-                                almacenActivo === "2" ? "default" : "outline"
-                            }
-                            onClick={() => setAlmacenActivo("2")}
-                            className="gap-2"
-                        >
-                            <Package className="h-4 w-4" />
-                            Almacén Real
-                        </Button>
-                    </div>
+                    {/* Almacén 2 (Real) fue reemplazado por Almacén Madre (/almacen-madre) */}
                 </div>
 
                 {/* Botones de acción */}

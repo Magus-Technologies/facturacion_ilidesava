@@ -10,6 +10,10 @@ import CotizacionForm from "./components/Cotizaciones/CotizacionForm";
 import ClientsList from "./components/Clientes/ClientsList";
 import MisEmpresas from "./components/Empresas/MisEmpresas";
 import ProductosList from "./components/Almacen/ProductosList";
+import AlmacenMadre from "./components/Almacen/AlmacenMadre";
+import AlmacenMadreDashboard from "./components/Almacen/AlmacenMadreDashboard";
+import AlmacenMadreProductos from "./components/Almacen/AlmacenMadreProductos";
+import AlmacenMadrePendientes from "./components/Almacen/AlmacenMadrePendientes";
 import MovimientosStockList from "./components/Almacen/MovimientosStock/page";
 import NotFound from "./components/NotFound";
 import Compras from "./components/Compras/Compras";
@@ -22,6 +26,7 @@ import NotaCreditoForm from "./components/NotaCredito/NotaCreditoForm";
 import ConsultaComprobante from "./components/Consulta/ConsultaComprobante";
 import Inicio from "./components/Inicio/Inicio";
 import PlantillaImpresion from "./components/Configuracion/PlantillaImpresion";
+import CuentasPorCobrar from "./components/Facturacion/CuentasPorCobrar/CuentasPorCobrar";
 
 import "./bootstrap";
 import "../css/app.css";
@@ -41,6 +46,10 @@ const components = {
     ClientsList,
     MisEmpresas,
     ProductosList,
+    AlmacenMadre,
+    AlmacenMadreDashboard,
+    AlmacenMadreProductos,
+    AlmacenMadrePendientes,
     MovimientosStockList,
     Compras,
     CompraForm,
@@ -52,6 +61,7 @@ const components = {
     ConsultaComprobante,
     Inicio,
     PlantillaImpresion,
+    CuentasPorCobrar,
 };
 
 // Monta cada elemento con atributo data-react-component

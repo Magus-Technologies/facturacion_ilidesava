@@ -114,47 +114,38 @@ export default function ProductoFormSection({
                     )}
                 </div>
 
-                {/* Selección de Almacén */}
-                <div className="flex flex-col gap-2 mt-1">
-                    <Label className="text-sm font-medium text-gray-700">
-                        Almacén
-                    </Label>
-                    <div className="flex p-1 bg-gray-100 rounded-lg h-10 w-fit">
-                        <button
-                            type="button"
-                            onClick={() =>
-                                !disableAlmacenSelector && onAlmacenChange("1")
-                            }
-                            disabled={disableAlmacenSelector}
-                            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
-                                almacen === "1"
-                                    ? "bg-white text-primary-700 shadow-sm"
-                                    : "text-gray-500 hover:text-gray-700"
-                            } ${disableAlmacenSelector ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                        >
-                            Facturación
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() =>
-                                !disableAlmacenSelector && onAlmacenChange("2")
-                            }
-                            disabled={disableAlmacenSelector}
-                            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
-                                almacen === "2"
-                                    ? "bg-white text-primary-700 shadow-sm"
-                                    : "text-gray-500 hover:text-gray-700"
-                            } ${disableAlmacenSelector ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                        >
-                            Almacén Real
-                        </button>
+                {/* Almacén: solo visible cuando NO está deshabilitado (es decir, sin tipo de documento aún) */}
+                {!disableAlmacenSelector && (
+                    <div className="flex flex-col gap-2 mt-1">
+                        <Label className="text-sm font-medium text-gray-700">
+                            Almacén
+                        </Label>
+                        <div className="flex p-1 bg-gray-100 rounded-lg h-10 w-fit">
+                            <button
+                                type="button"
+                                onClick={() => onAlmacenChange("1")}
+                                className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                                    almacen === "1"
+                                        ? "bg-white text-primary-700 shadow-sm"
+                                        : "text-gray-500 hover:text-gray-700"
+                                }`}
+                            >
+                                Facturación
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onAlmacenChange("2")}
+                                className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${
+                                    almacen === "2"
+                                        ? "bg-white text-primary-700 shadow-sm"
+                                        : "text-gray-500 hover:text-gray-700"
+                                }`}
+                            >
+                                Almacén Real
+                            </button>
+                        </div>
                     </div>
-                    {disableAlmacenSelector && (
-                        <p className="text-xs text-gray-500 italic">
-                            El almacén está determinado por el tipo de documento
-                        </p>
-                    )}
-                </div>
+                )}
             </div>
 
             {/* Descripción (editable, solo cuando no es modo libre) */}

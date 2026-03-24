@@ -186,6 +186,10 @@ export const prepararDatosVenta = (cliente, formData, productos, totales) => {
         cotizacion_id: formData.cotizacion_id || null,
         nota_venta_id: formData.nota_venta_id || null,
         empresas_ids: formData.empresas_ids || [],
+        fecha_vencimiento: formData.fecha_vencimiento || null,
+        tiene_inicial: formData.tiene_inicial ? 1 : 0,
+        monto_inicial: formData.monto_inicial || 0,
+        cuotas: formData.cuotas || [],
         productos: productos.map((p) => {
             const cantidad = parseFloat(p.cantidad);
             const precioConIgv = parseFloat(p.precioVenta);

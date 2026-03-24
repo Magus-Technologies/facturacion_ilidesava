@@ -26,6 +26,7 @@ class VentaPdfController extends Controller
                 "empresas",
                 "productosVentas.producto.unidad",
                 "pagos",
+                "cuotas",
             ])->findOrFail($id);
 
             // Generar QR
@@ -103,6 +104,7 @@ class VentaPdfController extends Controller
                 "empresas",
                 "productosVentas.producto.unidad",
                 "pagos",
+                "cuotas",
             ])->findOrFail($id);
 
             // Generar QR

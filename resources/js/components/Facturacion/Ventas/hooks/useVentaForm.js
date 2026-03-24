@@ -398,6 +398,11 @@ export const useVentaForm = (ventaId = null) => {
                     (dataToSend.empresas_ids || []).forEach((id, i) => {
                         formDataObj.append(`empresas_ids[${i}]`, id);
                     });
+                } else if (key === 'cuotas') {
+                    (dataToSend.cuotas || []).forEach((cuota, i) => {
+                        formDataObj.append(`cuotas[${i}][fecha]`, cuota.fecha);
+                        formDataObj.append(`cuotas[${i}][monto]`, cuota.monto);
+                    });
                 } else if (dataToSend[key] !== null && dataToSend[key] !== undefined) {
                     formDataObj.append(key, dataToSend[key]);
                 }
@@ -434,7 +439,7 @@ export const useVentaForm = (ventaId = null) => {
 
             if (data.success) {
                 toast.success(isEditing ? 'Venta actualizada' : 'Venta creada exitosamente');
-                
+
                 // Guardar datos de la venta y mostrar modal de impresión
                 setVentaGuardada({
                     id_venta: data.venta.id_venta,
@@ -443,7 +448,13 @@ export const useVentaForm = (ventaId = null) => {
                 });
                 setShowPrintModal(true);
             } else {
-                toast.error(data.message || 'Error al guardar la venta');
+                // Mostrar errores de validación detallados
+                if (data.errors) {
+                    const errores = Object.values(data.errors).flat().join('\n');
+                    toast.error(errores);
+                } else {
+                    toast.error(data.message || 'Error al guardar la venta');
+                }
             }
         } catch (error) {
             console.error('Error guardando venta:', error);

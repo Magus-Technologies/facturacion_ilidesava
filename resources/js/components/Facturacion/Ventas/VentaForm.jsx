@@ -1,7 +1,7 @@
 import MainLayout from "../../Layout/MainLayout";
 import { Button } from "../../ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // Componentes compartidos
 import ProductMultipleSearch from "../../shared/ProductMultipleSearch";
@@ -10,6 +10,7 @@ import ProductosTable from "../../shared/ProductosTable";
 import ProductoFormSection from "../../shared/ProductoFormSection";
 import PrintOptionsModal from "../../shared/PrintOptionsModal";
 import MetodoPago from "../../shared/MetodoPago";
+import PaymentSchedule from "../../shared/PaymentSchedule";
 
 // Hook personalizado
 import { useVentaForm } from "./hooks/useVentaForm";
@@ -231,6 +232,21 @@ export default function VentaForm({ ventaId = null }) {
         }
     }, [formData.id_tido]);
 
+    const [showPaymentSchedule, setShowPaymentSchedule] = useState(false);
+
+    const handlePaymentScheduleConfirm = (data) => {
+        setFormData((prev) => ({
+            ...prev,
+            cuotas: data.cuotas,
+            tiene_inicial: data.tiene_inicial,
+            monto_inicial: data.monto_inicial,
+            // Fecha vencimiento = última cuota
+            fecha_vencimiento: data.cuotas.length > 0
+                ? data.cuotas[data.cuotas.length - 1].fecha
+                : prev.fecha_vencimiento,
+        }));
+    };
+
     const totales = calcularTotales();
     const monedaSimbolo = getSimboloMoneda(formData.tipo_moneda);
 
@@ -365,11 +381,29 @@ export default function VentaForm({ ventaId = null }) {
                         totales={totales}
                         monedaSimbolo={monedaSimbolo}
                         showTipoPago={true}
+                        showCuotas={true}
+                        onOpenPaymentSchedule={() => setShowPaymentSchedule(true)}
                         showAsunto={false}
                         showEmpresas={false}
                         tipoContexto="venta"
                         disableTipoDoc={formData._tipoFijo}
                     >
+                        {/* Fecha vencimiento visible cuando es crédito */}
+                        {(formData.tipo_pago === "2" || formData.id_tipo_pago === "2") && (
+                            <div className="bg-amber-50 rounded-lg p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-amber-800">Fecha de vencimiento</span>
+                                    <span className="text-sm font-semibold text-amber-900">
+                                        {formData.fecha_vencimiento || "Sin definir"}
+                                    </span>
+                                </div>
+                                {formData.cuotas?.length > 0 && (
+                                    <p className="text-xs text-amber-600">
+                                        {formData.cuotas.length} cuota(s) configurada(s)
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         <MetodoPago
                             metodoPago={metodoPago}
                             onMetodoPagoChange={setMetodoPago}
@@ -394,6 +428,17 @@ export default function VentaForm({ ventaId = null }) {
                 onClose={handleClosePrintModal}
                 ventaId={ventaGuardada?.id_venta}
                 numeroCompleto={ventaGuardada?.numero_completo}
+            />
+
+            <PaymentSchedule
+                isOpen={showPaymentSchedule}
+                onClose={() => setShowPaymentSchedule(false)}
+                onConfirm={handlePaymentScheduleConfirm}
+                total={totales.total}
+                monedaSimbolo={monedaSimbolo}
+                cuotasIniciales={formData.cuotas || []}
+                tieneInicial={formData.tiene_inicial || false}
+                montoInicial={formData.monto_inicial || 0}
             />
         </MainLayout>
     );

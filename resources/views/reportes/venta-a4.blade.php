@@ -241,6 +241,10 @@
                     <span style="font-size: 8pt; color: #000;">{{ $venta->tipo_moneda === 'USD' ? 'DÓLARES' : 'SOLES' }}</span><br>
                     <span style="font-weight: bold; font-size: 8pt; color: #000;">FORMA DE PAGO: </span>
                     <span style="font-size: 8pt; color: #000;">{{ $venta->id_tipo_pago == 1 ? 'CONTADO' : 'CRÉDITO' }}</span>
+                    @if($venta->id_tipo_pago == 2 && $venta->fecha_vencimiento)
+                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">FECHA VENCIMIENTO: </span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->fecha_vencimiento->format('d/m/Y') }}</span>
+                    @endif
                     @if($pago)
                     <br><span style="font-weight: bold; font-size: 8pt; color: #000;">MÉTODO PAGO: </span>
                     <span style="font-size: 8pt; color: #000;">{{ $metodosPago[$pago->id_tipo_pago] ?? 'OTRO' }}</span>
@@ -379,6 +383,33 @@
                 </td>
             </tr>
         </table>
+
+        <!-- Cuotas de Crédito -->
+        @if($venta->id_tipo_pago == 2 && $venta->cuotas && $venta->cuotas->count() > 0)
+        <table style="width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid #999; border-radius: 6px; margin-top: 10px; overflow: hidden;">
+            <thead>
+                <tr style="background-color: #e5e7eb;">
+                    <td colspan="4" style="padding: 5px 10px; font-size: 8.5pt; font-weight: bold; text-align: center;">CRONOGRAMA DE PAGOS</td>
+                </tr>
+                <tr style="background-color: #f3f4f6;">
+                    <td style="padding: 4px 10px; font-size: 8pt; font-weight: bold; text-align: center; width: 15%;">N° CUOTA</td>
+                    <td style="padding: 4px 10px; font-size: 8pt; font-weight: bold; text-align: center; width: 35%;">FECHA VENCIMIENTO</td>
+                    <td style="padding: 4px 10px; font-size: 8pt; font-weight: bold; text-align: right; width: 25%;">MONTO</td>
+                    <td style="padding: 4px 10px; font-size: 8pt; font-weight: bold; text-align: center; width: 25%;">ESTADO</td>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($venta->cuotas as $cuota)
+                <tr>
+                    <td style="padding: 3px 10px; font-size: 8pt; text-align: center;">{{ $cuota->numero_cuota }}</td>
+                    <td style="padding: 3px 10px; font-size: 8pt; text-align: center;">{{ \Carbon\Carbon::parse($cuota->fecha_vencimiento)->format('d/m/Y') }}</td>
+                    <td style="padding: 3px 10px; font-size: 8pt; text-align: right;">{{ $simbolo }} {{ number_format($cuota->monto_cuota, 2) }}</td>
+                    <td style="padding: 3px 10px; font-size: 8pt; text-align: center;">{{ $cuota->estado === 'P' ? 'PENDIENTE' : ($cuota->estado === 'C' ? 'PAGADO' : 'VENCIDO') }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @endif
 
         <!-- QR Section -->
         @if(!empty($qrBase64))

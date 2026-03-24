@@ -96,6 +96,23 @@ Route::middleware('auth')->group(function () {
         return view('almacen.historialMovimientos');
     })->name('historialMovimientos');
 
+    Route::get('/almacen-madre', function () {
+        return view('almacen.almacenMadre');
+    })->name('almacenMadre');
+
+    Route::get('/almacen-madre/productos', function () {
+        return view('almacen.almacenMadreProductos');
+    })->name('almacenMadreProductos');
+
+    Route::get('/almacen-madre/pendientes', function () {
+        return view('almacen.almacenMadrePendientes');
+    })->name('almacenMadrePendientes');
+
+    // Cuentas por Cobrar
+    Route::get('/cuentas-por-cobrar', function () {
+        return view('ventas.cuentasPorCobrar');
+    })->name('cuentasPorCobrar');
+
     // Clientes
     Route::get('/clientes', function () {
         return view('clientesList');

@@ -257,6 +257,11 @@
             <div class="client-row">
                 <span class="client-label">PAGO:</span> {{ $venta->id_tipo_pago == 1 ? 'CONTADO' : 'CRÉDITO' }}
             </div>
+            @if($venta->id_tipo_pago == 2 && $venta->fecha_vencimiento)
+            <div class="client-row">
+                <span class="client-label">VENCE:</span> {{ $venta->fecha_vencimiento->format('d/m/Y') }}
+            </div>
+            @endif
             @if($pago)
             <div class="client-row">
                 <span class="client-label">MÉTODO:</span> {{ $metodosPago[$pago->id_tipo_pago] ?? 'OTRO' }}
@@ -273,6 +278,26 @@
             @endif
             @endif
         </div>
+
+        <!-- Cuotas de Crédito -->
+        @if($venta->id_tipo_pago == 2 && $venta->cuotas && $venta->cuotas->count() > 0)
+        <div class="divider"></div>
+        <div style="text-align: center; font-weight: bold; font-size: 8pt; margin-bottom: 3px;">CRONOGRAMA DE PAGOS</div>
+        <table style="width: 100%; font-size: 7.5pt; border-collapse: collapse;">
+            <tr style="font-weight: bold;">
+                <td style="padding: 2px 0;">N°</td>
+                <td style="padding: 2px 0;">VENCIMIENTO</td>
+                <td style="padding: 2px 0; text-align: right;">MONTO</td>
+            </tr>
+            @foreach($venta->cuotas as $cuota)
+            <tr>
+                <td style="padding: 1px 0;">{{ $cuota->numero_cuota }}</td>
+                <td style="padding: 1px 0;">{{ \Carbon\Carbon::parse($cuota->fecha_vencimiento)->format('d/m/Y') }}</td>
+                <td style="padding: 1px 0; text-align: right;">{{ $venta->tipo_moneda === 'USD' ? '$' : 'S/' }}{{ number_format($cuota->monto_cuota, 2) }}</td>
+            </tr>
+            @endforeach
+        </table>
+        @endif
 
         <!-- QR -->
         @if(!empty($qrBase64))

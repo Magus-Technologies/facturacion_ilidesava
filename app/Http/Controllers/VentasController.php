@@ -114,6 +114,12 @@ class VentasController extends Controller
                 'pago_numero_operacion' => 'nullable|string|max:50',
                 'pago_banco' => 'nullable|string|max:100',
                 'pago_voucher' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+                'fecha_vencimiento' => 'nullable|date',
+                'tiene_inicial' => 'nullable',
+                'monto_inicial' => 'nullable|numeric|min:0',
+                'cuotas' => 'nullable|array',
+                'cuotas.*.fecha' => 'required_with:cuotas|date',
+                'cuotas.*.monto' => 'required_with:cuotas|numeric|min:0',
             ], [
                 'id_tido.required' => 'El tipo de documento es obligatorio.',
                 'productos.required' => 'Debe agregar al menos un producto a la venta.',
@@ -345,6 +351,32 @@ class VentasController extends Controller
                     ]);
                 }
 
+                // Guardar cuotas si es crédito
+                if (($validated['id_tipo_pago'] ?? 1) == 2 && $request->has('cuotas')) {
+                    $cuotas = $request->input('cuotas', []);
+                    $fechaVencimiento = null;
+
+                    foreach ($cuotas as $i => $cuota) {
+                        \App\Models\DiaVenta::create([
+                            'id_venta' => $venta->id_venta,
+                            'numero_cuota' => $i + 1,
+                            'fecha_vencimiento' => $cuota['fecha'],
+                            'monto_cuota' => $cuota['monto'],
+                            'monto_pagado' => 0,
+                            'saldo' => $cuota['monto'],
+                            'estado' => 'P',
+                        ]);
+                        $fechaVencimiento = $cuota['fecha'];
+                    }
+
+                    // Actualizar fecha_vencimiento y num_cuotas en la venta
+                    $venta->update([
+                        'fecha_vencimiento' => $fechaVencimiento ?? $venta->fecha_emision,
+                        'num_cuotas' => count($cuotas),
+                        'monto_cuota' => count($cuotas) > 0 ? $cuotas[0]['monto'] : 0,
+                    ]);
+                }
+
                 // Si viene de una cotización → cambiar su estado a 'aprobada'
                 if (!empty($validated['cotizacion_id'])) {
                     \App\Models\Cotizacion::where('id', $validated['cotizacion_id'])
@@ -527,26 +559,39 @@ class VentasController extends Controller
                 ->where('id_empresa', $user->id_empresa)
                 ->findOrFail($id);
 
+            // Verificar si hay productos en almacén madre
+            $hayMadre = \App\Models\ProductoMadre::where('estado', '1')->exists();
+
             $items = [];
             foreach ($venta->productosVentas as $detalle) {
                 $productoOriginal = $detalle->producto;
                 $codigo = $productoOriginal?->codigo;
 
-                $productoAlmacen2 = $codigo
-                    ? \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                $productoMadre = null;
+
+                // Buscar en tabla productos_madre por código
+                if ($codigo && $hayMadre) {
+                    $productoMadre = \App\Models\ProductoMadre::where('codigo', $codigo)
+                        ->where('estado', '1')
+                        ->first();
+                }
+
+                // Fallback: buscar en almacén 2 de la misma empresa (compatibilidad)
+                if (!$productoMadre && $codigo) {
+                    $productoMadre = \App\Models\Producto::where('id_empresa', $user->id_empresa)
                         ->where('almacen', '2')
                         ->where('codigo', $codigo)
-                        ->first()
-                    : null;
+                        ->first();
+                }
 
                 $items[] = [
                     'codigo' => $codigo ?? '-',
                     'nombre' => $productoOriginal?->nombre ?? $detalle->descripcion ?? '-',
                     'cantidad_venta' => $detalle->cantidad,
-                    'encontrado' => $productoAlmacen2 !== null,
-                    'stock_almacen2' => $productoAlmacen2?->cantidad ?? 0,
-                    'stock_despues' => $productoAlmacen2
-                        ? $productoAlmacen2->cantidad - $detalle->cantidad
+                    'encontrado' => $productoMadre !== null,
+                    'stock_almacen2' => $productoMadre?->cantidad ?? 0,
+                    'stock_despues' => $productoMadre
+                        ? $productoMadre->cantidad - $detalle->cantidad
                         : null,
                 ];
             }
@@ -555,6 +600,7 @@ class VentasController extends Controller
                 'success' => true,
                 'data' => $items,
                 'stock_real_descontado' => (bool) $venta->stock_real_descontado,
+                'almacen_madre' => $hayMadre ? 'Almacén Madre' : null,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -565,7 +611,7 @@ class VentasController extends Controller
     }
 
     /**
-     * Descontar stock del almacén 2 (real) para cualquier venta
+     * Descontar stock del almacén madre (o almacén 2 como fallback)
      */
     public function descontarStock(Request $request, int $id): JsonResponse
     {
@@ -579,39 +625,36 @@ class VentasController extends Controller
                     ->where('stock_real_descontado', false)
                     ->findOrFail($id);
 
+                $hayMadre = \App\Models\ProductoMadre::where('estado', '1')->exists();
+
                 foreach ($venta->productosVentas as $detalle) {
-                    // Buscar el producto equivalente en almacén 2
-                    $productoAlmacen2 = \App\Models\Producto::where('id_empresa', $user->id_empresa)
-                        ->where('almacen', '2')
-                        ->where('codigo', function ($query) use ($detalle) {
-                            $query->select('codigo')
-                                ->from('productos')
-                                ->where('id_producto', $detalle->id_producto)
-                                ->limit(1);
-                        })
-                        ->first();
+                    $codigoProducto = DB::table('productos')
+                        ->where('id_producto', $detalle->id_producto)
+                        ->value('codigo');
 
-                    if ($productoAlmacen2) {
-                        $stockAnterior = $productoAlmacen2->cantidad;
-                        $productoAlmacen2->decrement('cantidad', $detalle->cantidad);
-                        $productoAlmacen2->update(['ultima_salida' => now()]);
-                        $stockNuevo = $stockAnterior - $detalle->cantidad;
+                    if (!$codigoProducto) continue;
 
-                        MovimientoStock::create([
-                            'id_producto' => $productoAlmacen2->id_producto,
-                            'tipo_movimiento' => 'salida',
-                            'cantidad' => $detalle->cantidad,
-                            'stock_anterior' => $stockAnterior,
-                            'stock_nuevo' => $stockNuevo,
-                            'tipo_documento' => 'descuento_almacen',
-                            'id_documento' => $venta->id_venta,
-                            'documento_referencia' => $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT),
-                            'motivo' => 'Descuento de almacén real por venta',
-                            'id_almacen' => 2,
-                            'id_empresa' => $user->id_empresa,
-                            'id_usuario' => $user->id,
-                            'fecha_movimiento' => now(),
-                        ]);
+                    $productoMadre = null;
+
+                    // Buscar en tabla productos_madre
+                    if ($hayMadre) {
+                        $productoMadre = \App\Models\ProductoMadre::where('codigo', $codigoProducto)
+                            ->where('estado', '1')
+                            ->first();
+                    }
+
+                    // Fallback: almacén 2 de la misma empresa
+                    if (!$productoMadre) {
+                        $productoMadre = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                            ->where('almacen', '2')
+                            ->where('codigo', $codigoProducto)
+                            ->first();
+                    }
+
+                    if ($productoMadre) {
+                        $stockAnterior = $productoMadre->cantidad;
+                        $productoMadre->decrement('cantidad', $detalle->cantidad);
+                        $productoMadre->update(['ultima_salida' => now()]);
                     }
                 }
 
@@ -619,14 +662,16 @@ class VentasController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Stock descontado del almacén real exitosamente',
+                    'message' => $hayMadre
+                        ? 'Stock descontado del almacén madre exitosamente'
+                        : 'Stock descontado del almacén real exitosamente',
                 ]);
             });
         } catch (\Exception $e) {
             Log::error('Error al descontar stock: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al descontar stock del almacén real',
+                'message' => 'Error al descontar stock del almacén',
             ], 500);
         }
     }
