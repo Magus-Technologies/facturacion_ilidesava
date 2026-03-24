@@ -10,10 +10,10 @@ import CotizacionForm from "./components/Cotizaciones/CotizacionForm";
 import ClientsList from "./components/Clientes/ClientsList";
 import MisEmpresas from "./components/Empresas/MisEmpresas";
 import ProductosList from "./components/Almacen/ProductosList";
-import AlmacenMadre from "./components/Almacen/AlmacenMadre";
 import AlmacenMadreDashboard from "./components/Almacen/AlmacenMadreDashboard";
 import AlmacenMadreProductos from "./components/Almacen/AlmacenMadreProductos";
 import AlmacenMadrePendientes from "./components/Almacen/AlmacenMadrePendientes";
+import AlmacenMadreMovimientos from "./components/Almacen/AlmacenMadreMovimientos";
 import MovimientosStockList from "./components/Almacen/MovimientosStock/page";
 import NotFound from "./components/NotFound";
 import Compras from "./components/Compras/Compras";
@@ -46,10 +46,10 @@ const components = {
     ClientsList,
     MisEmpresas,
     ProductosList,
-    AlmacenMadre,
     AlmacenMadreDashboard,
     AlmacenMadreProductos,
     AlmacenMadrePendientes,
+    AlmacenMadreMovimientos,
     MovimientosStockList,
     Compras,
     CompraForm,

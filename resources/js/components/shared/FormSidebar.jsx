@@ -121,7 +121,7 @@ export default function FormSidebar({
             {/* Info: Nota de Venta no afecta stock */}
             {formData.id_tido === "6" && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-lg border border-amber-200">
-                    <PackageMinus className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <PackageMinus className="h-4 w-4 text-amber-600 shrink-0" />
                     <span className="text-xs font-medium text-amber-800">
                         No descuenta stock al crear
                     </span>

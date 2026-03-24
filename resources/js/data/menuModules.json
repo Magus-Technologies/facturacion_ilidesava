@@ -98,18 +98,6 @@
           "name": "Almacén Madre",
           "icon": "Building2",
           "path": "/almacen-madre"
-        },
-        {
-          "id": "almacen-madre-productos",
-          "name": "Productos (Madre)",
-          "icon": "PackageSearch",
-          "path": "/almacen-madre/productos"
-        },
-        {
-          "id": "almacen-madre-pendientes",
-          "name": "Pendientes (Madre)",
-          "icon": "PackageMinus",
-          "path": "/almacen-madre/pendientes"
         }
       ]
     },

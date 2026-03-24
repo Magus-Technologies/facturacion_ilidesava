@@ -22,6 +22,7 @@ import {
     CheckCircle,
     Search,
     FileSpreadsheet,
+    History,
 } from "lucide-react";
 
 const getToken = () => localStorage.getItem("auth_token");
@@ -182,11 +183,12 @@ export default function AlmacenMadreProductos() {
                     <NavLink href="/almacen-madre" label="Dashboard" icon={Warehouse} />
                     <NavLink href="/almacen-madre/productos" active label="Productos" icon={Package} />
                     <NavLink href="/almacen-madre/pendientes" label="Ventas Pendientes" icon={PackageMinus} />
+                    <NavLink href="/almacen-madre/movimientos" label="Movimientos" icon={History} />
                 </div>
 
                 {/* Filtros */}
                 <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative flex-1 min-w-[200px] max-w-sm">
+                    <div className="relative flex-1 min-w-50 max-w-sm">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input
                             type="text"
@@ -197,7 +199,7 @@ export default function AlmacenMadreProductos() {
                         />
                     </div>
                     <Select value={filterStock} onValueChange={setFilterStock}>
-                        <SelectTrigger className="w-[160px] bg-white shadow-sm">
+                        <SelectTrigger className="w-40 bg-white shadow-sm">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -208,7 +210,7 @@ export default function AlmacenMadreProductos() {
                         </SelectContent>
                     </Select>
                     <Select value={filterCategoria} onValueChange={setFilterCategoria}>
-                        <SelectTrigger className="w-[180px] bg-white shadow-sm">
+                        <SelectTrigger className="w-45 bg-white shadow-sm">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

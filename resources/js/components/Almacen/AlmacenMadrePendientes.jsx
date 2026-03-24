@@ -9,6 +9,7 @@ import {
     Loader2,
     RefreshCw,
     CheckCircle,
+    History,
 } from "lucide-react";
 
 const getToken = () => localStorage.getItem("auth_token");
@@ -112,6 +113,7 @@ export default function AlmacenMadrePendientes() {
                     <NavLink href="/almacen-madre" label="Dashboard" icon={Warehouse} />
                     <NavLink href="/almacen-madre/productos" label="Productos" icon={Package} />
                     <NavLink href="/almacen-madre/pendientes" active label="Ventas Pendientes" icon={PackageMinus} />
+                    <NavLink href="/almacen-madre/movimientos" label="Movimientos" icon={History} />
                 </div>
 
                 {/* Actions */}

@@ -108,6 +108,10 @@ Route::middleware('auth')->group(function () {
         return view('almacen.almacenMadrePendientes');
     })->name('almacenMadrePendientes');
 
+    Route::get('/almacen-madre/movimientos', function () {
+        return view('almacen.almacenMadreMovimientos');
+    })->name('almacenMadreMovimientos');
+
     // Cuentas por Cobrar
     Route::get('/cuentas-por-cobrar', function () {
         return view('ventas.cuentasPorCobrar');

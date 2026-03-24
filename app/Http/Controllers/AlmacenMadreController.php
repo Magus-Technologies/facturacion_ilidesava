@@ -307,7 +307,10 @@ class AlmacenMadreController extends Controller
                     ->where('estado', '1')
                     ->get();
 
+                $numeroCompleto = '';
                 foreach ($ventas as $venta) {
+                    $numeroCompleto = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
+
                     foreach ($venta->productosVentas as $detalle) {
                         $codigoProducto = DB::table('productos')
                             ->where('id_producto', $detalle->id_producto)
@@ -320,9 +323,26 @@ class AlmacenMadreController extends Controller
                             ->first();
 
                         if ($productoMadre) {
-                            $stockAnterior = $productoMadre->cantidad;
+                            $stockAnterior = (float) $productoMadre->cantidad;
                             $productoMadre->decrement('cantidad', $detalle->cantidad);
                             $productoMadre->update(['ultima_salida' => now()]);
+
+                            // Registrar movimiento
+                            MovimientoStock::create([
+                                'id_producto' => $productoMadre->id_producto,
+                                'tipo_movimiento' => 'salida',
+                                'cantidad' => $detalle->cantidad,
+                                'stock_anterior' => $stockAnterior,
+                                'stock_nuevo' => $stockAnterior - $detalle->cantidad,
+                                'tipo_documento' => 'almacen_madre',
+                                'id_documento' => $venta->id_venta,
+                                'documento_referencia' => $numeroCompleto,
+                                'motivo' => 'Descuento almacén madre por venta',
+                                'id_almacen' => 0,
+                                'id_empresa' => $venta->id_empresa,
+                                'id_usuario' => $user?->id,
+                                'fecha_movimiento' => now(),
+                            ]);
                         }
                     }
 
@@ -343,6 +363,55 @@ class AlmacenMadreController extends Controller
                 'message' => 'Error: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Historial de movimientos del almacén madre
+     */
+    public function movimientos(Request $request): JsonResponse
+    {
+        $query = MovimientoStock::where('tipo_documento', 'almacen_madre')
+            ->where('id_almacen', 0);
+
+        if ($search = $request->get('search')) {
+            $productoIds = ProductoMadre::where('nombre', 'LIKE', "%{$search}%")
+                ->orWhere('codigo', 'LIKE', "%{$search}%")
+                ->pluck('id_producto');
+            $query->where(function ($q) use ($search, $productoIds) {
+                $q->whereIn('id_producto', $productoIds)
+                  ->orWhere('documento_referencia', 'LIKE', "%{$search}%");
+            });
+        }
+
+        if ($desde = $request->get('desde')) {
+            $query->whereDate('fecha_movimiento', '>=', $desde);
+        }
+        if ($hasta = $request->get('hasta')) {
+            $query->whereDate('fecha_movimiento', '<=', $hasta);
+        }
+
+        $movimientos = $query->orderBy('fecha_movimiento', 'desc')
+            ->limit(200)
+            ->get()
+            ->map(function ($m) {
+                $producto = ProductoMadre::find($m->id_producto);
+                $empresa = \App\Models\Empresa::find($m->id_empresa);
+                return [
+                    'id' => $m->id_movimiento,
+                    'fecha' => $m->fecha_movimiento?->format('Y-m-d H:i'),
+                    'producto' => $producto?->nombre ?? '-',
+                    'codigo' => $producto?->codigo ?? '-',
+                    'tipo' => $m->tipo_movimiento,
+                    'cantidad' => (float) $m->cantidad,
+                    'stock_anterior' => (float) $m->stock_anterior,
+                    'stock_nuevo' => (float) $m->stock_nuevo,
+                    'comprobante' => $m->documento_referencia,
+                    'empresa' => $empresa?->comercial ?? $empresa?->razon_social ?? '-',
+                    'motivo' => $m->motivo,
+                ];
+            });
+
+        return response()->json(['success' => true, 'data' => $movimientos]);
     }
 
     /**

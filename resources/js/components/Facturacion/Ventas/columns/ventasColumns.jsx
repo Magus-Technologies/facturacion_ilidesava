@@ -106,7 +106,7 @@ const DocumentCell = ({ venta }) => {
             {isOpen && createPortal(
                 <div
                     ref={dropdownRef}
-                    className="fixed w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-[9999] animate-in fade-in zoom-in duration-200 origin-top-left"
+                    className="fixed w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-9999 animate-in fade-in zoom-in duration-200 origin-top-left"
                     style={{ top: pos.top, left: pos.left }}
                 >
                     <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold text-gray-400">

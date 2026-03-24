@@ -323,10 +323,10 @@ export default function PaymentSchedule({
                         </Button>
                     </div>
 
-                    <div className="max-h-[300px] overflow-y-auto space-y-2">
+                    <div className="max-h-75 overflow-y-auto space-y-2">
                         {cuotas.map((cuota, index) => (
                             <div key={index} className="flex gap-2 items-start p-3 border border-gray-200 rounded-lg bg-gray-50">
-                                <div className="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                                <div className="shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
                                     <span className="text-sm font-bold text-orange-600">
                                         {index + 1}
                                     </span>
@@ -364,7 +364,7 @@ export default function PaymentSchedule({
                                     size="sm"
                                     variant="outline"
                                     onClick={() => eliminarCuota(index)}
-                                    className="h-8 w-8 p-0 flex-shrink-0"
+                                    className="h-8 w-8 p-0 shrink-0"
                                     disabled={cuotas.length <= 1}
                                 >
                                     <Trash2 className="h-4 w-4 text-red-600" />

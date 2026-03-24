@@ -168,7 +168,7 @@ export default function Sidebar({ isOpen, isCollapsed, currentPath = "/dashboard
     return (
         <>
             <aside
-                className={`fixed left-0 top-0 h-full bg-gradient-to-b from-primary-600 to-primary-700 text-white transition-all duration-300 z-40 overflow-hidden ${
+                className={`fixed left-0 top-0 h-full bg-linear-to-b from-primary-600 to-primary-700 text-white transition-all duration-300 z-40 overflow-hidden ${
                     isOpen ? "w-64" : "w-0 -translate-x-full"
                 } ${
                     isCollapsed ? "lg:w-20" : "lg:w-64"
@@ -193,7 +193,7 @@ export default function Sidebar({ isOpen, isCollapsed, currentPath = "/dashboard
                     </div>
 
                     {/* Menu Navigation */}
-                    <nav className="flex-1 overflow-y-auto px-3 py-4">
+                    <nav className="flex-1 overflow-y-auto sidebar-scrollbar px-3 py-4">
                         <ul className="space-y-1">
                             {filteredModules.map((module) => {
                                 const Icon = iconMap[module.icon] || Circle;
@@ -362,7 +362,7 @@ export default function Sidebar({ isOpen, isCollapsed, currentPath = "/dashboard
             {isCollapsed && clickedModule && createPortal(
                 <div 
                     data-tooltip-menu
-                    className="fixed left-20 bg-white rounded-lg shadow-2xl border border-gray-200 py-2 z-[100] min-w-[220px]"
+                    className="fixed left-20 bg-white rounded-lg shadow-2xl border border-gray-200 py-2 z-100 min-w-55"
                     style={{ top: `${tooltipPosition.top}px` }}
                 >
                     {filteredModules.map((module) => {

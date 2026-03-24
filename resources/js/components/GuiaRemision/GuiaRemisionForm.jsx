@@ -1109,20 +1109,20 @@ export default function GuiaRemisionForm() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[40px]">
+                                        <TableHead className="w-10">
                                             #
                                         </TableHead>
-                                        <TableHead className="w-[90px]">
+                                        <TableHead className="w-22.5">
                                             Código
                                         </TableHead>
                                         <TableHead>Descripción</TableHead>
-                                        <TableHead className="w-[90px]">
+                                        <TableHead className="w-22.5">
                                             Cant.
                                         </TableHead>
-                                        <TableHead className="w-[80px]">
+                                        <TableHead className="w-20">
                                             Und.
                                         </TableHead>
-                                        <TableHead className="w-[40px]"></TableHead>
+                                        <TableHead className="w-10"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1453,7 +1453,7 @@ export default function GuiaRemisionForm() {
                                             Destinatario
                                         </span>
                                         <span
-                                            className="font-medium text-gray-900 text-right max-w-[160px] truncate"
+                                            className="font-medium text-gray-900 text-right max-w-40 truncate"
                                             title={destinatario.nombre}
                                         >
                                             {destinatario.nombre}

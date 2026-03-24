@@ -66,7 +66,10 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::put('almacen-madre/productos/{id}/stock', [\App\Http\Controllers\AlmacenMadreController::class, 'actualizarStock']);
     Route::get('almacen-madre/ventas-pendientes', [\App\Http\Controllers\AlmacenMadreController::class, 'ventasPendientes']);
     Route::post('almacen-madre/descontar-masivo', [\App\Http\Controllers\AlmacenMadreController::class, 'descontarMasivo']);
+    Route::get('almacen-madre/movimientos', [\App\Http\Controllers\AlmacenMadreController::class, 'movimientos']);
     Route::get('almacen-madre/exportar-excel', [\App\Http\Controllers\Exports\AlmacenMadreExportController::class, 'descargarExcel']);
+    Route::get('almacen-madre/exportar-dashboard', [\App\Http\Controllers\Exports\AlmacenMadreExportController::class, 'descargarDashboard']);
+    Route::get('almacen-madre/exportar-movimientos', [\App\Http\Controllers\Exports\AlmacenMadreExportController::class, 'descargarMovimientos']);
     Route::get('almacen-madre/empresas-importar', [\App\Http\Controllers\AlmacenMadreController::class, 'empresasParaImportar']);
     Route::post('almacen-madre/importar-empresa', [\App\Http\Controllers\AlmacenMadreController::class, 'importarDesdeEmpresa']);
 

@@ -76,6 +76,30 @@
     background: #a3a3a3;
 }
 
+/* Scrollbar para sidebar naranja */
+.sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.25) transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 8px 0;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 9999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.4);
+}
+
 /* Quill editor — tamaños en px para el selector */
 .ql-snow .ql-picker.ql-size .ql-picker-label::before,
 .ql-snow .ql-picker.ql-size .ql-picker-item::before {
