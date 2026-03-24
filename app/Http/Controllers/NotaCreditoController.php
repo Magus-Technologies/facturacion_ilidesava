@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\MotivoNota;
+use App\Models\MovimientoStock;
 use App\Models\NotaCredito;
+use App\Models\Producto;
+use App\Models\ProductoMadre;
 use App\Models\Venta;
 use App\Models\DocumentoEmpresa;
 use App\Services\SunatService;
@@ -88,6 +91,9 @@ class NotaCreditoController extends Controller
                 ]);
 
                 $resultado = $this->sunatService->generarNotaCreditoXml($nota);
+
+                // Devolver stock al almacén de la empresa y al almacén madre
+                $this->devolverStock($venta, $request->user());
 
                 $nota->load(['venta.cliente', 'motivo']);
 
@@ -232,5 +238,76 @@ class NotaCreditoController extends Controller
             ->get();
 
         return response()->json(['success' => true, 'data' => $motivos]);
+    }
+
+    /**
+     * Devolver stock al almacén empresa y almacén madre al emitir nota de crédito
+     */
+    private function devolverStock(Venta $venta, $user): void
+    {
+        $numeroCompleto = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
+
+        foreach ($venta->productosVentas as $detalle) {
+            // 1. Devolver stock al producto de la empresa (almacén 1)
+            $producto = Producto::find($detalle->id_producto);
+            if ($producto) {
+                $stockAnterior = (float) $producto->cantidad;
+                $producto->increment('cantidad', $detalle->cantidad);
+
+                MovimientoStock::create([
+                    'id_producto' => $detalle->id_producto,
+                    'tipo_movimiento' => 'entrada',
+                    'cantidad' => $detalle->cantidad,
+                    'stock_anterior' => $stockAnterior,
+                    'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                    'tipo_documento' => 'nota_credito',
+                    'id_documento' => $venta->id_venta,
+                    'documento_referencia' => $numeroCompleto,
+                    'motivo' => 'Devolución por nota de crédito',
+                    'observaciones' => 'NC sobre venta ' . $numeroCompleto,
+                    'id_almacen' => 1,
+                    'id_empresa' => $venta->id_empresa,
+                    'id_usuario' => $user?->id,
+                    'fecha_movimiento' => now(),
+                ]);
+            }
+
+            // 2. Devolver stock al almacén madre si fue descontado
+            if ($venta->stock_real_descontado && $producto) {
+                $codigo = $producto->codigo;
+                if (!$codigo) continue;
+
+                $productoMadre = ProductoMadre::where('codigo', $codigo)
+                    ->where('estado', '1')
+                    ->first();
+
+                if ($productoMadre) {
+                    $stockMadreAnterior = (float) $productoMadre->cantidad;
+                    $productoMadre->increment('cantidad', $detalle->cantidad);
+
+                    MovimientoStock::create([
+                        'id_producto' => $detalle->id_producto,
+                        'tipo_movimiento' => 'entrada',
+                        'cantidad' => $detalle->cantidad,
+                        'stock_anterior' => $stockMadreAnterior,
+                        'stock_nuevo' => $stockMadreAnterior + $detalle->cantidad,
+                        'tipo_documento' => 'nota_credito',
+                        'id_documento' => $venta->id_venta,
+                        'documento_referencia' => $numeroCompleto,
+                        'motivo' => 'Devolución almacén madre por nota de crédito',
+                        'observaciones' => 'NC sobre venta ' . $numeroCompleto . ' - Producto madre: ' . $codigo,
+                        'id_almacen' => 0,
+                        'id_empresa' => $venta->id_empresa,
+                        'id_usuario' => $user?->id,
+                        'fecha_movimiento' => now(),
+                    ]);
+                }
+            }
+        }
+
+        // Resetear flag de stock descontado del almacén madre
+        if ($venta->stock_real_descontado) {
+            $venta->update(['stock_real_descontado' => false]);
+        }
     }
 }
