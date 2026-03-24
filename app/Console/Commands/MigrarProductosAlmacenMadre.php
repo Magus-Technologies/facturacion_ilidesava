@@ -32,6 +32,7 @@ class MigrarProductosAlmacenMadre extends Command
         }
 
         $query = Producto::where('estado', '1')
+            ->where('almacen', '1')
             ->whereNotNull('codigo')
             ->where('codigo', '!=', '')
             ->whereNotIn('id_empresa', $empresasExcluidas->values());
