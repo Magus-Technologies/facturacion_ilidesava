@@ -35,6 +35,7 @@ export default function ClienteFormSection({
                         value={formData.nom_cli || ''}
                         onChange={(e) => handleChange('nom_cli', e.target.value)}
                         placeholder="Nombre del cliente"
+                        autoComplete="off"
                     />
                 </div>
 
@@ -44,6 +45,7 @@ export default function ClienteFormSection({
                         value={formData.dir_cli || ''}
                         onChange={(e) => handleChange('dir_cli', e.target.value)}
                         placeholder="Dirección"
+                        autoComplete="off"
                     />
                 </div>
 

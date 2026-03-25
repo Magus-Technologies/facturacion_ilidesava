@@ -38,6 +38,7 @@ class VentasController extends Controller
                         'serie' => $venta->serie,
                         'numero' => $venta->numero,
                         'fecha_emision' => $venta->fecha_emision?->format('Y-m-d'),
+                        'created_at' => $venta->created_at?->format('Y-m-d H:i'),
                         'cliente' => [
                             'documento' => $venta->cliente?->documento,
                             'datos' => $venta->cliente?->datos,
@@ -99,6 +100,7 @@ class VentasController extends Controller
                 'afecta_stock' => 'nullable|boolean',
                 'cotizacion_id' => 'nullable|integer|exists:cotizaciones,id',
                 'nota_venta_id' => 'nullable|integer|exists:ventas,id_venta',
+                'observaciones' => 'nullable|string|max:1000',
                 'empresas_ids' => 'nullable|array',
                 'empresas_ids.*' => 'integer|exists:empresas,id_empresa',
                 'productos' => 'required|array|min:1',
@@ -237,6 +239,7 @@ class VentasController extends Controller
                     'direccion' => '',
                     'cotizacion_id' => $validated['cotizacion_id'] ?? null,
                     'nota_venta_id' => $validated['nota_venta_id'] ?? null,
+                    'observaciones' => $validated['observaciones'] ?? null,
                 ]);
 
                 $afectaStock = $validated['id_tido'] == 6 ? false : ($validated['afecta_stock'] ?? true);

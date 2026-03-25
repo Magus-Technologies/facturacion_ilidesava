@@ -321,7 +321,7 @@ export default function ListaProductosModal({ isOpen, onClose, productos, warnin
                                                     </TableCell>
                                                     {tieneDetalle && (
                                                         <TableCell>
-                                                            <textarea value={item.descripcicon || ""} onChange={(e) => handleCambioProducto(indexOriginal, 'descripcicon', e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded-lg min-w-[180px] min-h-[52px] text-sm" rows="2" />
+                                                            <textarea value={item.descripcicon || ""} onChange={(e) => handleCambioProducto(indexOriginal, 'descripcicon', e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded-lg min-w-45 min-h-13 text-sm" rows="2" />
                                                         </TableCell>
                                                     )}
                                                     <TableCell>
@@ -369,9 +369,9 @@ export default function ListaProductosModal({ isOpen, onClose, productos, warnin
                                                             </span>
                                                         )}
                                                     </TableCell>
-                                                    <TableCell className="font-medium max-w-[200px] truncate" title={item.producto}>{item.producto}</TableCell>
+                                                    <TableCell className="font-medium max-w-50 truncate" title={item.producto}>{item.producto}</TableCell>
                                                     {tieneDetalle && (
-                                                        <TableCell className="text-gray-500 text-xs max-w-[200px] truncate" title={item.descripcicon}>{item.descripcicon || <span className="text-gray-300">—</span>}</TableCell>
+                                                        <TableCell className="text-gray-500 text-xs max-w-50 truncate" title={item.descripcicon}>{item.descripcicon || <span className="text-gray-300">—</span>}</TableCell>
                                                     )}
                                                     <TableCell>
                                                         {item.categoria

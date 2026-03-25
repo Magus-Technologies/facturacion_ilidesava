@@ -48,6 +48,7 @@ export default function ClienteAutocomplete({
     const inputRef = useRef(null);
     const dropdownRef = useRef(null);
     const isExternalUpdate = useRef(false);
+    const lastSelectedDoc = useRef(null); // Track last selected client's document
 
     // Sincronizar tipo con el comprobante o initialTipoDoc cuando cambia
     useEffect(() => {
@@ -111,6 +112,7 @@ export default function ClienteAutocomplete({
 
     const handleSelectCliente = (cliente) => {
         onClienteSelect(cliente);
+        lastSelectedDoc.current = cliente.documento || "";
         setSearchTerm(cliente.documento || "");
         setClientes([]);
         setShowDropdown(false);
@@ -230,6 +232,13 @@ export default function ClienteAutocomplete({
         let val = e.target.value;
         setSearchTerm(val);
         onDocumentoChange?.(val);
+
+        // If user modifies the field after selecting a client, clear the selection
+        // so nom_cli/dir_cli don't keep stale data from the previous client
+        if (lastSelectedDoc.current !== null && val !== lastSelectedDoc.current) {
+            lastSelectedDoc.current = null;
+            onClienteSelect({ documento: val, datos: "", direccion: "" });
+        }
     };
 
     const handleTipoChange = (tipo) => {

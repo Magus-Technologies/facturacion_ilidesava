@@ -2,7 +2,6 @@ import {
     Eye,
     Trash2,
     Printer,
-    FileBadge,
     CheckCircle,
     XCircle,
     Clock,
@@ -17,7 +16,6 @@ import {
     Smartphone,
     PackageMinus,
     PackageCheck,
-    Image,
     Loader2,
     AlertTriangle,
 } from "lucide-react";
@@ -91,18 +89,12 @@ const DocumentCell = ({ venta }) => {
 
     return (
         <div ref={triggerRef}>
-            <div
-                className="flex items-center gap-2 cursor-pointer group"
+            <span
+                className="font-mono text-xs font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded cursor-pointer hover:bg-blue-100 transition-colors"
                 onClick={handleToggle}
             >
-                <div className="p-1.5 rounded-md text-primary-600 group-hover:bg-primary-50 transition-colors">
-                    <FileBadge className="h-4 w-4" />
-                </div>
-                <span className="font-mono text-sm font-medium text-gray-600 group-hover:text-primary-600 transition-all italic underline underline-offset-4 decoration-primary-200/50">
-                    {venta.tipo_documento?.abreviatura || "DOC"} {venta.serie}-
-                    {String(venta.numero).padStart(6, "0")}
-                </span>
-            </div>
+                {venta.tipo_documento?.abreviatura || "DOC"} {venta.serie}-{String(venta.numero).padStart(6, "0")}
+            </span>
 
             {isOpen && createPortal(
                 <div
@@ -161,21 +153,25 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
             cell: ({ row }) => <DocumentCell venta={row.original} />,
         },
         {
-            accessorKey: "fecha_emision",
-            header: "Fecha V.",
+            accessorKey: "created_at",
+            header: "Fecha",
             cell: ({ row }) => {
-                const fecha = row.getValue("fecha_emision");
-                if (!fecha) return "-";
-                const dateObj = new Date(fecha);
-                return (
-                    <span className="text-sm text-gray-600">
-                        {dateObj.toLocaleDateString("es-PE", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                        })}
-                    </span>
-                );
+                const createdAt = row.getValue("created_at");
+                const fechaEmision = row.original.fecha_emision;
+                if (!createdAt && !fechaEmision) return "-";
+                if (createdAt) {
+                    // Format: "2026-03-24 14:30" → "24/03/2026 14:30"
+                    const [date, time] = createdAt.split(" ");
+                    const [y, m, d] = date.split("-");
+                    return (
+                        <div className="leading-tight">
+                            <span className="text-xs text-gray-700">{d}/{m}/{y}</span>
+                            <span className="text-[10px] text-gray-400 ml-1">{time}</span>
+                        </div>
+                    );
+                }
+                const [y, m, d] = fechaEmision.split("-");
+                return <span className="text-xs text-gray-600">{d}/{m}/{y}</span>;
             },
         },
         {
@@ -184,11 +180,11 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
             cell: ({ row }) => {
                 const cliente = row.getValue("cliente");
                 return (
-                    <div>
-                        <p className="text-xs text-gray-500">
-                            {cliente?.documento || "N/A"}
+                    <div className="leading-tight">
+                        <p className="text-[10px] text-gray-400">
+                            {cliente?.documento || "—"}
                         </p>
-                        <p className="font-medium text-gray-900 text-sm">
+                        <p className="font-medium text-gray-900 text-xs truncate max-w-37.5">
                             {cliente?.datos || "Sin datos"}
                         </p>
                     </div>
@@ -197,13 +193,10 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
         },
         {
             accessorKey: "subtotal",
-            header: "Sub. Total",
+            header: "Subtotal",
             cell: ({ row }) => (
-                <span className="text-sm text-gray-600">
-                    {formatMonto(
-                        row.getValue("subtotal"),
-                        row.original.tipo_moneda,
-                    )}
+                <span className="text-xs text-gray-600">
+                    {formatMonto(row.getValue("subtotal"), row.original.tipo_moneda)}
                 </span>
             ),
         },
@@ -211,7 +204,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
             accessorKey: "igv",
             header: "IGV",
             cell: ({ row }) => (
-                <span className="text-sm text-gray-600">
+                <span className="text-xs text-gray-600">
                     {formatMonto(row.getValue("igv"), row.original.tipo_moneda)}
                 </span>
             ),
@@ -220,80 +213,49 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
             accessorKey: "total",
             header: "Total",
             cell: ({ row }) => (
-                <span className="text-sm font-semibold text-gray-900">
-                    {formatMonto(
-                        row.getValue("total"),
-                        row.original.tipo_moneda,
-                    )}
+                <span className="text-xs font-semibold text-gray-900">
+                    {formatMonto(row.getValue("total"), row.original.tipo_moneda)}
                 </span>
             ),
         },
         {
             accessorKey: "id_tipo_pago",
-            header: "Condición",
+            header: "Pago",
             cell: ({ row }) => {
                 const tipo = row.getValue("id_tipo_pago");
-                const esContado = tipo === 1 || tipo === "1" || !tipo;
-                return (
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        esContado ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
-                    }`}>
-                        {esContado ? "Contado" : "Crédito"}
-                    </span>
-                );
-            },
-        },
-        {
-            accessorKey: "metodo_pago",
-            header: "Método Pago",
-            cell: ({ row }) => {
-                const metodo = row.getValue("metodo_pago");
+                const esCredito = tipo === 2 || tipo === "2";
+                const metodo = row.original.metodo_pago;
+                const voucher = row.original.voucher;
                 const config = {
                     1: { label: "Efectivo", icon: Banknote, color: "text-green-600" },
                     2: { label: "Tarjeta", icon: CreditCard, color: "text-blue-600" },
                     4: { label: "Transfer.", icon: Building2, color: "text-purple-600" },
                     5: { label: "Yape/Plin", icon: Smartphone, color: "text-pink-600" },
                 };
-                const tipo = row.original.id_tipo_pago;
-                const esCredito = tipo === 2 || tipo === "2";
-                if (esCredito) {
-                    return (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
-                            <CreditCard className="h-3.5 w-3.5" />
-                            Crédito
+                const info = esCredito ? null : config[metodo];
+                const Icon = info?.icon;
+                return (
+                    <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium ${
+                            esCredito ? "text-amber-600" : (info?.color || "text-gray-400")
+                        }`}>
+                            {esCredito ? <CreditCard className="h-3 w-3" /> : Icon ? <Icon className="h-3 w-3" /> : null}
+                            {esCredito ? "Crédito" : (info?.label || "—")}
                         </span>
-                    );
-                }
-                const info = config[metodo];
-                if (!info) return <span className="text-xs text-gray-400">—</span>;
-                const Icon = info.icon;
-                return (
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium ${info.color}`}>
-                        <Icon className="h-3.5 w-3.5" />
-                        {info.label}
-                    </span>
-                );
-            },
-        },
-        {
-            accessorKey: "voucher",
-            header: "Voucher",
-            cell: ({ row }) => {
-                const voucher = row.getValue("voucher");
-                if (!voucher) return <span className="text-xs text-gray-400">—</span>;
-                return (
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(`/storage/${voucher}`, "_blank");
-                        }}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-800 transition-colors"
-                        title="Ver voucher"
-                    >
-                        <Image className="h-3.5 w-3.5" />
-                        Ver
-                    </button>
+                        {voucher && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(`/storage/${voucher}`, "_blank");
+                                }}
+                                className="text-[10px] text-primary-600 hover:text-primary-800 underline underline-offset-2"
+                                title="Ver voucher"
+                            >
+                                ver voucher
+                            </button>
+                        )}
+                    </div>
                 );
             },
         },
@@ -356,7 +318,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
         {
             id: "actions",
             header: "",
-            size: 50,
+            size: 40,
             cell: ({ row }) => {
                 const venta = row.original;
                 const estaAnulada =
