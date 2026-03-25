@@ -2,6 +2,7 @@ import {
     Eye,
     Trash2,
     Printer,
+    Pencil,
     CheckCircle,
     XCircle,
     Clock,
@@ -465,7 +466,25 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         Guía de Remisión
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && !estaVendida && ocultarSunatFila && (
+                                {!estaAnulada && !estaVendida && esNotaVenta && handlers.handleEditar && (
+                                    <DropdownMenuItem
+                                        onClick={() => handlers.handleEditar(venta)}
+                                        className="text-blue-600 focus:bg-blue-50 focus:text-blue-700"
+                                    >
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Editar
+                                    </DropdownMenuItem>
+                                )}
+                                {!estaAnulada && !estaVendida && esNotaVenta && handlers.handleEliminar && (
+                                    <DropdownMenuItem
+                                        onClick={() => handlers.handleEliminar(venta)}
+                                        className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Eliminar
+                                    </DropdownMenuItem>
+                                )}
+                                {!estaAnulada && !estaVendida && ocultarSunatFila && !esNotaVenta && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleAnular(venta)}
                                         className="text-red-600 focus:bg-red-50 focus:text-red-700"

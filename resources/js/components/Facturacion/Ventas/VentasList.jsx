@@ -20,6 +20,8 @@ export default function VentasList() {
         handleAnular,
         handlePrint,
         handleNuevaVenta,
+        handleEditar,
+        handleEliminar,
     } = useVentas();
 
     const { handleGenerarXml: _handleGenerarXml, handleEnviarSunat: _handleEnviarSunat } = useSunat(fetchVentas);
@@ -183,6 +185,8 @@ export default function VentasList() {
             handleGenerarGuia,
             handleDescontarStock,
             handleWhatsApp,
+            handleEditar,
+            handleEliminar,
         },
         filtroTipo === "6",
         sunatLoadingId,

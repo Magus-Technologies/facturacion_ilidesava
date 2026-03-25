@@ -110,9 +110,10 @@ export const useVentaForm = (ventaId = null) => {
                     }));
                 }
                 
-                if (venta.productosVentas) {
+                const detalles = venta.productos_ventas || venta.productosVentas || [];
+                if (detalles.length > 0) {
                     setProductos(
-                        venta.productosVentas.map((detalle) => ({
+                        detalles.map((detalle) => ({
                             id_producto: detalle.id_producto,
                             codigo: detalle.producto?.codigo || '',
                             descripcion: detalle.producto?.nombre || '',
@@ -124,17 +125,47 @@ export const useVentaForm = (ventaId = null) => {
                         }))
                     );
                 }
-                
+
+                // Cargar pagos si existen
+                const pagos = venta.pagos || venta.ventas_pagos || [];
+                if (pagos.length > 0) {
+                    setMetodoPago(
+                        pagos.map((p) => ({
+                            id_tipo_pago: String(p.id_tipo_pago || '1'),
+                            numero_operacion: p.numero_operacion || '',
+                            banco: p.banco || '',
+                            voucher_file: null,
+                            voucher_preview: p.voucher_path || null,
+                        }))
+                    );
+                }
+
+                // Parsear fecha ISO a YYYY-MM-DD
+                const fechaEmision = venta.fecha_emision
+                    ? venta.fecha_emision.split('T')[0]
+                    : new Date().toISOString().split('T')[0];
+
+                // Cargar cuotas si existen (BD usa fecha_vencimiento/monto_cuota)
+                const cuotas = (venta.cuotas || []).map((c) => ({
+                    fecha: (c.fecha_vencimiento || c.fecha || '').split('T')[0],
+                    monto: c.monto_cuota || c.monto || 0,
+                }));
+
                 setFormData((prev) => ({
                     ...prev,
-                    id_tido: venta.id_tido,
-                    fecha_emision: venta.fecha_emision,
+                    id_tido: String(venta.id_tido),
+                    id_tipo_pago: String(venta.id_tipo_pago || '1'),
+                    fecha_emision: fechaEmision,
                     serie: venta.serie,
                     numero: venta.numero,
                     tipo_moneda: venta.tipo_moneda,
                     tipo_cambio: venta.tipo_cambio || '1.00',
                     aplicar_igv: true,
                     observaciones: venta.observaciones || '',
+                    cuotas,
+                    fecha_vencimiento: cuotas.length > 0
+                        ? cuotas[cuotas.length - 1].fecha
+                        : (venta.fecha_vencimiento ? venta.fecha_vencimiento.split('T')[0] : prev.fecha_vencimiento),
                 }));
             }
         } catch (error) {

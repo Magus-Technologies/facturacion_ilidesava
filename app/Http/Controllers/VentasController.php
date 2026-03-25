@@ -509,6 +509,211 @@ class VentasController extends Controller
     }
 
     /**
+     * Actualizar una nota de venta (solo id_tido=6)
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $venta = Venta::where('id_empresa', $user->id_empresa)->findOrFail($id);
+
+            // Solo permitir editar notas de venta
+            if ($venta->id_tido != 6) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden editar notas de venta',
+                ], 422);
+            }
+
+            // No editar si está anulada
+            if (in_array($venta->estado, ['2', 'A'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede editar una venta anulada',
+                ], 422);
+            }
+
+            $validated = $request->validate([
+                'id_cliente' => 'nullable|integer|exists:clientes,id_cliente',
+                'cliente_documento' => 'nullable|string|max:15',
+                'cliente_datos' => 'nullable|string|max:250',
+                'cliente_direccion' => 'nullable|string|max:500',
+                'fecha_emision' => 'required|date',
+                'subtotal' => 'required|numeric|min:0',
+                'igv' => 'required|numeric|min:0',
+                'total' => 'required|numeric|min:0',
+                'tipo_moneda' => 'required|in:PEN,USD',
+                'observaciones' => 'nullable|string|max:1000',
+                'productos' => 'required|array|min:1',
+                'productos.*.id_producto' => 'nullable|integer|exists:productos,id_producto',
+                'productos.*.descripcion_libre' => 'nullable|string|max:500',
+                'productos.*.cantidad' => 'required|integer|min:1',
+                'productos.*.precio_unitario' => 'required|numeric|min:0',
+                'productos.*.subtotal' => 'required|numeric|min:0',
+                'productos.*.igv' => 'required|numeric|min:0',
+                'productos.*.total' => 'required|numeric|min:0',
+                'productos.*.descripcion' => 'nullable|string|max:500',
+                'productos.*.codigo_producto' => 'nullable|string|max:50',
+                'pagos' => 'nullable|array',
+                'pagos.*.id_tipo_pago' => 'required_with:pagos|integer',
+                'pagos.*.numero_operacion' => 'nullable|string|max:50',
+                'pagos.*.banco' => 'nullable|string|max:100',
+                'pagos.*.voucher' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            ]);
+
+            return DB::transaction(function () use ($venta, $validated, $request, $user) {
+                // Manejar cliente
+                $idCliente = $validated['id_cliente'] ?? $venta->id_cliente;
+                if (!$idCliente) {
+                    $docCliente = $validated['cliente_documento'] ?? '';
+                    $nomCliente = $validated['cliente_datos'] ?? '';
+
+                    if (empty($docCliente) && empty($nomCliente)) {
+                        $docCliente = '00000000';
+                        $nomCliente = 'CLIENTES VARIOS';
+                    }
+
+                    $clienteModel = Cliente::where('documento', $docCliente)
+                        ->where('id_empresa', $user->id_empresa)
+                        ->first();
+
+                    if (!$clienteModel) {
+                        $tipoDoc = strlen($docCliente) === 11 ? '6' : (strlen($docCliente) === 8 ? '1' : '4');
+                        $clienteModel = Cliente::create([
+                            'documento' => $docCliente,
+                            'tipo_doc' => $tipoDoc,
+                            'datos' => $nomCliente,
+                            'direccion' => $validated['cliente_direccion'] ?? '',
+                            'id_empresa' => $user->id_empresa,
+                        ]);
+                    }
+                    $idCliente = $clienteModel->id_cliente;
+                }
+
+                // Actualizar venta
+                $venta->update([
+                    'id_cliente' => $idCliente,
+                    'fecha_emision' => $validated['fecha_emision'],
+                    'subtotal' => $validated['subtotal'],
+                    'igv' => $validated['igv'],
+                    'total' => $validated['total'],
+                    'tipo_moneda' => $validated['tipo_moneda'],
+                    'observaciones' => $validated['observaciones'] ?? null,
+                ]);
+
+                // Reemplazar productos
+                $venta->productosVentas()->delete();
+                foreach ($validated['productos'] as $producto) {
+                    $venta->productosVentas()->create([
+                        'id_producto' => $producto['id_producto'] ?? null,
+                        'cantidad' => $producto['cantidad'],
+                        'precio_unitario' => $producto['precio_unitario'],
+                        'subtotal' => $producto['subtotal'],
+                        'igv' => $producto['igv'],
+                        'total' => $producto['total'],
+                        'descripcion' => $producto['descripcion'] ?? null,
+                        'codigo_producto' => $producto['codigo_producto'] ?? null,
+                    ]);
+                }
+
+                // Reemplazar pagos
+                $venta->pagos()->delete();
+                $pagosData = $request->input('pagos', []);
+                foreach ($pagosData as $i => $pagoItem) {
+                    $voucherPath = null;
+                    if ($request->hasFile("pagos.{$i}.voucher")) {
+                        $file = $request->file("pagos.{$i}.voucher");
+                        $filename = 'voucher_' . $venta->id_venta . '_' . $i . '_' . time() . '.' . $file->getClientOriginalExtension();
+                        $voucherPath = $file->storeAs('vouchers', $filename, 'public');
+                    }
+
+                    VentaPago::create([
+                        'id_venta' => $venta->id_venta,
+                        'id_tipo_pago' => $pagoItem['id_tipo_pago'],
+                        'monto' => $venta->total,
+                        'fecha_pago' => $venta->fecha_emision,
+                        'numero_operacion' => $pagoItem['numero_operacion'] ?? null,
+                        'banco' => $pagoItem['banco'] ?? null,
+                        'voucher' => $voucherPath,
+                        'tipo_moneda' => $venta->tipo_moneda,
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Nota de venta actualizada correctamente',
+                    'venta' => [
+                        'id_venta' => $venta->id_venta,
+                        'numero_completo' => $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT),
+                    ],
+                ]);
+            });
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar nota de venta: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar una nota de venta (solo id_tido=6)
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $venta = Venta::where('id_empresa', $user->id_empresa)->findOrFail($id);
+
+            // Solo permitir eliminar notas de venta
+            if ($venta->id_tido != 6) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden eliminar notas de venta',
+                ], 422);
+            }
+
+            // No eliminar si está anulada (ya está "eliminada" lógicamente)
+            if (in_array($venta->estado, ['2', 'A'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La venta ya está anulada',
+                ], 422);
+            }
+
+            return DB::transaction(function () use ($venta) {
+                $serie = $venta->serie;
+                $numero = str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
+
+                // Eliminar pagos, productos y la venta
+                $venta->pagos()->delete();
+                $venta->productosVentas()->delete();
+                $venta->delete();
+
+                Log::info("Nota de venta eliminada: {$serie}-{$numero}");
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Nota de venta {$serie}-{$numero} eliminada correctamente",
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error al eliminar nota de venta: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Anular una venta
      */
     public function anular(Request $request, int $id): JsonResponse

@@ -62,6 +62,10 @@ Route::middleware('auth')->group(function () {
         return view('ventas.ventas-productos');
     })->name('ventas.productos');
 
+    Route::get('/ventas/{id}/editar', function ($id) {
+        return view('ventas.ventas-editar', ['ventaId' => $id]);
+    })->name('ventas.editar');
+
     Route::get('/facturas', function () {
         return redirect('/ventas?tipo=factura');
     })->name('facturas');

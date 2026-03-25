@@ -104,6 +104,57 @@ export const useVentas = () => {
     };
 
     /**
+     * Editar nota de venta — redirige al formulario
+     */
+    const handleEditar = (venta) => {
+        window.location.href = `/ventas/${venta.id_venta}/editar`;
+    };
+
+    /**
+     * Eliminar nota de venta con doble confirmación
+     */
+    const handleEliminar = async (venta) => {
+        const doc = `${venta.serie}-${String(venta.numero).padStart(6, '0')}`;
+        confirmDelete({
+            title: 'Eliminar Nota de Venta',
+            message: `¿Estás seguro de eliminar <strong>${doc}</strong>? Esta acción no se puede deshacer.`,
+            confirmText: 'Sí, eliminar',
+            cancelText: 'Cancelar',
+            onConfirm: async () => {
+                // Segunda confirmación
+                confirmDelete({
+                    title: '¿Confirmar eliminación?',
+                    message: `Se eliminará permanentemente la nota de venta <strong>${doc}</strong> y todos sus datos.`,
+                    confirmText: 'Eliminar definitivamente',
+                    cancelText: 'Cancelar',
+                    onConfirm: async () => {
+                        try {
+                            const token = localStorage.getItem('auth_token');
+                            const response = await fetch(`/api/ventas/${venta.id_venta}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    Authorization: `Bearer ${token}`,
+                                    Accept: 'application/json',
+                                },
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                toast.success(data.message);
+                                fetchVentas();
+                            } else {
+                                toast.error(data.message || 'Error al eliminar');
+                            }
+                        } catch (err) {
+                            toast.error('Error de conexión');
+                            console.error(err);
+                        }
+                    },
+                });
+            },
+        });
+    };
+
+    /**
      * Navega a la creación de nueva venta
      */
     const handleNuevaVenta = () => {
@@ -119,5 +170,7 @@ export const useVentas = () => {
         handleView,
         handlePrint,
         handleNuevaVenta,
+        handleEditar,
+        handleEliminar,
     };
 };
