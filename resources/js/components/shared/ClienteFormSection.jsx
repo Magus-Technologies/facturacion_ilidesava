@@ -19,6 +19,18 @@ export default function ClienteFormSection({
         });
     };
 
+    // Cuando el usuario edita nombre/dirección manualmente, limpiar id_cliente
+    // para que el backend cree o busque el cliente correcto
+    const handleClienteFieldChange = (field, value) => {
+        handleChange(field, value);
+        onClienteSelect({
+            documento: formData.num_doc || '',
+            datos: field === 'nom_cli' ? value : (formData.nom_cli || ''),
+            direccion: field === 'dir_cli' ? value : (formData.dir_cli || ''),
+            // Sin id_cliente → backend creará o buscará por documento
+        });
+    };
+
     return (
         <>
             <h3 className="text-sm font-semibold mb-3 text-center">Cliente</h3>
@@ -33,7 +45,7 @@ export default function ClienteFormSection({
                     <Input
                         type="text"
                         value={formData.nom_cli || ''}
-                        onChange={(e) => handleChange('nom_cli', e.target.value)}
+                        onChange={(e) => handleClienteFieldChange('nom_cli', e.target.value)}
                         placeholder="Nombre del cliente"
                         autoComplete="off"
                     />
@@ -43,7 +55,7 @@ export default function ClienteFormSection({
                     <Input
                         type="text"
                         value={formData.dir_cli || ''}
-                        onChange={(e) => handleChange('dir_cli', e.target.value)}
+                        onChange={(e) => handleClienteFieldChange('dir_cli', e.target.value)}
                         placeholder="Dirección"
                         autoComplete="off"
                     />

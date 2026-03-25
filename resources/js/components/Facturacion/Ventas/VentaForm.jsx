@@ -304,7 +304,7 @@ export default function VentaForm({ ventaId = null }) {
                     </div>
                     <div className="flex gap-3">
                         <Button onClick={handleSubmit} disabled={saving}>
-                            {saving ? "Guardando..." : "Guardar Venta"}
+                            {saving ? "Guardando..." : (isEditing ? "Actualizar Venta" : "Guardar Venta")}
                         </Button>
                         <Button
                             variant="outline"
