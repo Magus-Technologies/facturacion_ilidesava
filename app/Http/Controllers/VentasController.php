@@ -111,7 +111,7 @@ class VentasController extends Controller
                 'empresas_ids' => 'nullable|array',
                 'empresas_ids.*' => 'integer|exists:empresas,id_empresa',
                 'productos' => 'required|array|min:1',
-                'productos.*.id_producto' => 'nullable|integer|exists:productos,id_producto',
+                'productos.*.id_producto' => 'nullable|integer|exists:' . ($request->input('id_tido') == 6 ? 'productos_madre' : 'productos') . ',id_producto',
                 'productos.*.descripcion_libre' => 'nullable|string|max:500',
                 'productos.*.cantidad' => 'required|integer|min:1',
                 'productos.*.precio_unitario' => 'required|numeric|min:0',
@@ -545,7 +545,7 @@ class VentasController extends Controller
                 'tipo_moneda' => 'required|in:PEN,USD',
                 'observaciones' => 'nullable|string|max:1000',
                 'productos' => 'required|array|min:1',
-                'productos.*.id_producto' => 'nullable|integer|exists:productos,id_producto',
+                'productos.*.id_producto' => 'nullable|integer|exists:productos_madre,id_producto',
                 'productos.*.descripcion_libre' => 'nullable|string|max:500',
                 'productos.*.cantidad' => 'required|integer|min:1',
                 'productos.*.precio_unitario' => 'required|numeric|min:0',
@@ -806,15 +806,25 @@ class VentasController extends Controller
             $empresa = \App\Models\Empresa::find($user->id_empresa);
             $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
 
+            $esNotaVenta = $venta->id_tido == 6;
+
             $items = [];
             foreach ($venta->productosVentas as $detalle) {
-                $productoOriginal = $detalle->producto;
+                // Nota de Venta: id_producto viene de productos_madre
+                if ($esNotaVenta) {
+                    $productoOriginal = \App\Models\ProductoMadre::find($detalle->id_producto);
+                } else {
+                    $productoOriginal = $detalle->producto;
+                }
                 $codigo = $productoOriginal?->codigo;
 
                 $productoReal = null;
 
                 if ($codigo) {
-                    if ($usaAlmacenPropio) {
+                    if ($esNotaVenta) {
+                        // Nota de Venta: descontar directamente del producto madre
+                        $productoReal = $productoOriginal;
+                    } elseif ($usaAlmacenPropio) {
                         // Empresa con almacén propio: buscar en almacén 2
                         $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
                             ->where('almacen', '2')
@@ -882,16 +892,22 @@ class VentasController extends Controller
 
                 $numeroCompleto = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
 
+                $esNotaVenta = $venta->id_tido == 6;
+
                 foreach ($venta->productosVentas as $detalle) {
-                    $codigoProducto = DB::table('productos')
-                        ->where('id_producto', $detalle->id_producto)
-                        ->value('codigo');
+                    // Nota de Venta usa productos_madre, los demás usan productos
+                    $codigoProducto = $esNotaVenta
+                        ? DB::table('productos_madre')->where('id_producto', $detalle->id_producto)->value('codigo')
+                        : DB::table('productos')->where('id_producto', $detalle->id_producto)->value('codigo');
 
                     if (!$codigoProducto) continue;
 
                     $productoReal = null;
 
-                    if ($usaAlmacenPropio) {
+                    if ($esNotaVenta) {
+                        // Nota de Venta: descontar directamente del producto madre
+                        $productoReal = \App\Models\ProductoMadre::find($detalle->id_producto);
+                    } elseif ($usaAlmacenPropio) {
                         // Empresa con almacén propio: buscar en almacén 2 de la misma empresa
                         $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
                             ->where('almacen', '2')
@@ -919,26 +935,40 @@ class VentasController extends Controller
                             $productoReal->update(['ultima_salida' => now()]);
                         }
 
-                        $tipoAlmacen = $usaAlmacenPropio ? 'almacen_2' : 'almacen_madre';
+                        $tipoAlmacen = $esNotaVenta ? 'nota_venta_madre' : ($usaAlmacenPropio ? 'almacen_2' : 'almacen_madre');
 
-                        \App\Models\MovimientoStock::create([
-                            'id_producto' => $detalle->id_producto,
-                            'tipo_movimiento' => 'salida',
-                            'cantidad' => $detalle->cantidad,
-                            'stock_anterior' => $stockAnterior,
-                            'stock_nuevo' => $stockAnterior - $detalle->cantidad,
-                            'tipo_documento' => $tipoAlmacen,
-                            'id_documento' => $venta->id_venta,
-                            'documento_referencia' => $numeroCompleto,
-                            'motivo' => $usaAlmacenPropio
-                                ? 'Descuento almacén 2 por venta'
-                                : 'Descuento almacén madre por venta',
-                            'observaciones' => 'Producto: ' . $productoReal->codigo,
-                            'id_almacen' => $usaAlmacenPropio ? 2 : 0,
-                            'id_empresa' => $venta->id_empresa,
-                            'id_usuario' => $user?->id,
-                            'fecha_movimiento' => now(),
-                        ]);
+                        // Para movimientos_stock, id_producto debe existir en tabla productos (FK)
+                        // Si es nota de venta, buscar producto equivalente por código en tabla productos
+                        $idProductoMovimiento = $detalle->id_producto;
+                        if ($esNotaVenta) {
+                            $prodEquivalente = DB::table('productos')
+                                ->where('codigo', $productoReal->codigo)
+                                ->where('id_empresa', $venta->id_empresa)
+                                ->value('id_producto');
+                            $idProductoMovimiento = $prodEquivalente ?: $detalle->id_producto;
+                        }
+
+                        // Solo registrar movimiento si tenemos un id_producto válido en tabla productos
+                        if (!$esNotaVenta || $idProductoMovimiento !== $detalle->id_producto || DB::table('productos')->where('id_producto', $idProductoMovimiento)->exists()) {
+                            \App\Models\MovimientoStock::create([
+                                'id_producto' => $idProductoMovimiento,
+                                'tipo_movimiento' => 'salida',
+                                'cantidad' => $detalle->cantidad,
+                                'stock_anterior' => $stockAnterior,
+                                'stock_nuevo' => $stockAnterior - $detalle->cantidad,
+                                'tipo_documento' => $tipoAlmacen,
+                                'id_documento' => $venta->id_venta,
+                                'documento_referencia' => $numeroCompleto,
+                                'motivo' => $esNotaVenta
+                                    ? 'Descuento almacén madre por nota de venta'
+                                    : ($usaAlmacenPropio ? 'Descuento almacén 2 por venta' : 'Descuento almacén madre por venta'),
+                                'observaciones' => 'Producto: ' . $productoReal->codigo,
+                                'id_almacen' => $usaAlmacenPropio ? 2 : 0,
+                                'id_empresa' => $venta->id_empresa,
+                                'id_usuario' => $user?->id,
+                                'fecha_movimiento' => now(),
+                            ]);
+                        }
                     }
                 }
 
@@ -952,10 +982,10 @@ class VentasController extends Controller
                 ]);
             });
         } catch (\Exception $e) {
-            Log::error('Error al descontar stock: ' . $e->getMessage());
+            Log::error('Error al descontar stock: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al descontar stock del almacén',
+                'message' => 'Error al descontar stock del almacén: ' . $e->getMessage(),
             ], 500);
         }
     }

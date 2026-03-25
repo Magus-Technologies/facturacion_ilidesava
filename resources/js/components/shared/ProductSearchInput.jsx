@@ -31,6 +31,7 @@ export default function ProductSearchInput({
     className = "",
     showCosto = false, // Nuevo prop para mostrar costo en lugar de precio
     soloConStock = false, // Filtrar solo productos con stock > 0
+    apiEndpoint = null, // Endpoint personalizado (ej: /api/almacen-madre/productos)
 }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [products, setProducts] = useState([]);
@@ -68,11 +69,11 @@ export default function ProductSearchInput({
                 headers["X-Empresa-Activa"] = empresaActiva.id_empresa;
             }
 
-            // Buscar en productos
-            const response = await fetch(
-                `/api/productos?search=${encodeURIComponent(term)}&almacen=${almacen}${soloConStock ? '&solo_con_stock=1' : ''}`,
-                { headers },
-            );
+            // Buscar en productos (usa endpoint personalizado si se proporcionó)
+            const url = apiEndpoint
+                ? `${apiEndpoint}?search=${encodeURIComponent(term)}${soloConStock ? '&solo_con_stock=1' : ''}`
+                : `/api/productos?search=${encodeURIComponent(term)}&almacen=${almacen}${soloConStock ? '&solo_con_stock=1' : ''}`;
+            const response = await fetch(url, { headers });
 
             const data = await response.json();
 

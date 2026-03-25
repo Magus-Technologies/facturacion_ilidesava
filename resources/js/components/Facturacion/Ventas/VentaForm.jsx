@@ -218,8 +218,8 @@ export default function VentaForm({ ventaId = null }) {
             let nuevoAlmacen = "1"; // Por defecto Almacén 1
 
             if (formData.id_tido === "6") {
-                // Nota de Venta → Almacén 2 (Kardex Real)
-                nuevoAlmacen = "2";
+                // Nota de Venta → Almacén 1 (Madre)
+                nuevoAlmacen = "1";
             } else if (formData.id_tido === "1" || formData.id_tido === "2") {
                 // Factura/Boleta → Almacén 1 (SUNAT)
                 nuevoAlmacen = "1";
@@ -346,6 +346,7 @@ export default function VentaForm({ ventaId = null }) {
                             disableAlmacenSelector={!!formData.id_tido}
                             soloConStock={formData.id_tido !== "6"}
                             showModoLibre={true}
+                            apiEndpoint={formData.id_tido === "6" ? "/api/almacen-madre/productos" : null}
                         />
 
                         <div>
@@ -421,6 +422,7 @@ export default function VentaForm({ ventaId = null }) {
                 productosExistentes={productos}
                 almacen={formData.almacen}
                 afectaStock={formData.afecta_stock}
+                apiEndpoint={formData.id_tido === "6" ? "/api/almacen-madre/productos" : null}
             />
 
             <PrintOptionsModal

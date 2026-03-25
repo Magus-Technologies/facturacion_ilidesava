@@ -16,6 +16,7 @@ export default function ProductMultipleSearch({
     almacen = "1",
     afectaStock = true,
     productosExistentes = [],
+    apiEndpoint = null,
 }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [productos, setProductos] = useState([]);
@@ -49,11 +50,11 @@ export default function ProductMultipleSearch({
                 headers["X-Empresa-Activa"] = empresaActiva.id_empresa;
             }
 
-            // Buscar productos
-            const response = await fetch(
-                `/api/productos?search=${encodeURIComponent(term)}&almacen=${almacen}&limit=50`,
-                { headers },
-            );
+            // Buscar productos (usa endpoint personalizado si se proporcionó)
+            const url = apiEndpoint
+                ? `${apiEndpoint}?search=${encodeURIComponent(term)}&limit=50`
+                : `/api/productos?search=${encodeURIComponent(term)}&almacen=${almacen}&limit=50`;
+            const response = await fetch(url, { headers });
 
             const data = await response.json();
 

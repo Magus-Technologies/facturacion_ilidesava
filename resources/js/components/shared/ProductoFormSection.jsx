@@ -37,6 +37,7 @@ export default function ProductoFormSection({
     disableAlmacenSelector = false,
     soloConStock = false,
     showModoLibre = false,
+    apiEndpoint = null,
 }) {
     const [modoLibre, setModoLibre] = useState(false);
 
@@ -110,6 +111,7 @@ export default function ProductoFormSection({
                             almacen={almacen}
                             showCosto={showCosto}
                             soloConStock={soloConStock}
+                            apiEndpoint={apiEndpoint}
                         />
                     )}
                 </div>
