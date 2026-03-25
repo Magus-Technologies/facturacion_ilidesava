@@ -111,18 +111,24 @@ export const useVentaForm = (ventaId = null) => {
                 }
                 
                 const detalles = venta.productos_ventas || venta.productosVentas || [];
+                const esNotaVenta = String(venta.id_tido) === '6';
                 if (detalles.length > 0) {
                     setProductos(
-                        detalles.map((detalle) => ({
-                            id_producto: detalle.id_producto,
-                            codigo: detalle.producto?.codigo || '',
-                            descripcion: detalle.producto?.nombre || '',
-                            cantidad: detalle.cantidad,
-                            precioVenta: detalle.precio_unitario,
-                            precio_mostrado: detalle.precio_unitario,
-                            moneda: venta.tipo_moneda,
-                            tipo_precio: 'PV',
-                        }))
+                        detalles.map((detalle) => {
+                            const prod = esNotaVenta
+                                ? (detalle.producto_madre || detalle.producto)
+                                : detalle.producto;
+                            return {
+                                id_producto: detalle.id_producto,
+                                codigo: prod?.codigo || detalle.codigo_producto || '',
+                                descripcion: prod?.nombre || detalle.descripcion || '',
+                                cantidad: detalle.cantidad,
+                                precioVenta: detalle.precio_unitario,
+                                precio_mostrado: detalle.precio_unitario,
+                                moneda: venta.tipo_moneda,
+                                tipo_precio: 'PV',
+                            };
+                        })
                     );
                 }
 

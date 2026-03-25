@@ -502,13 +502,20 @@ class VentasController extends Controller
             $venta = Venta::with([
                 'cliente',
                 'tipoDocumento',
-                'productosVentas.producto',
+                'productosVentas',
                 'serviciosVentas',
                 'cuotas',
                 'pagos',
             ])
                 ->where('id_empresa', $user->id_empresa)
                 ->findOrFail($id);
+
+            // Cargar relación de producto según tipo de documento
+            if ($venta->id_tido == 6) {
+                $venta->productosVentas->load('productoMadre');
+            } else {
+                $venta->productosVentas->load('producto');
+            }
 
             return response()->json([
                 'success' => true,

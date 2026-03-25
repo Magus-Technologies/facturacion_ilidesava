@@ -50,6 +50,11 @@ class ProductoVenta extends Model
         return $this->belongsTo(Producto::class, 'id_producto', 'id_producto');
     }
 
+    public function productoMadre(): BelongsTo
+    {
+        return $this->belongsTo(ProductoMadre::class, 'id_producto', 'id_producto');
+    }
+
     // Accessors
     public function getTotalLineaAttribute(): float
     {
