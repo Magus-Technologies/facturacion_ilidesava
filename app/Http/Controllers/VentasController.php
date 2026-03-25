@@ -181,21 +181,35 @@ class VentasController extends Controller
             return DB::transaction(function () use ($validated, $user, $request) {
                 $idCliente = $validated['id_cliente'] ?? null;
 
-                // Si no hay id_cliente, usar CLIENTES VARIOS para boleta/nota o crear cliente
+                // Si no hay id_cliente, buscar o crear cliente
                 if (!$idCliente) {
-                    $docCliente = $validated['cliente_documento'] ?? '';
-                    $nomCliente = $validated['cliente_datos'] ?? '';
+                    $docCliente = trim($validated['cliente_documento'] ?? '');
+                    $nomCliente = trim($validated['cliente_datos'] ?? '');
 
-                    // Para boleta/nota sin datos: usar CLIENTES VARIOS
+                    // Sin datos → usar CLIENTES VARIOS
                     if (empty($docCliente) && empty($nomCliente)) {
                         $docCliente = '00000000';
                         $nomCliente = 'CLIENTES VARIOS';
                     }
 
-                    $clienteModel = \App\Models\Cliente::where('documento', $docCliente)
-                        ->where('id_empresa', $user->id_empresa)
-                        ->first();
+                    $clienteModel = null;
 
+                    // Solo buscar por documento si tiene uno válido (no vacío)
+                    if (!empty($docCliente)) {
+                        $clienteModel = \App\Models\Cliente::where('documento', $docCliente)
+                            ->where('id_empresa', $user->id_empresa)
+                            ->first();
+
+                        // Si encontró, actualizar nombre/dirección si cambiaron
+                        if ($clienteModel && !empty($nomCliente) && $clienteModel->datos !== $nomCliente) {
+                            $clienteModel->update([
+                                'datos' => $nomCliente,
+                                'direccion' => $validated['cliente_direccion'] ?? $clienteModel->direccion,
+                            ]);
+                        }
+                    }
+
+                    // Si no encontró (o no tiene documento), crear nuevo
                     if (!$clienteModel) {
                         $tipoDoc = strlen($docCliente) === 11 ? '6' : (strlen($docCliente) === 8 ? '1' : '4');
                         $clienteModel = \App\Models\Cliente::create([
@@ -563,19 +577,30 @@ class VentasController extends Controller
 
             return DB::transaction(function () use ($venta, $validated, $request, $user) {
                 // Manejar cliente
-                $idCliente = $validated['id_cliente'] ?? $venta->id_cliente;
-                if (!$idCliente) {
-                    $docCliente = $validated['cliente_documento'] ?? '';
-                    $nomCliente = $validated['cliente_datos'] ?? '';
+                $docCliente = trim($validated['cliente_documento'] ?? '');
+                $nomCliente = trim($validated['cliente_datos'] ?? '');
+                $idCliente = $validated['id_cliente'] ?? null;
 
+                if (!$idCliente) {
                     if (empty($docCliente) && empty($nomCliente)) {
                         $docCliente = '00000000';
                         $nomCliente = 'CLIENTES VARIOS';
                     }
 
-                    $clienteModel = Cliente::where('documento', $docCliente)
-                        ->where('id_empresa', $user->id_empresa)
-                        ->first();
+                    $clienteModel = null;
+
+                    if (!empty($docCliente)) {
+                        $clienteModel = Cliente::where('documento', $docCliente)
+                            ->where('id_empresa', $user->id_empresa)
+                            ->first();
+
+                        if ($clienteModel && !empty($nomCliente) && $clienteModel->datos !== $nomCliente) {
+                            $clienteModel->update([
+                                'datos' => $nomCliente,
+                                'direccion' => $validated['cliente_direccion'] ?? $clienteModel->direccion,
+                            ]);
+                        }
+                    }
 
                     if (!$clienteModel) {
                         $tipoDoc = strlen($docCliente) === 11 ? '6' : (strlen($docCliente) === 8 ? '1' : '4');
