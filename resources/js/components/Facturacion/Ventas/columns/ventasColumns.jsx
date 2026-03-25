@@ -359,6 +359,9 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                     venta.estado === "2" || venta.estado === "A";
                 const estaVendida = venta.estado === "3";
                 const esNotaVenta = String(venta.id_tido) === "6";
+                const userRol = (() => { try { return JSON.parse(localStorage.getItem("user") || "{}").rol_id; } catch { return null; } })();
+                const esVendedor = userRol === 3 || userRol === "3";
+                const ocultarStock = esVendedor && !esNotaVenta;
                 const yaEnviado = venta.estado_sunat === "1" || venta.estado_sunat === "4";
                 const conObservaciones = venta.estado_sunat === "4";
                 const tieneXml = !!venta.nombre_xml;
@@ -410,13 +413,13 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         </span>
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && venta.stock_real_descontado && (
+                                {!estaAnulada && !ocultarStock && venta.stock_real_descontado && (
                                     <DropdownMenuItem disabled className="text-green-600 opacity-100">
                                         <PackageCheck className="mr-2 h-4 w-4" />
                                         Ya descontado
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && !venta.stock_real_descontado && handlers.handleDescontarStock && (
+                                {!estaAnulada && !ocultarStock && !venta.stock_real_descontado && handlers.handleDescontarStock && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleDescontarStock(venta)}
                                         className="text-amber-600 focus:bg-amber-50 focus:text-amber-700"
