@@ -56,11 +56,31 @@ class User extends Authenticatable
     }
 
     /**
-     * Relación con empresa
+     * Relación con empresa actual (activa)
      */
     public function empresa()
     {
         return $this->belongsTo(\App\Models\Empresa::class, 'id_empresa', 'id_empresa');
+    }
+
+    /**
+     * Empresas asignadas al usuario (muchos a muchos)
+     */
+    public function empresas()
+    {
+        return $this->belongsToMany(\App\Models\Empresa::class, 'empresa_usuario', 'user_id', 'id_empresa');
+    }
+
+    /**
+     * Obtener las empresas disponibles para este usuario
+     * Admin: todas las activas. Otros: solo las asignadas en pivote.
+     */
+    public function empresasDisponibles()
+    {
+        if ($this->rol_id == 1) {
+            return \App\Models\Empresa::where('estado', '1')->get();
+        }
+        return $this->empresas()->where('estado', '1')->get();
     }
 
     /**

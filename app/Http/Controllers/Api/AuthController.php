@@ -48,22 +48,16 @@ class AuthController extends Controller
         // Generar token con Sanctum (válido por 8 horas)
         $token = $user->createToken('auth_token', ['*'], now()->addHours(8))->plainTextToken;
 
-        // Cargar datos de empresa(s)
-        $empresas = [];
-        if ($user->rol_id == 1) {
-            // Admin: todas las empresas
-            $empresas = \App\Models\Empresa::where('estado', '1')
-                ->select('id_empresa', 'comercial', 'ruc', 'razon_social', 'logo', 'direccion')
-                ->get();
-        } elseif ($user->id_empresa) {
-            // Usuario normal: solo su empresa
-            $empresa = \App\Models\Empresa::where('id_empresa', $user->id_empresa)
-                ->select('id_empresa', 'comercial', 'ruc', 'razon_social', 'logo', 'direccion')
-                ->first();
-            if ($empresa) {
-                $empresas = [$empresa];
-            }
-        }
+        // Cargar empresas disponibles para el usuario
+        $empresas = $user->empresasDisponibles()
+            ->map(fn ($e) => [
+                'id_empresa' => $e->id_empresa,
+                'comercial' => $e->comercial,
+                'ruc' => $e->ruc,
+                'razon_social' => $e->razon_social,
+                'logo' => $e->logo,
+                'direccion' => $e->direccion,
+            ]);
 
         // Cargar permisos del usuario
         $permissions = [];
@@ -173,34 +167,26 @@ class AuthController extends Controller
         ]);
 
         $user = $request->user();
+        $idEmpresa = $request->id_empresa;
 
-        // Admin puede cambiar a cualquier empresa activa
-        if ($user->rol_id == 1) {
-            $empresa = \App\Models\Empresa::where('id_empresa', $request->id_empresa)
-                ->where('estado', '1')
-                ->first();
+        // Verificar que el usuario tiene acceso a esta empresa
+        $empresasDisponibles = $user->empresasDisponibles()->pluck('id_empresa')->toArray();
 
-            if (!$empresa) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Empresa no encontrada o inactiva',
-                ], 404);
-            }
-
-            $user->id_empresa = $empresa->id_empresa;
-            $user->save();
-
+        if (!in_array($idEmpresa, $empresasDisponibles)) {
             return response()->json([
-                'success' => true,
-                'message' => 'Empresa cambiada exitosamente',
-                'id_empresa' => $empresa->id_empresa,
-            ]);
+                'success' => false,
+                'message' => 'No tiene acceso a esta empresa',
+            ], 403);
         }
 
+        $user->id_empresa = $idEmpresa;
+        $user->save();
+
         return response()->json([
-            'success' => false,
-            'message' => 'No tiene permisos para cambiar de empresa',
-        ], 403);
+            'success' => true,
+            'message' => 'Empresa cambiada exitosamente',
+            'id_empresa' => $idEmpresa,
+        ]);
     }
 
     /**

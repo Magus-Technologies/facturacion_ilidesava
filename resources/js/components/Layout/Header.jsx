@@ -117,8 +117,8 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
                         )}
                     </button>
 
-                    {/* Empresa activa - Selector para admin, texto para usuarios */}
-                    {isAdmin && empresas.length > 1 ? (
+                    {/* Empresa activa - Selector si tiene múltiples empresas */}
+                    {empresas.length > 1 ? (
                         <div className="relative">
                             <button
                                 onClick={() =>

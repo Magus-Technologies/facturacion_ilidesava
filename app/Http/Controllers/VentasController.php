@@ -25,7 +25,7 @@ class VentasController extends Controller
         try {
             $user = $request->user();
 
-            $ventas = Venta::with(['cliente', 'tipoDocumento', 'pagos'])
+            $ventas = Venta::with(['cliente', 'tipoDocumento', 'pagos', 'usuario:id,name'])
                 ->where('id_empresa', $user->id_empresa)
                 ->orderBy('fecha_emision', 'desc')
                 ->orderBy('numero', 'desc')
@@ -66,6 +66,7 @@ class VentasController extends Controller
                         'sunat_observaciones' => $venta->sunat_observaciones,
                         'nombre_xml' => $venta->nombre_xml,
                         'cdr_url' => $venta->cdr_url,
+                        'vendedor' => $venta->usuario?->name,
                         'afecta_stock' => $venta->afecta_stock,
                         'stock_real_descontado' => $venta->stock_real_descontado,
                     ];

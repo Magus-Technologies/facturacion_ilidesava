@@ -17,7 +17,7 @@ class UserController extends Controller
     {
         try {
             $users = User::select('id', 'name', 'email', 'rol_id', 'id_empresa', 'created_at', 'updated_at')
-                ->with(['rol:rol_id,nombre', 'empresa:id_empresa,comercial,ruc'])
+                ->with(['rol:rol_id,nombre', 'empresa:id_empresa,comercial,ruc', 'empresas:id_empresa,comercial,ruc'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -48,11 +48,19 @@ class UserController extends Controller
                 'password' => 'required|string|min:6|confirmed',
                 'rol_id' => 'required|integer|exists:roles,rol_id',
                 'id_empresa' => $isAdmin ? 'nullable|integer|exists:empresas,id_empresa' : 'required|integer|exists:empresas,id_empresa',
+                'empresas_ids' => 'nullable|array',
+                'empresas_ids.*' => 'integer|exists:empresas,id_empresa',
             ]);
 
             // Admin sin empresa: asignar la del creador
             if ($isAdmin && empty($validated['id_empresa'])) {
                 $validated['id_empresa'] = $request->user()->id_empresa;
+            }
+
+            // Si no es admin y tiene empresas_ids, usar la primera como empresa principal
+            $empresasIds = $validated['empresas_ids'] ?? [];
+            if (!$isAdmin && !empty($empresasIds) && empty($validated['id_empresa'])) {
+                $validated['id_empresa'] = $empresasIds[0];
             }
 
             $user = User::create([
@@ -62,6 +70,13 @@ class UserController extends Controller
                 'rol_id' => $validated['rol_id'],
                 'id_empresa' => $validated['id_empresa'],
             ]);
+
+            // Sincronizar empresas asignadas (para no-admins)
+            if (!$isAdmin && !empty($empresasIds)) {
+                $user->empresas()->sync($empresasIds);
+            }
+
+            $user->load(['rol:rol_id,nombre', 'empresa:id_empresa,comercial,ruc', 'empresas:id_empresa,comercial,ruc']);
 
             return response()->json([
                 'success' => true,
@@ -126,6 +141,8 @@ class UserController extends Controller
                 'password' => 'sometimes|nullable|string|min:6|confirmed',
                 'rol_id' => 'sometimes|required|integer|exists:roles,rol_id',
                 'id_empresa' => 'nullable|integer|exists:empresas,id_empresa',
+                'empresas_ids' => 'nullable|array',
+                'empresas_ids.*' => 'integer|exists:empresas,id_empresa',
             ]);
 
             if (isset($validated['name'])) {
@@ -149,6 +166,24 @@ class UserController extends Controller
             }
 
             $user->save();
+
+            // Sincronizar empresas asignadas
+            $isAdmin = ($validated['rol_id'] ?? $user->rol_id) == 1;
+            if (!$isAdmin && $request->has('empresas_ids')) {
+                $empresasIds = $validated['empresas_ids'] ?? [];
+                $user->empresas()->sync($empresasIds);
+
+                // Si la empresa actual no está en las asignadas, cambiar a la primera
+                if (!empty($empresasIds) && !in_array($user->id_empresa, $empresasIds)) {
+                    $user->id_empresa = $empresasIds[0];
+                    $user->save();
+                }
+            } elseif ($isAdmin) {
+                // Admin no necesita pivote, limpiar si tenía
+                $user->empresas()->detach();
+            }
+
+            $user->load(['rol:rol_id,nombre', 'empresa:id_empresa,comercial,ruc', 'empresas:id_empresa,comercial,ruc']);
 
             return response()->json([
                 'success' => true,

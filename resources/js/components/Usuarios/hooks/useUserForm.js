@@ -16,6 +16,7 @@ export const useUserForm = (user, isOpen, onClose, onSuccess) => {
         password_confirmation: "",
         rol_id: "",
         id_empresa: "",
+        empresas_ids: [],
     });
 
     // Cargar datos del usuario si está editando
@@ -28,9 +29,9 @@ export const useUserForm = (user, isOpen, onClose, onSuccess) => {
                 password_confirmation: "",
                 rol_id: user.rol_id || "",
                 id_empresa: user.id_empresa || "",
+                empresas_ids: (user.empresas || []).map((e) => e.id_empresa),
             });
         } else {
-            // Resetear formulario si es nuevo
             setFormData({
                 name: "",
                 email: "",
@@ -38,6 +39,7 @@ export const useUserForm = (user, isOpen, onClose, onSuccess) => {
                 password_confirmation: "",
                 rol_id: "",
                 id_empresa: "",
+                empresas_ids: [],
             });
         }
         setErrors({});
@@ -67,12 +69,27 @@ export const useUserForm = (user, isOpen, onClose, onSuccess) => {
     };
 
     /**
-     * Maneja el cambio de empresa
+     * Maneja el cambio de empresa (single - para admin)
      */
     const handleEmpresaChange = (empresaId) => {
         setFormData((prev) => ({ ...prev, id_empresa: empresaId }));
         if (errors.id_empresa) {
             setErrors((prev) => ({ ...prev, id_empresa: null }));
+        }
+    };
+
+    /**
+     * Maneja el cambio de empresas múltiples (para no-admin)
+     */
+    const handleEmpresasChange = (empresasIds) => {
+        setFormData((prev) => ({
+            ...prev,
+            empresas_ids: empresasIds,
+            // La primera empresa seleccionada es la principal
+            id_empresa: empresasIds.length > 0 ? empresasIds[0] : "",
+        }));
+        if (errors.empresas_ids || errors.id_empresa) {
+            setErrors((prev) => ({ ...prev, empresas_ids: null, id_empresa: null }));
         }
     };
 
@@ -143,6 +160,7 @@ export const useUserForm = (user, isOpen, onClose, onSuccess) => {
         handleChange,
         handleRoleChange,
         handleEmpresaChange,
+        handleEmpresasChange,
         handleSubmit,
     };
 };

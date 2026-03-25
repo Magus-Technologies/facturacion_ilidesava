@@ -6,6 +6,7 @@ import { Loader2, User, Mail, Calendar, Shield, Briefcase, Building2 } from "luc
 import { useUserForm } from "./hooks/useUserForm";
 import SelectRol from "../ui/SelectRol";
 import SelectEmpresa from "../ui/SelectEmpresa";
+import SelectEmpresas from "../ui/SelectEmpresas";
 
 export default function UserModal({
     isOpen,
@@ -23,8 +24,11 @@ export default function UserModal({
         handleChange,
         handleRoleChange,
         handleEmpresaChange,
+        handleEmpresasChange,
         handleSubmit,
     } = useUserForm(user, isOpen, onClose, onSuccess);
+
+    const isAdmin = String(formData.rol_id) === "1";
 
     const getTitle = () => {
         if (mode === "view") return "Detalles del Usuario";
@@ -36,7 +40,7 @@ export default function UserModal({
             isOpen={isOpen}
             onClose={onClose}
             title={getTitle()}
-            size="md"
+            size="lg"
             footer={
                 <>
                     <Button
@@ -156,7 +160,7 @@ export default function UserModal({
                 </div>
             ) : (
                 <ModalForm onSubmit={handleSubmit}>
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                         {/* Nombre */}
                         <ModalField
                             label="Nombre Completo"
@@ -205,29 +209,39 @@ export default function UserModal({
                             />
                         </ModalField>
 
-                        {/* Empresa */}
-                        <ModalField
-                            label="Empresa Asignada"
-                            required={String(formData.rol_id) !== "1"}
-                            error={errors.id_empresa?.[0]}
-                            hint={String(formData.rol_id) === "1"
-                                ? "Admin tiene acceso a todas las empresas. Selecciona su empresa por defecto (opcional)"
-                                : "Selecciona la empresa a la que tendrá acceso este usuario"
-                            }
-                        >
-                            <SelectEmpresa
-                                value={formData.id_empresa}
-                                onChange={handleEmpresaChange}
+                        {/* Empresa(s) */}
+                        {isAdmin ? (
+                            <ModalField
+                                label="Empresa por Defecto"
                                 error={errors.id_empresa?.[0]}
-                                placeholder="Seleccionar empresa..."
-                            />
-                        </ModalField>
+                                hint="Admin tiene acceso a todas las empresas"
+                            >
+                                <SelectEmpresa
+                                    value={formData.id_empresa}
+                                    onChange={handleEmpresaChange}
+                                    error={errors.id_empresa?.[0]}
+                                    placeholder="Seleccionar empresa..."
+                                />
+                            </ModalField>
+                        ) : (
+                            <ModalField
+                                label="Empresas Asignadas"
+                                required
+                                error={errors.empresas_ids?.[0] || errors.id_empresa?.[0]}
+                                hint="Selecciona las empresas donde podrá facturar"
+                            >
+                                <SelectEmpresas
+                                    value={formData.empresas_ids || []}
+                                    onChange={handleEmpresasChange}
+                                />
+                            </ModalField>
+                        )}
 
                         {/* Password */}
                         <ModalField
                             label={
                                 isEditing
-                                    ? "Contraseña (dejar en blanco para no cambiar)"
+                                    ? "Contraseña (dejar en blanco)"
                                     : "Contraseña"
                             }
                             required={!isEditing}

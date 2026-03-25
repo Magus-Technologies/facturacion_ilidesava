@@ -284,6 +284,15 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                 );
             },
         },
+        {
+            accessorKey: "vendedor",
+            header: "Vendedor",
+            cell: ({ row }) => (
+                <span className="text-xs text-gray-700 truncate max-w-24 block">
+                    {row.getValue("vendedor") || "—"}
+                </span>
+            ),
+        },
         ...(!ocultarSunat
             ? [
                   {

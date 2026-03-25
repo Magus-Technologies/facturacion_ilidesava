@@ -139,6 +139,11 @@ class Venta extends Model
         return $this->hasMany(VentaAnulada::class, 'id_venta', 'id_venta');
     }
 
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_usuario', 'id');
+    }
+
     public function clienteVenta(): HasMany
     {
         return $this->hasMany(ClienteVenta::class, 'id_venta', 'id_venta');
