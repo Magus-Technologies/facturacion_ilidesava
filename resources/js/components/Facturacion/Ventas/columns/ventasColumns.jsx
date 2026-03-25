@@ -224,37 +224,61 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
             cell: ({ row }) => {
                 const tipo = row.getValue("id_tipo_pago");
                 const esCredito = tipo === 2 || tipo === "2";
-                const metodo = row.original.metodo_pago;
-                const voucher = row.original.voucher;
+                const pagosDetalle = row.original.pagos_detalle || [];
                 const config = {
                     1: { label: "Efectivo", icon: Banknote, color: "text-green-600" },
                     2: { label: "Tarjeta", icon: CreditCard, color: "text-blue-600" },
                     4: { label: "Transfer.", icon: Building2, color: "text-purple-600" },
                     5: { label: "Yape/Plin", icon: Smartphone, color: "text-pink-600" },
                 };
-                const info = esCredito ? null : config[metodo];
-                const Icon = info?.icon;
-                return (
-                    <div className="flex items-center gap-1.5">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium ${
-                            esCredito ? "text-amber-600" : (info?.color || "text-gray-400")
-                        }`}>
-                            {esCredito ? <CreditCard className="h-3 w-3" /> : Icon ? <Icon className="h-3 w-3" /> : null}
-                            {esCredito ? "Crédito" : (info?.label || "—")}
+
+                if (esCredito) {
+                    return (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+                            <CreditCard className="h-3 w-3" />
+                            Crédito
                         </span>
-                        {voucher && (
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(`/storage/${voucher}`, "_blank");
-                                }}
-                                className="text-[10px] text-primary-600 hover:text-primary-800 underline underline-offset-2"
-                                title="Ver voucher"
-                            >
-                                ver voucher
-                            </button>
-                        )}
+                    );
+                }
+
+                if (pagosDetalle.length === 0) {
+                    const metodo = row.original.metodo_pago;
+                    const info = config[metodo];
+                    const Icon = info?.icon;
+                    return (
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium ${info?.color || "text-gray-400"}`}>
+                            {Icon ? <Icon className="h-3 w-3" /> : null}
+                            {info?.label || "—"}
+                        </span>
+                    );
+                }
+
+                return (
+                    <div className="space-y-0.5">
+                        {pagosDetalle.map((pago, i) => {
+                            const info = config[pago.id_tipo_pago];
+                            const Icon = info?.icon;
+                            return (
+                                <div key={i} className="flex items-center gap-1">
+                                    <span className={`inline-flex items-center gap-0.5 text-[11px] font-medium ${info?.color || "text-gray-400"}`}>
+                                        {Icon ? <Icon className="h-3 w-3" /> : null}
+                                        {info?.label || "—"}
+                                    </span>
+                                    {pago.voucher && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                window.open(`/storage/${pago.voucher}`, "_blank");
+                                            }}
+                                            className="text-[9px] text-primary-600 hover:text-primary-800 underline underline-offset-2"
+                                        >
+                                            voucher
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 );
             },

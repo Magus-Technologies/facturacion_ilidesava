@@ -254,7 +254,7 @@
 
         <!-- Payment Method -->
         @php
-            $pago = $venta->pagos->first();
+            $todosLosPagos = $venta->pagos;
             $metodosPago = [1 => 'EFECTIVO', 2 => 'TARJETA', 4 => 'TRANSFERENCIA', 5 => 'YAPE / PLIN'];
         @endphp
         <div class="divider"></div>
@@ -267,20 +267,12 @@
                 <span class="client-label">VENCE:</span> {{ $venta->fecha_vencimiento->format('d/m/Y') }}
             </div>
             @endif
-            @if($pago && $venta->id_tipo_pago == 1)
-            <div class="client-row">
-                <span class="client-label">MÉTODO:</span> {{ $metodosPago[$pago->id_tipo_pago] ?? 'OTRO' }}
+            @if($todosLosPagos->count() > 0 && $venta->id_tipo_pago == 1)
+            @foreach($todosLosPagos as $iPago => $pagoItem)
+            <div class="client-row" style="margin-top: {{ $iPago > 0 ? '2px' : '0' }}; {{ $todosLosPagos->count() > 1 && $iPago > 0 ? 'border-top: 1px dashed #ccc; padding-top: 2px;' : '' }}">
+                <span class="client-label">{{ $metodosPago[$pagoItem->id_tipo_pago] ?? 'OTRO' }}</span>{{ $pagoItem->numero_operacion ? ' | Op: ' . $pagoItem->numero_operacion : '' }}{{ $pagoItem->banco ? ' | ' . $pagoItem->banco : '' }}
             </div>
-            @if($pago->numero_operacion)
-            <div class="client-row">
-                <span class="client-label">N° OPER:</span> {{ $pago->numero_operacion }}
-            </div>
-            @endif
-            @if($pago->banco)
-            <div class="client-row">
-                <span class="client-label">BANCO:</span> {{ $pago->banco }}
-            </div>
-            @endif
+            @endforeach
             @endif
         </div>
 

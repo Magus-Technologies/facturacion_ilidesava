@@ -21,13 +21,13 @@ export const useVentaForm = (ventaId = null) => {
     const [showMultipleSearch, setShowMultipleSearch] = useState(false);
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [ventaGuardada, setVentaGuardada] = useState(null);
-    const [metodoPago, setMetodoPago] = useState({
+    const [metodoPago, setMetodoPago] = useState([{
         id_tipo_pago: '1',
         numero_operacion: '',
         banco: '',
         voucher_file: null,
         voucher_preview: null,
-    });
+    }]);
     
     const [productoActual, setProductoActual] = useState({
         id_producto: null,
@@ -410,17 +410,20 @@ export const useVentaForm = (ventaId = null) => {
                 }
             });
 
-            // Agregar datos de pago
-            formDataObj.append('pago_id_tipo_pago', metodoPago.id_tipo_pago);
-            if (metodoPago.numero_operacion) {
-                formDataObj.append('pago_numero_operacion', metodoPago.numero_operacion);
-            }
-            if (metodoPago.banco) {
-                formDataObj.append('pago_banco', metodoPago.banco);
-            }
-            if (metodoPago.voucher_file) {
-                formDataObj.append('pago_voucher', metodoPago.voucher_file);
-            }
+            // Agregar datos de pagos (múltiples)
+            const pagos = Array.isArray(metodoPago) ? metodoPago : [metodoPago];
+            pagos.forEach((pago, i) => {
+                formDataObj.append(`pagos[${i}][id_tipo_pago]`, pago.id_tipo_pago);
+                if (pago.numero_operacion) {
+                    formDataObj.append(`pagos[${i}][numero_operacion]`, pago.numero_operacion);
+                }
+                if (pago.banco) {
+                    formDataObj.append(`pagos[${i}][banco]`, pago.banco);
+                }
+                if (pago.voucher_file) {
+                    formDataObj.append(`pagos[${i}][voucher]`, pago.voucher_file);
+                }
+            });
 
             // Para PUT con FormData, usar POST + _method
             const actualMethod = isEditing ? 'POST' : 'POST';

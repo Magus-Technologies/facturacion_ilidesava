@@ -31,7 +31,8 @@ class VentasController extends Controller
                 ->orderBy('numero', 'desc')
                 ->get()
                 ->map(function ($venta) {
-                    $pago = $venta->pagos->first();
+                    $pagos = $venta->pagos;
+                    $primerPago = $pagos->first();
                     return [
                         'id_venta' => $venta->id_venta,
                         'id_tido' => $venta->id_tido,
@@ -52,8 +53,14 @@ class VentasController extends Controller
                         'total' => $venta->total,
                         'tipo_moneda' => $venta->tipo_moneda,
                         'id_tipo_pago' => $venta->id_tipo_pago,
-                        'metodo_pago' => $venta->id_tipo_pago == 1 ? ($pago ? $pago->id_tipo_pago : null) : null,
-                        'voucher' => $pago && $pago->voucher ? $pago->voucher : null,
+                        'metodo_pago' => $venta->id_tipo_pago == 1 ? ($primerPago ? $primerPago->id_tipo_pago : null) : null,
+                        'voucher' => $primerPago && $primerPago->voucher ? $primerPago->voucher : null,
+                        'pagos_detalle' => $venta->id_tipo_pago == 1 ? $pagos->map(fn($p) => [
+                            'id_tipo_pago' => $p->id_tipo_pago,
+                            'numero_operacion' => $p->numero_operacion,
+                            'banco' => $p->banco,
+                            'voucher' => $p->voucher,
+                        ])->values() : [],
                         'estado' => $venta->estado,
                         'estado_sunat' => $venta->estado_sunat,
                         'sunat_observaciones' => $venta->sunat_observaciones,
@@ -113,6 +120,12 @@ class VentasController extends Controller
                 'productos.*.total' => 'required|numeric|min:0',
                 'productos.*.descripcion' => 'nullable|string|max:500',
                 'productos.*.codigo_producto' => 'nullable|string|max:50',
+                'pagos' => 'nullable|array',
+                'pagos.*.id_tipo_pago' => 'required_with:pagos|integer',
+                'pagos.*.numero_operacion' => 'nullable|string|max:50',
+                'pagos.*.banco' => 'nullable|string|max:100',
+                'pagos.*.voucher' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+                // Backwards compatibility
                 'pago_id_tipo_pago' => 'nullable|integer',
                 'pago_numero_operacion' => 'nullable|string|max:50',
                 'pago_banco' => 'nullable|string|max:100',
@@ -334,8 +347,30 @@ class VentasController extends Controller
                     $venta->empresas()->attach($validated['empresas_ids']);
                 }
 
-                // Guardar pago si viene info de método de pago
-                if ($request->has('pago_id_tipo_pago') && $request->pago_id_tipo_pago) {
+                // Guardar pagos (múltiples)
+                $pagosData = $request->input('pagos', []);
+                if (!empty($pagosData)) {
+                    foreach ($pagosData as $i => $pagoItem) {
+                        $voucherPath = null;
+                        if ($request->hasFile("pagos.{$i}.voucher")) {
+                            $file = $request->file("pagos.{$i}.voucher");
+                            $filename = 'voucher_' . $venta->id_venta . '_' . $i . '_' . time() . '.' . $file->getClientOriginalExtension();
+                            $voucherPath = $file->storeAs('vouchers', $filename, 'public');
+                        }
+
+                        VentaPago::create([
+                            'id_venta' => $venta->id_venta,
+                            'id_tipo_pago' => $pagoItem['id_tipo_pago'],
+                            'monto' => $venta->total,
+                            'fecha_pago' => $venta->fecha_emision,
+                            'numero_operacion' => $pagoItem['numero_operacion'] ?? null,
+                            'banco' => $pagoItem['banco'] ?? null,
+                            'voucher' => $voucherPath,
+                            'tipo_moneda' => $venta->tipo_moneda,
+                        ]);
+                    }
+                } elseif ($request->has('pago_id_tipo_pago') && $request->pago_id_tipo_pago) {
+                    // Backwards compatibility: formato antiguo single pago
                     $voucherPath = null;
                     if ($request->hasFile('pago_voucher')) {
                         $file = $request->file('pago_voucher');

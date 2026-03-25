@@ -217,7 +217,7 @@
 
         <!-- Client Info -->
         @php
-            $pago = $venta->pagos->first();
+            $todosLosPagos = $venta->pagos;
             $metodosPago = [1 => 'EFECTIVO', 2 => 'TARJETA', 4 => 'TRANSFERENCIA', 5 => 'YAPE / PLIN'];
         @endphp
         <table style="width: 100%; border-collapse: separate; border-spacing: 10px 0; margin-bottom: 20px; margin-left: -10px;">
@@ -249,23 +249,33 @@
                     <br><span style="font-weight: bold; font-size: 8pt; color: #000;">FECHA VENCIMIENTO: </span>
                     <span style="font-size: 8pt; color: #000;">{{ $venta->fecha_vencimiento->format('d/m/Y') }}</span>
                     @endif
-                    @if($pago && $venta->id_tipo_pago == 1)
-                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">MÉTODO PAGO: </span>
-                    <span style="font-size: 8pt; color: #000;">{{ $metodosPago[$pago->id_tipo_pago] ?? 'OTRO' }}</span>
-                    @if($pago->numero_operacion)
-                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">N° OPERACIÓN: </span>
-                    <span style="font-size: 8pt; color: #000;">{{ $pago->numero_operacion }}</span>
-                    @endif
-                    @if($pago->banco)
-                    <br><span style="font-weight: bold; font-size: 8pt; color: #000;">BANCO: </span>
-                    <span style="font-size: 8pt; color: #000;">{{ $pago->banco }}</span>
-                    @endif
-                    @endif
                     <br><span style="font-weight: bold; font-size: 8pt; color: #000;">VENDEDOR: </span>
                     <span style="font-size: 8pt; color: #000;">{{ $venta->usuario->name ?? 'Sistema' }}</span>
                 </td>
             </tr>
         </table>
+
+        <!-- Métodos de Pago -->
+        @if($todosLosPagos->count() > 0 && $venta->id_tipo_pago == 1)
+        <table class="products-table" style="margin-bottom: 8px;">
+            <thead>
+                <tr>
+                    <th width="30%" class="text-center">MÉTODO</th>
+                    <th width="35%" class="text-center">N° OPERACIÓN</th>
+                    <th width="35%" class="text-center">BANCO</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($todosLosPagos as $pagoItem)
+                <tr>
+                    <td style="text-align: center;">{{ $metodosPago[$pagoItem->id_tipo_pago] ?? 'OTRO' }}</td>
+                    <td style="text-align: center;">{{ $pagoItem->numero_operacion ?? '—' }}</td>
+                    <td style="text-align: center;">{{ $pagoItem->banco ?? '—' }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @endif
 
         <!-- Products Table -->
         @php
