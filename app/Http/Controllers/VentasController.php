@@ -112,7 +112,13 @@ class VentasController extends Controller
                 'empresas_ids' => 'nullable|array',
                 'empresas_ids.*' => 'integer|exists:empresas,id_empresa',
                 'productos' => 'required|array|min:1',
-                'productos.*.id_producto' => 'nullable|integer|exists:' . ($request->input('id_tido') == 6 ? 'productos_madre' : 'productos') . ',id_producto',
+                'productos.*.id_producto' => $request->input('id_tido') == 6
+                    ? ['nullable', 'integer', function ($attribute, $value, $fail) {
+                        if ($value && !\App\Models\ProductoMadre::find($value) && !\App\Models\Producto::find($value)) {
+                            $fail('El producto seleccionado no existe.');
+                        }
+                    }]
+                    : 'nullable|integer|exists:productos,id_producto',
                 'productos.*.descripcion_libre' => 'nullable|string|max:500',
                 'productos.*.cantidad' => 'required|integer|min:1',
                 'productos.*.precio_unitario' => 'required|numeric|min:0',
@@ -567,7 +573,11 @@ class VentasController extends Controller
                 'tipo_moneda' => 'required|in:PEN,USD',
                 'observaciones' => 'nullable|string|max:1000',
                 'productos' => 'required|array|min:1',
-                'productos.*.id_producto' => 'nullable|integer|exists:productos_madre,id_producto',
+                'productos.*.id_producto' => ['nullable', 'integer', function ($attribute, $value, $fail) {
+                    if ($value && !\App\Models\ProductoMadre::find($value) && !\App\Models\Producto::find($value)) {
+                        $fail('El producto seleccionado no existe.');
+                    }
+                }],
                 'productos.*.descripcion_libre' => 'nullable|string|max:500',
                 'productos.*.cantidad' => 'required|integer|min:1',
                 'productos.*.precio_unitario' => 'required|numeric|min:0',
@@ -843,9 +853,10 @@ class VentasController extends Controller
 
             $items = [];
             foreach ($venta->productosVentas as $detalle) {
-                // Nota de Venta: id_producto viene de productos_madre
+                // Nota de Venta: id_producto puede venir de productos_madre (nuevas) o productos (antiguas)
                 if ($esNotaVenta) {
-                    $productoOriginal = \App\Models\ProductoMadre::find($detalle->id_producto);
+                    $productoOriginal = \App\Models\ProductoMadre::find($detalle->id_producto)
+                        ?? \App\Models\Producto::find($detalle->id_producto);
                 } else {
                     $productoOriginal = $detalle->producto;
                 }
@@ -928,18 +939,22 @@ class VentasController extends Controller
                 $esNotaVenta = $venta->id_tido == 6;
 
                 foreach ($venta->productosVentas as $detalle) {
-                    // Nota de Venta usa productos_madre, los demás usan productos
-                    $codigoProducto = $esNotaVenta
-                        ? DB::table('productos_madre')->where('id_producto', $detalle->id_producto)->value('codigo')
-                        : DB::table('productos')->where('id_producto', $detalle->id_producto)->value('codigo');
+                    // Nota de Venta: buscar código en productos_madre, fallback a productos (notas antiguas)
+                    if ($esNotaVenta) {
+                        $codigoProducto = DB::table('productos_madre')->where('id_producto', $detalle->id_producto)->value('codigo')
+                            ?? DB::table('productos')->where('id_producto', $detalle->id_producto)->value('codigo');
+                    } else {
+                        $codigoProducto = DB::table('productos')->where('id_producto', $detalle->id_producto)->value('codigo');
+                    }
 
                     if (!$codigoProducto) continue;
 
                     $productoReal = null;
 
                     if ($esNotaVenta) {
-                        // Nota de Venta: descontar directamente del producto madre
-                        $productoReal = \App\Models\ProductoMadre::find($detalle->id_producto);
+                        // Nota de Venta: buscar en productos_madre, fallback por código para notas antiguas
+                        $productoReal = \App\Models\ProductoMadre::find($detalle->id_producto)
+                            ?? \App\Models\ProductoMadre::where('codigo', $codigoProducto)->where('estado', '1')->first();
                     } elseif ($usaAlmacenPropio) {
                         // Empresa con almacén propio: buscar en almacén 2 de la misma empresa
                         $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
