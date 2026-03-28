@@ -171,6 +171,10 @@ class AlmacenMadreController extends Controller
 
         try {
             return DB::transaction(function () use ($request) {
+                $user = $request->user();
+                $empresa = Empresa::find($user->id_empresa);
+                $usaPropio = $empresa && $empresa->usa_almacen_propio;
+
                 $data = $request->only([
                     'nombre', 'descripcion', 'codigo', 'cod_barra',
                     'categoria_id', 'unidad_id',
@@ -179,12 +183,44 @@ class AlmacenMadreController extends Controller
                     'moneda', 'codsunat', 'usar_barra', 'usar_multiprecio',
                 ]);
 
-                // Manejar imagen si viene
                 if ($request->hasFile('imagen')) {
                     $data['imagen'] = $request->file('imagen')->store('productos', 'public');
                 }
 
-                // Generar código si no viene
+                if ($usaPropio) {
+                    // Empresa con almacén propio: crear solo en su almacén 2
+                    if (empty($data['codigo'])) {
+                        $prefijo = "A2-";
+                        $ultimo = Producto::where('id_empresa', $user->id_empresa)
+                            ->where('almacen', '2')
+                            ->where('codigo', 'LIKE', "{$prefijo}%")
+                            ->orderBy('id_producto', 'desc')->first();
+                        $numero = 1;
+                        if ($ultimo && preg_match('/-(\d+)$/', $ultimo->codigo, $matches)) {
+                            $numero = intval($matches[1]) + 1;
+                        }
+                        $data['codigo'] = $prefijo . str_pad($numero, 5, '0', STR_PAD_LEFT);
+                    }
+
+                    $producto = Producto::create([
+                        ...$data,
+                        'id_empresa' => $user->id_empresa,
+                        'almacen' => '2',
+                        'estado' => '1',
+                        'codsunat' => $data['codsunat'] ?? '51121703',
+                        'fecha_registro' => now(),
+                    ]);
+                    $producto->load(['categoria', 'unidad']);
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Producto creado en almacén propio',
+                        'data' => $producto,
+                        'replicados' => 0,
+                    ], 201);
+                }
+
+                // Almacén madre global: crear y replicar
                 if (empty($data['codigo'])) {
                     $prefijo = "MADRE-";
                     $ultimo = ProductoMadre::where('codigo', 'LIKE', "{$prefijo}%")
@@ -271,7 +307,16 @@ class AlmacenMadreController extends Controller
     public function actualizarProducto(Request $request, int $id): JsonResponse
     {
         try {
-            $producto = ProductoMadre::findOrFail($id);
+            $user = $request->user();
+            $empresa = Empresa::find($user->id_empresa);
+
+            if ($empresa && $empresa->usa_almacen_propio) {
+                $producto = Producto::where('id_empresa', $user->id_empresa)
+                    ->where('almacen', '2')
+                    ->findOrFail($id);
+            } else {
+                $producto = ProductoMadre::findOrFail($id);
+            }
 
             $data = $request->only([
                 'nombre', 'descripcion', 'codigo', 'cod_barra',
@@ -588,6 +633,10 @@ class AlmacenMadreController extends Controller
 
         try {
             return DB::transaction(function () use ($request) {
+                $user = $request->user();
+                $empresa = Empresa::find($user->id_empresa);
+                $usaPropio = $empresa && $empresa->usa_almacen_propio;
+
                 $lista = $request->lista;
                 $importados = 0;
                 $actualizados = 0;
@@ -646,31 +695,61 @@ class AlmacenMadreController extends Controller
                         'moneda' => strtoupper(trim($item['moneda'] ?? 'PEN')),
                     ];
 
-                    // Buscar existente por código o nombre
-                    $existente = null;
-                    if ($codigo) {
-                        $existente = ProductoMadre::where('codigo', $codigo)->first();
-                    }
-                    if (!$existente) {
-                        $existente = ProductoMadre::where('nombre', $nombre)->first();
-                    }
+                    if ($usaPropio) {
+                        // Importar al almacén 2 de la empresa
+                        $existente = null;
+                        if ($codigo) {
+                            $existente = Producto::where('id_empresa', $user->id_empresa)
+                                ->where('almacen', '2')->where('codigo', $codigo)->first();
+                        }
+                        if (!$existente) {
+                            $existente = Producto::where('id_empresa', $user->id_empresa)
+                                ->where('almacen', '2')->where('nombre', $nombre)->first();
+                        }
 
-                    if ($existente) {
-                        $existente->update($datos);
-                        $actualizados++;
+                        if ($existente) {
+                            $existente->update($datos);
+                            $actualizados++;
+                        } else {
+                            Producto::create([
+                                ...$datos,
+                                'codigo' => $codigo ?: null,
+                                'codsunat' => '51121703',
+                                'id_empresa' => $user->id_empresa,
+                                'almacen' => '2',
+                                'estado' => '1',
+                                'fecha_registro' => now(),
+                            ]);
+                            $importados++;
+                        }
                     } else {
-                        $datos['codigo'] = $codigo ?: null;
-                        $datos['codsunat'] = '51121703';
-                        $datos['fecha_registro'] = now();
-                        $datos['estado'] = '1';
-                        ProductoMadre::create($datos);
-                        $importados++;
+                        // Importar al almacén madre global
+                        $existente = null;
+                        if ($codigo) {
+                            $existente = ProductoMadre::where('codigo', $codigo)->first();
+                        }
+                        if (!$existente) {
+                            $existente = ProductoMadre::where('nombre', $nombre)->first();
+                        }
+
+                        if ($existente) {
+                            $existente->update($datos);
+                            $actualizados++;
+                        } else {
+                            $datos['codigo'] = $codigo ?: null;
+                            $datos['codsunat'] = '51121703';
+                            $datos['fecha_registro'] = now();
+                            $datos['estado'] = '1';
+                            ProductoMadre::create($datos);
+                            $importados++;
+                        }
                     }
                 }
 
+                $destino = $usaPropio ? 'almacén propio' : 'almacén madre';
                 return response()->json([
                     'success' => true,
-                    'message' => "Importación al almacén madre: {$importados} creado(s), {$actualizados} actualizado(s)",
+                    'message' => "Importación al {$destino}: {$importados} creado(s), {$actualizados} actualizado(s)",
                 ]);
             });
         } catch (\Exception $e) {
