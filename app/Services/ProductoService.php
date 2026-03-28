@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Producto;
+use App\Models\ProductoMadre;
 use Illuminate\Support\Facades\Storage;
 
 class ProductoService
@@ -16,6 +17,14 @@ class ProductoService
             ->where('id_empresa', $idEmpresa)
             ->where('almacen', $almacen)
             ->where('estado', '1');
+
+        // En almacén 1 (boletas/facturas), excluir productos replicados del almacén madre
+        if ($almacen === '1') {
+            $codigosMadre = ProductoMadre::pluck('codigo')->filter()->toArray();
+            if (!empty($codigosMadre)) {
+                $query->whereNotIn('codigo', $codigosMadre);
+            }
+        }
 
         if ($soloConStock) {
             $query->where('cantidad', '>', 0);

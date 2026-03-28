@@ -361,7 +361,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                 const esNotaVenta = String(venta.id_tido) === "6";
                 const userRol = (() => { try { return JSON.parse(localStorage.getItem("user") || "{}").rol_id; } catch { return null; } })();
                 const esVendedor = userRol === 3 || userRol === "3";
-                const ocultarStock = esVendedor;
+                const ocultarStock = !esNotaVenta || esVendedor;
                 const yaEnviado = venta.estado_sunat === "1" || venta.estado_sunat === "4";
                 const conObservaciones = venta.estado_sunat === "4";
                 const tieneXml = !!venta.nombre_xml;
