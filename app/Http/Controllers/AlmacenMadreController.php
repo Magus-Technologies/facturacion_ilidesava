@@ -88,8 +88,19 @@ class AlmacenMadreController extends Controller
      */
     public function productos(Request $request): JsonResponse
     {
-        $query = ProductoMadre::with(['categoria', 'unidad'])
-            ->where('estado', '1');
+        $user = $request->user();
+        $empresa = Empresa::find($user->id_empresa);
+
+        // Si la empresa usa almacén propio, mostrar su almacén 2 en vez del madre
+        if ($empresa && $empresa->usa_almacen_propio) {
+            $query = Producto::with(['categoria', 'unidad'])
+                ->where('id_empresa', $user->id_empresa)
+                ->where('almacen', '2')
+                ->where('estado', '1');
+        } else {
+            $query = ProductoMadre::with(['categoria', 'unidad'])
+                ->where('estado', '1');
+        }
 
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
