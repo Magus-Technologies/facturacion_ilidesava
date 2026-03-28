@@ -16,55 +16,91 @@ class AlmacenMadreController extends Controller
     /**
      * Dashboard: resumen del almacén madre
      */
-    public function dashboard(): JsonResponse
+    public function dashboard(Request $request): JsonResponse
     {
-        $totalProductos = ProductoMadre::where('estado', '1')->count();
-        $productosConStock = ProductoMadre::where('estado', '1')->where('cantidad', '>', 0)->count();
+        $user = $request->user();
+        $empresa = Empresa::find($user->id_empresa);
+        $usaPropio = $empresa && $empresa->usa_almacen_propio;
 
-        // Excluir empresas con almacén propio
-        $empresasAlmacenPropio = Empresa::where('usa_almacen_propio', true)->pluck('id_empresa');
+        if ($usaPropio) {
+            // Empresa con almacén propio: mostrar datos de su almacén 2
+            $baseQuery = Producto::where('id_empresa', $user->id_empresa)
+                ->where('almacen', '2')->where('estado', '1');
+            $totalProductos = (clone $baseQuery)->count();
+            $productosConStock = (clone $baseQuery)->where('cantidad', '>', 0)->count();
 
-        $ventasPendientes = \App\Models\Venta::where('stock_real_descontado', false)
-            ->where('estado', '1')
-            ->whereNotIn('id_empresa', $empresasAlmacenPropio)
-            ->count();
+            $valorTotal = Producto::where('id_empresa', $user->id_empresa)
+                ->where('almacen', '2')->where('estado', '1')
+                ->selectRaw('SUM(cantidad * precio) as valor_venta, SUM(cantidad * costo) as valor_costo')
+                ->first();
 
-        // Valorización del inventario
-        $valorTotal = ProductoMadre::where('estado', '1')
-            ->selectRaw('SUM(cantidad * precio) as valor_venta, SUM(cantidad * costo) as valor_costo')
-            ->first();
+            $stockBajo = Producto::where('id_empresa', $user->id_empresa)
+                ->where('almacen', '2')->where('estado', '1')
+                ->where('cantidad', '>', 0)
+                ->orderBy('cantidad', 'asc')->limit(10)
+                ->get(['nombre', 'codigo', 'cantidad', 'stock_minimo']);
 
-        // Top 10 productos con menos stock (alerta)
-        $stockBajo = ProductoMadre::where('estado', '1')
-            ->where('cantidad', '>', 0)
-            ->orderBy('cantidad', 'asc')
-            ->limit(10)
-            ->get(['nombre', 'codigo', 'cantidad', 'stock_minimo']);
+            $sinStock = Producto::where('id_empresa', $user->id_empresa)
+                ->where('almacen', '2')->where('estado', '1')
+                ->where('cantidad', '<=', 0)
+                ->orderBy('nombre')->limit(10)
+                ->get(['nombre', 'codigo', 'cantidad']);
 
-        // Productos sin stock
-        $sinStock = ProductoMadre::where('estado', '1')
-            ->where('cantidad', '<=', 0)
-            ->orderBy('nombre')
-            ->limit(10)
-            ->get(['nombre', 'codigo', 'cantidad']);
+            $porCategoria = Producto::where('productos.id_empresa', $user->id_empresa)
+                ->where('productos.almacen', '2')->where('productos.estado', '1')
+                ->leftJoin('categorias', 'productos.categoria_id', '=', 'categorias.id')
+                ->selectRaw('COALESCE(categorias.nombre, "Sin categoría") as categoria, COUNT(*) as total, SUM(productos.cantidad) as stock_total')
+                ->groupBy('categorias.nombre')
+                ->orderByDesc('total')->limit(8)
+                ->get();
 
-        // Distribución por categoría
-        $porCategoria = ProductoMadre::where('productos_madre.estado', '1')
-            ->leftJoin('categorias', 'productos_madre.categoria_id', '=', 'categorias.id')
-            ->selectRaw('COALESCE(categorias.nombre, "Sin categoría") as categoria, COUNT(*) as total, SUM(productos_madre.cantidad) as stock_total')
-            ->groupBy('categorias.nombre')
-            ->orderByDesc('total')
-            ->limit(8)
-            ->get();
+            $ventasPendientes = \App\Models\Venta::where('stock_real_descontado', false)
+                ->where('estado', '1')
+                ->where('id_empresa', $user->id_empresa)
+                ->count();
 
-        // Ventas pendientes por empresa (excluir almacén propio)
-        $pendientesPorEmpresa = \App\Models\Venta::where('stock_real_descontado', false)
-            ->where('ventas.estado', '1')
-            ->whereNotIn('ventas.id_empresa', $empresasAlmacenPropio)
-            ->join('empresas', 'ventas.id_empresa', '=', 'empresas.id_empresa')
-            ->selectRaw('COALESCE(empresas.comercial, empresas.razon_social) as empresa, COUNT(*) as total, SUM(ventas.total) as monto')
-            ->groupBy('empresas.comercial', 'empresas.razon_social')
-            ->get();
+            $pendientesPorEmpresa = collect();
+        } else {
+            // Almacén madre global
+            $totalProductos = ProductoMadre::where('estado', '1')->count();
+            $productosConStock = ProductoMadre::where('estado', '1')->where('cantidad', '>', 0)->count();
+
+            $empresasAlmacenPropio = Empresa::where('usa_almacen_propio', true)->pluck('id_empresa');
+
+            $ventasPendientes = \App\Models\Venta::where('stock_real_descontado', false)
+                ->where('estado', '1')
+                ->whereNotIn('id_empresa', $empresasAlmacenPropio)
+                ->count();
+
+            $valorTotal = ProductoMadre::where('estado', '1')
+                ->selectRaw('SUM(cantidad * precio) as valor_venta, SUM(cantidad * costo) as valor_costo')
+                ->first();
+
+            $stockBajo = ProductoMadre::where('estado', '1')
+                ->where('cantidad', '>', 0)
+                ->orderBy('cantidad', 'asc')->limit(10)
+                ->get(['nombre', 'codigo', 'cantidad', 'stock_minimo']);
+
+            $sinStock = ProductoMadre::where('estado', '1')
+                ->where('cantidad', '<=', 0)
+                ->orderBy('nombre')->limit(10)
+                ->get(['nombre', 'codigo', 'cantidad']);
+
+            $porCategoria = ProductoMadre::where('productos_madre.estado', '1')
+                ->leftJoin('categorias', 'productos_madre.categoria_id', '=', 'categorias.id')
+                ->selectRaw('COALESCE(categorias.nombre, "Sin categoría") as categoria, COUNT(*) as total, SUM(productos_madre.cantidad) as stock_total')
+                ->groupBy('categorias.nombre')
+                ->orderByDesc('total')->limit(8)
+                ->get();
+
+            $pendientesPorEmpresa = \App\Models\Venta::where('stock_real_descontado', false)
+                ->where('ventas.estado', '1')
+                ->whereNotIn('ventas.id_empresa', $empresasAlmacenPropio)
+                ->join('empresas', 'ventas.id_empresa', '=', 'empresas.id_empresa')
+                ->selectRaw('COALESCE(empresas.comercial, empresas.razon_social) as empresa, COUNT(*) as total, SUM(ventas.total) as monto')
+                ->groupBy('empresas.comercial', 'empresas.razon_social')
+                ->get();
+        }
 
         return response()->json([
             'success' => true,
@@ -270,7 +306,17 @@ class AlmacenMadreController extends Controller
         $request->validate(['cantidad' => 'required|integer|min:0']);
 
         try {
-            $producto = ProductoMadre::findOrFail($id);
+            $user = $request->user();
+            $empresa = Empresa::find($user->id_empresa);
+
+            if ($empresa && $empresa->usa_almacen_propio) {
+                $producto = Producto::where('id_empresa', $user->id_empresa)
+                    ->where('almacen', '2')
+                    ->findOrFail($id);
+            } else {
+                $producto = ProductoMadre::findOrFail($id);
+            }
+
             $stockAnterior = $producto->cantidad;
             $producto->update(['cantidad' => $request->cantidad]);
 
@@ -288,15 +334,24 @@ class AlmacenMadreController extends Controller
     /**
      * Ventas pendientes de descontar del almacén madre (todas las empresas)
      */
-    public function ventasPendientes(): JsonResponse
+    public function ventasPendientes(Request $request): JsonResponse
     {
-        $empresasAlmacenPropio = Empresa::where('usa_almacen_propio', true)->pluck('id_empresa');
+        $user = $request->user();
+        $empresa = Empresa::find($user->id_empresa);
+        $usaPropio = $empresa && $empresa->usa_almacen_propio;
 
-        $ventas = \App\Models\Venta::with(['cliente', 'empresa', 'productosVentas.producto'])
+        $query = \App\Models\Venta::with(['cliente', 'empresa', 'productosVentas.producto'])
             ->where('stock_real_descontado', false)
-            ->where('estado', '1')
-            ->whereNotIn('id_empresa', $empresasAlmacenPropio)
-            ->orderBy('fecha_emision', 'desc')
+            ->where('estado', '1');
+
+        if ($usaPropio) {
+            $query->where('id_empresa', $user->id_empresa);
+        } else {
+            $empresasAlmacenPropio = Empresa::where('usa_almacen_propio', true)->pluck('id_empresa');
+            $query->whereNotIn('id_empresa', $empresasAlmacenPropio);
+        }
+
+        $ventas = $query->orderBy('fecha_emision', 'desc')
             ->get()
             ->map(function ($v) {
                 return [
