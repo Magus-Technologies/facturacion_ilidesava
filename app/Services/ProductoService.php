@@ -18,11 +18,15 @@ class ProductoService
             ->where('almacen', $almacen)
             ->where('estado', '1');
 
-        // En almacén 1 (boletas/facturas), excluir productos replicados del almacén madre
+        // En almacén 1 (boletas/facturas), excluir productos auto-replicados del almacén madre (stock 0)
+        // Los importados manualmente con stock real sí se muestran
         if ($almacen === '1') {
             $codigosMadre = ProductoMadre::pluck('codigo')->filter()->toArray();
             if (!empty($codigosMadre)) {
-                $query->whereNotIn('codigo', $codigosMadre);
+                $query->where(function ($q) use ($codigosMadre) {
+                    $q->whereNotIn('codigo', $codigosMadre)
+                      ->orWhere('cantidad', '>', 0);
+                });
             }
         }
 
