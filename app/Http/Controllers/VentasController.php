@@ -707,7 +707,9 @@ class VentasController extends Controller
     }
 
     /**
-     * Eliminar una nota de venta (solo id_tido=6)
+     * Eliminar una venta:
+     *  - Notas de venta (id_tido=6): siempre que no estén anuladas
+     *  - Boletas (2) y facturas (1): solo si están PENDIENTES (sin XML enviado a SUNAT)
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
@@ -715,11 +717,11 @@ class VentasController extends Controller
             $user = $request->user();
             $venta = Venta::where('id_empresa', $user->id_empresa)->findOrFail($id);
 
-            // Solo permitir eliminar notas de venta
-            if ($venta->id_tido != 6) {
+            // Tipos permitidos: nota de venta, boleta, factura
+            if (!in_array($venta->id_tido, [1, 2, 6])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Solo se pueden eliminar notas de venta',
+                    'message' => 'Solo se pueden eliminar notas de venta, boletas o facturas',
                 ], 422);
             }
 
@@ -731,24 +733,54 @@ class VentasController extends Controller
                 ], 422);
             }
 
+            // Para boletas/facturas: solo si están pendientes (sin XML generado/enviado)
+            if (in_array($venta->id_tido, [1, 2])) {
+                $pendienteSunat = (empty($venta->estado_sunat) || $venta->estado_sunat === '0')
+                    && empty($venta->xml_url);
+
+                if (!$pendienteSunat) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Solo se pueden eliminar boletas/facturas pendientes (sin enviar a SUNAT)',
+                    ], 422);
+                }
+            }
+
             return DB::transaction(function () use ($venta) {
                 $serie = $venta->serie;
                 $numero = str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
+                $tipo = $venta->id_tido == 6 ? 'Nota de venta' : ($venta->id_tido == 1 ? 'Factura' : 'Boleta');
+                $idEmpresa = $venta->id_empresa;
+                $idTido = $venta->id_tido;
 
                 // Eliminar pagos, productos y la venta
                 $venta->pagos()->delete();
                 $venta->productosVentas()->delete();
                 $venta->delete();
 
-                Log::info("Nota de venta eliminada: {$serie}-{$numero}");
+                // Sincronizar contador en documentos_empresas para boletas/facturas/notas de venta:
+                // dejarlo en el máximo número restante de esa serie, así se reusa el correlativo
+                // si eliminamos el último. Si no era el último, no cambia nada.
+                $maxRestante = Venta::where('id_empresa', $idEmpresa)
+                    ->where('id_tido', $idTido)
+                    ->where('serie', $serie)
+                    ->max('numero') ?? 0;
+
+                DB::table('documentos_empresas')
+                    ->where('id_empresa', $idEmpresa)
+                    ->where('id_tido', $idTido)
+                    ->where('serie', $serie)
+                    ->update(['numero' => $maxRestante]);
+
+                Log::info("{$tipo} eliminada: {$serie}-{$numero}. Contador sincronizado a {$maxRestante}");
 
                 return response()->json([
                     'success' => true,
-                    'message' => "Nota de venta {$serie}-{$numero} eliminada correctamente",
+                    'message' => "{$tipo} {$serie}-{$numero} eliminada correctamente",
                 ]);
             });
         } catch (\Exception $e) {
-            Log::error('Error al eliminar nota de venta: ' . $e->getMessage());
+            Log::error('Error al eliminar venta: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error al eliminar: ' . $e->getMessage(),

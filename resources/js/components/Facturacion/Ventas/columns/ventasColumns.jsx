@@ -365,6 +365,13 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                 const yaEnviado = venta.estado_sunat === "1" || venta.estado_sunat === "4";
                 const conObservaciones = venta.estado_sunat === "4";
                 const tieneXml = !!venta.nombre_xml;
+                // Boleta/Factura pendiente: sin XML y sin envío a SUNAT
+                const esBoletaFactura = String(venta.id_tido) === "1" || String(venta.id_tido) === "2";
+                const esSunatPendiente = esBoletaFactura
+                    && (!venta.estado_sunat || String(venta.estado_sunat) === "0")
+                    && !venta.xml_url
+                    && !tieneXml;
+                const puedeEliminar = esNotaVenta || esSunatPendiente;
                 const isSunatLoading = sunatLoadingId === venta.id_venta;
                 const ocultarSunatFila = ocultarSunat || esNotaVenta;
                 const puedeGenerarXml = !estaAnulada && !tieneXml && !ocultarSunatFila;
@@ -487,7 +494,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         Editar
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && !estaVendida && esNotaVenta && handlers.handleEliminar && (
+                                {!estaAnulada && !estaVendida && puedeEliminar && handlers.handleEliminar && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleEliminar(venta)}
                                         className="text-red-600 focus:bg-red-50 focus:text-red-700"

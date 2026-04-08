@@ -115,8 +115,14 @@ export const useVentas = () => {
      */
     const handleEliminar = async (venta) => {
         const doc = `${venta.serie}-${String(venta.numero).padStart(6, '0')}`;
+        const tipoDoc = String(venta.id_tido) === '1'
+            ? 'Factura'
+            : String(venta.id_tido) === '2'
+                ? 'Boleta'
+                : 'Nota de Venta';
+        const tipoDocLower = tipoDoc.toLowerCase();
         confirmDelete({
-            title: 'Eliminar Nota de Venta',
+            title: `Eliminar ${tipoDoc}`,
             message: `¿Estás seguro de eliminar <strong>${doc}</strong>? Esta acción no se puede deshacer.`,
             confirmText: 'Sí, eliminar',
             cancelText: 'Cancelar',
@@ -124,7 +130,7 @@ export const useVentas = () => {
                 // Segunda confirmación
                 confirmDelete({
                     title: '¿Confirmar eliminación?',
-                    message: `Se eliminará permanentemente la nota de venta <strong>${doc}</strong> y todos sus datos.`,
+                    message: `Se eliminará permanentemente la ${tipoDocLower} <strong>${doc}</strong> y todos sus datos.`,
                     confirmText: 'Eliminar definitivamente',
                     cancelText: 'Cancelar',
                     onConfirm: async () => {
