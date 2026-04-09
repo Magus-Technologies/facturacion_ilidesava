@@ -422,6 +422,7 @@ function ImportarModal({ isOpen, onClose, onSuccess }) {
 
 function CrearProductoModal({ isOpen, onClose, onSuccess }) {
     const [form, setForm] = useState({ nombre: "", codigo: "", precio: "", costo: "", cantidad: "" });
+    const [replicar, setReplicar] = useState(false);
     const [saving, setSaving] = useState(false);
 
     const handleSubmit = async () => {
@@ -438,12 +439,14 @@ function CrearProductoModal({ isOpen, onClose, onSuccess }) {
                 precio: parseFloat(form.precio),
                 costo: form.costo ? parseFloat(form.costo) : 0,
                 cantidad: form.cantidad ? parseInt(form.cantidad) : 0,
+                replicar_empresas: replicar,
             }),
         });
         setSaving(false);
         if (data.success) {
             toast.success(data.message);
             setForm({ nombre: "", codigo: "", precio: "", costo: "", cantidad: "" });
+            setReplicar(false);
             onSuccess();
             onClose();
         } else {
@@ -462,15 +465,24 @@ function CrearProductoModal({ isOpen, onClose, onSuccess }) {
                     <Button variant="outline" onClick={onClose}>Cancelar</Button>
                     <Button onClick={handleSubmit} disabled={saving}>
                         {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        Crear y replicar
+                        {replicar ? "Crear y replicar" : "Crear producto"}
                     </Button>
                 </div>
             }
         >
             <div className="space-y-3">
-                <p className="text-sm text-gray-500">
-                    El producto se creara en el almacen madre y se replicara a todas las empresas (con stock 0).
-                </p>
+                <label className="flex items-start gap-2.5 cursor-pointer p-3 rounded-lg border border-blue-100 bg-blue-50/50 hover:bg-blue-50 transition-colors">
+                    <input
+                        type="checkbox"
+                        checked={replicar}
+                        onChange={(e) => setReplicar(e.target.checked)}
+                        className="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 h-4 w-4"
+                    />
+                    <div>
+                        <span className="text-sm font-medium text-gray-700 block">Replicar a todas las empresas</span>
+                        <span className="text-xs text-gray-500">Crea este producto en todas las empresas activas (con stock 0)</span>
+                    </div>
+                </label>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
                     <input

@@ -237,57 +237,65 @@ class AlmacenMadreController extends Controller
                 $data['fecha_registro'] = now();
                 $productoMadre = ProductoMadre::create($data);
 
-                // Replicar a todas las empresas activas (excepto las que usan almacén propio)
-                $empresas = Empresa::where('estado', '1')
-                    ->where(function ($q) {
-                        $q->where('usa_almacen_propio', false)
-                          ->orWhereNull('usa_almacen_propio');
-                    })
-                    ->pluck('id_empresa');
                 $replicados = 0;
+                $replicar = filter_var($request->input('replicar_empresas', false), FILTER_VALIDATE_BOOLEAN);
 
-                foreach ($empresas as $empresaId) {
-                    $existe = Producto::where('id_empresa', $empresaId)
-                        ->where(function ($q) use ($data) {
-                            $q->where('nombre', $data['nombre']);
-                            if (!empty($data['codigo'])) {
-                                $q->orWhere('codigo', $data['codigo']);
-                            }
+                if ($replicar) {
+                    // Replicar a todas las empresas activas (excepto las que usan almacén propio)
+                    $empresas = Empresa::where('estado', '1')
+                        ->where(function ($q) {
+                            $q->where('usa_almacen_propio', false)
+                              ->orWhereNull('usa_almacen_propio');
                         })
-                        ->exists();
+                        ->pluck('id_empresa');
 
-                    if (!$existe) {
-                        Producto::create([
-                            'id_empresa' => $empresaId,
-                            'nombre' => $data['nombre'],
-                            'descripcion' => $data['descripcion'] ?? null,
-                            'codigo' => $data['codigo'],
-                            'cod_barra' => $data['cod_barra'] ?? null,
-                            'categoria_id' => $data['categoria_id'] ?? null,
-                            'unidad_id' => $data['unidad_id'] ?? null,
-                            'precio' => $data['precio'] ?? 0,
-                            'precio_mayor' => $data['precio_mayor'] ?? 0,
-                            'precio_menor' => $data['precio_menor'] ?? 0,
-                            'precio_unidad' => $data['precio_unidad'] ?? 0,
-                            'costo' => $data['costo'] ?? 0,
-                            'cantidad' => $data['cantidad'] ?? 0,
-                            'stock_minimo' => $data['stock_minimo'] ?? 0,
-                            'stock_maximo' => $data['stock_maximo'] ?? 0,
-                            'moneda' => $data['moneda'] ?? 'PEN',
-                            'codsunat' => $data['codsunat'] ?? '51121703',
-                            'almacen' => '1',
-                            'estado' => '1',
-                            'fecha_registro' => now(),
-                        ]);
-                        $replicados++;
+                    foreach ($empresas as $empresaId) {
+                        $existe = Producto::where('id_empresa', $empresaId)
+                            ->where(function ($q) use ($data) {
+                                $q->where('nombre', $data['nombre']);
+                                if (!empty($data['codigo'])) {
+                                    $q->orWhere('codigo', $data['codigo']);
+                                }
+                            })
+                            ->exists();
+
+                        if (!$existe) {
+                            Producto::create([
+                                'id_empresa' => $empresaId,
+                                'nombre' => $data['nombre'],
+                                'descripcion' => $data['descripcion'] ?? null,
+                                'codigo' => $data['codigo'],
+                                'cod_barra' => $data['cod_barra'] ?? null,
+                                'categoria_id' => $data['categoria_id'] ?? null,
+                                'unidad_id' => $data['unidad_id'] ?? null,
+                                'precio' => $data['precio'] ?? 0,
+                                'precio_mayor' => $data['precio_mayor'] ?? 0,
+                                'precio_menor' => $data['precio_menor'] ?? 0,
+                                'precio_unidad' => $data['precio_unidad'] ?? 0,
+                                'costo' => $data['costo'] ?? 0,
+                                'cantidad' => $data['cantidad'] ?? 0,
+                                'stock_minimo' => $data['stock_minimo'] ?? 0,
+                                'stock_maximo' => $data['stock_maximo'] ?? 0,
+                                'moneda' => $data['moneda'] ?? 'PEN',
+                                'codsunat' => $data['codsunat'] ?? '51121703',
+                                'almacen' => '1',
+                                'estado' => '1',
+                                'fecha_registro' => now(),
+                            ]);
+                            $replicados++;
+                        }
                     }
                 }
 
                 $productoMadre->load(['categoria', 'unidad']);
 
+                $message = $replicar
+                    ? "Producto creado en almacén madre y replicado a {$replicados} empresa(s)"
+                    : "Producto creado en almacén madre (sin replicar)";
+
                 return response()->json([
                     'success' => true,
-                    'message' => "Producto creado en almacén madre y replicado a {$replicados} empresa(s)",
+                    'message' => $message,
                     'data' => $productoMadre,
                     'replicados' => $replicados,
                 ], 201);

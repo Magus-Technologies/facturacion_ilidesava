@@ -226,7 +226,7 @@ export default function ProductoModal({
                 formDataToSend.append("imagen", formData.imagen);
             }
 
-            // Replicar a empresas (solo en creación)
+            // Replicar a empresas (solo en creación, tanto modo normal como madre)
             if (!isEditing && replicarEmpresas) {
                 formDataToSend.append("replicar_empresas", "true");
             }
