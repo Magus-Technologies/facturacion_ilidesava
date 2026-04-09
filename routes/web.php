@@ -22,6 +22,13 @@ Route::get('/login', function () {
     return view('auth.login');
 })->name('login');
 
+Route::post('/logout', function (\Illuminate\Http\Request $request) {
+    \Illuminate\Support\Facades\Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect('/login');
+})->name('logout');
+
 // Página pública de consulta de comprobante
 Route::get('/consulta', [\App\Http\Controllers\ConsultaComprobanteController::class, 'index']);
 Route::post('/consulta/buscar', [\App\Http\Controllers\ConsultaComprobanteController::class, 'consultar']);

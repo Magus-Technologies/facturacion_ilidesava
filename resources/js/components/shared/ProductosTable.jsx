@@ -76,12 +76,34 @@ export default function ProductosTable({
 
                                 {/* Código */}
                                 <TableCell className="font-mono text-sm">
-                                    {item.codigo || "-"}
+                                    {item.editable ? (
+                                        <Input
+                                            type="text"
+                                            value={item.codigo || ""}
+                                            onChange={(e) =>
+                                                onUpdateField(index, "codigo", e.target.value)
+                                            }
+                                            className="w-28"
+                                        />
+                                    ) : (
+                                        item.codigo || "-"
+                                    )}
                                 </TableCell>
 
                                 {/* Producto */}
                                 <TableCell className="font-medium">
-                                    {item.descripcion || item.nombre}
+                                    {item.editable ? (
+                                        <Input
+                                            type="text"
+                                            value={item.descripcion || item.nombre || ""}
+                                            onChange={(e) =>
+                                                onUpdateField(index, "descripcion", e.target.value)
+                                            }
+                                            className="w-full min-w-[150px]"
+                                        />
+                                    ) : (
+                                        item.descripcion || item.nombre
+                                    )}
                                 </TableCell>
 
                                 {/* Cantidad */}

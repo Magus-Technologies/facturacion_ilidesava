@@ -94,10 +94,10 @@ export default function DetallesVentaModal({ venta, isOpen, onClose }) {
                 return (
                     <div className="flex flex-col">
                         <span className="font-medium text-gray-900">
-                            {detalle.producto?.nombre || "N/A"}
+                            {detalle.descripcion || detalle.producto?.nombre || "N/A"}
                         </span>
                         <span className="text-[10px] text-gray-400 font-mono">
-                            COD: {detalle.producto?.codigo || "---"}
+                            COD: {detalle.codigo_producto || detalle.producto?.codigo || "---"}
                         </span>
                     </div>
                 );

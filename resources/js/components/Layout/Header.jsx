@@ -69,14 +69,13 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
     const handleLogout = () => {
         const token = localStorage.getItem("auth_token");
 
-        // Limpiar localStorage y redirigir inmediatamente
+        // Limpiar localStorage
         localStorage.removeItem("auth_token");
         localStorage.removeItem("user");
         localStorage.removeItem("empresas");
         localStorage.removeItem("empresa_activa");
-        window.location.href = "/login";
 
-        // Invalidar token en segundo plano (no bloquea al usuario)
+        // Invalidar token Sanctum en segundo plano
         if (token) {
             fetch("/api/logout", {
                 method: "POST",
@@ -86,6 +85,21 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
                 },
             }).catch(() => {});
         }
+
+        // Cerrar sesión web (destruye la cookie de sesión) vía POST con CSRF
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/logout";
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfMeta) {
+            const csrfInput = document.createElement("input");
+            csrfInput.type = "hidden";
+            csrfInput.name = "_token";
+            csrfInput.value = csrfMeta.getAttribute("content");
+            form.appendChild(csrfInput);
+        }
+        document.body.appendChild(form);
+        form.submit();
     };
 
     const getNombreCorto = (nombre) => {

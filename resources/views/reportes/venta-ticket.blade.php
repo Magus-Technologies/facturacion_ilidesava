@@ -224,7 +224,7 @@
                 <tbody>
                     @foreach($venta->productosVentas as $item)
                     <tr>
-                        <td>{{ $item->producto?->nombre ?: ($item->descripcion ?: '-') }}</td>
+                        <td>{{ $item->descripcion ?: ($item->producto?->nombre ?: '-') }}</td>
                         <td class="text-center">{{ $item->cantidad }}</td>
                         <td class="text-right">{{ number_format($item->precio_unitario, 2) }}</td>
                         <td class="text-right">{{ number_format($item->total, 2) }}</td>
