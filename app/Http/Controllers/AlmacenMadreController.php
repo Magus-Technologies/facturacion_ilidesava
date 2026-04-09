@@ -150,7 +150,7 @@ class AlmacenMadreController extends Controller
             $query->where('cantidad', '>', 0);
         }
 
-        $productos = $query->orderBy('nombre')->get();
+        $productos = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json([
             'success' => true,

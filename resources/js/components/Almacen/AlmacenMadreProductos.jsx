@@ -179,6 +179,8 @@ export default function AlmacenMadreProductos() {
                 return (
                     <span className="text-xs text-gray-500">
                         {d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                        {" "}
+                        {d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                 );
             },
