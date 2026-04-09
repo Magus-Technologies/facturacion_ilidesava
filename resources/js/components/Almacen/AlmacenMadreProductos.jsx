@@ -170,6 +170,20 @@ export default function AlmacenMadreProductos() {
             cell: ({ row }) => `S/ ${parseFloat(row.original.costo || 0).toFixed(2)}`,
         },
         {
+            accessorKey: "created_at",
+            header: "Fecha Registro",
+            cell: ({ row }) => {
+                const fecha = row.original.created_at;
+                if (!fecha) return "-";
+                const d = new Date(fecha);
+                return (
+                    <span className="text-xs text-gray-500">
+                        {d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    </span>
+                );
+            },
+        },
+        {
             id: "acciones",
             header: "Acciones",
             cell: ({ row }) => (
