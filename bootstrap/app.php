@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/*',
         ]);
 
+        // Sincronizar empresa activa desde el header del frontend en cada request API
+        $middleware->api(append: [
+            \App\Http\Middleware\SetEmpresaFromHeader::class,
+        ]);
+
         // Registrar middleware de permisos
         $middleware->alias([
             'permission' => \App\Http\Middleware\CheckPermission::class,

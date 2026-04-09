@@ -32,6 +32,31 @@ import "./bootstrap";
 import "../css/app.css";
 import "../css/select-custom.css";
 
+// Interceptor global de fetch: inyecta X-Empresa-Id en cada request API
+// para que el backend siempre use la empresa correcta del navegador actual,
+// evitando conflictos cuando múltiples sesiones comparten la misma cuenta.
+const originalFetch = window.fetch;
+window.fetch = function (url, options = {}) {
+    const urlStr = typeof url === "string" ? url : url?.url || "";
+    if (urlStr.startsWith("/api/")) {
+        const empresaActiva = localStorage.getItem("empresa_activa");
+        if (empresaActiva) {
+            try {
+                const empresa = JSON.parse(empresaActiva);
+                if (empresa?.id_empresa) {
+                    options.headers = {
+                        ...(options.headers || {}),
+                        "X-Empresa-Id": String(empresa.id_empresa),
+                    };
+                }
+            } catch (e) {
+                // localStorage corrupto, ignorar
+            }
+        }
+    }
+    return originalFetch.call(this, url, options);
+};
+
 // Registrar componentes disponibles para montado desde Blade
 const components = {
     Login,
