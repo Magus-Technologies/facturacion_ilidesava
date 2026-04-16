@@ -139,6 +139,7 @@ export default function CotizacionForm({ cotizacionId = null }) {
                             showPriceSelector={true}
                             submitButtonText="Agregar"
                             almacen={formData.almacen}
+                            apiEndpoint={formData.almacen === "2" ? "/api/almacen-madre/productos" : null}
                             onAlmacenChange={(val) => {
                                 // Almacén Real (2) → Nota de Venta, Facturación (1) → Boleta por defecto
                                 const nuevoTipo = val === "2" ? "6" : "1";
@@ -272,6 +273,7 @@ export default function CotizacionForm({ cotizacionId = null }) {
                 onProductsSelect={handleMultipleProductsSelect}
                 productosExistentes={productos}
                 almacen={formData.almacen}
+                apiEndpoint={formData.almacen === "2" ? "/api/almacen-madre/productos" : null}
             />
 
             <PaymentSchedule

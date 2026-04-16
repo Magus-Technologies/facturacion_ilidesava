@@ -746,12 +746,87 @@ class VentasController extends Controller
                 }
             }
 
-            return DB::transaction(function () use ($venta) {
+            return DB::transaction(function () use ($venta, $user) {
                 $serie = $venta->serie;
                 $numero = str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
                 $tipo = $venta->id_tido == 6 ? 'Nota de venta' : ($venta->id_tido == 1 ? 'Factura' : 'Boleta');
                 $idEmpresa = $venta->id_empresa;
                 $idTido = $venta->id_tido;
+                $docRef = $serie . '-' . $numero;
+
+                // Devolver stock si corresponde:
+                //  - Boletas/facturas: se descuenta automáticamente al crear (afecta_stock=1)
+                //  - Notas de venta: solo si tienen stock_real_descontado=1 (se descontó manualmente desde almacén madre)
+                if ($venta->id_tido == 6 && $venta->stock_real_descontado) {
+                    // Nota de venta: devolver al almacén madre (o almacén 2 si empresa usa_almacen_propio)
+                    $empresa = \App\Models\Empresa::find($idEmpresa);
+                    $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
+
+                    foreach ($venta->productosVentas as $detalle) {
+                        if (!$detalle->id_producto) continue;
+
+                        if ($usaAlmacenPropio) {
+                            // Devolver al almacén 2 de su empresa
+                            $productoModel = \App\Models\Producto::where('id_producto', $detalle->id_producto)
+                                ->where('id_empresa', $idEmpresa)
+                                ->where('almacen', '2')
+                                ->first();
+                            if ($productoModel) {
+                                $stockAnterior = $productoModel->cantidad;
+                                $productoModel->increment('cantidad', $detalle->cantidad);
+                                MovimientoStock::create([
+                                    'id_producto' => $productoModel->id_producto,
+                                    'tipo_movimiento' => 'entrada',
+                                    'cantidad' => $detalle->cantidad,
+                                    'stock_anterior' => $stockAnterior,
+                                    'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                                    'tipo_documento' => 'eliminacion_venta',
+                                    'id_documento' => $venta->id_venta,
+                                    'documento_referencia' => $docRef,
+                                    'motivo' => "Devolución por eliminación de {$tipo}",
+                                    'id_almacen' => '2',
+                                    'id_empresa' => $idEmpresa,
+                                    'id_usuario' => $user->id,
+                                    'fecha_movimiento' => now(),
+                                ]);
+                            }
+                        } else {
+                            // Devolver al almacén madre
+                            $productoMadre = \App\Models\ProductoMadre::find($detalle->id_producto);
+                            if ($productoMadre) {
+                                $productoMadre->increment('cantidad', $detalle->cantidad);
+                            }
+                        }
+                    }
+                } elseif (in_array($venta->id_tido, [1, 2]) && $venta->afecta_stock) {
+                    // Boleta/Factura: devolver al almacén de cada producto
+                    foreach ($venta->productosVentas as $detalle) {
+                        if (!$detalle->id_producto) continue;
+
+                        $productoModel = \App\Models\Producto::find($detalle->id_producto);
+                        if ($productoModel) {
+                            $stockAnterior = $productoModel->cantidad;
+                            $productoModel->increment('cantidad', $detalle->cantidad);
+                            $stockNuevo = $stockAnterior + $detalle->cantidad;
+
+                            MovimientoStock::create([
+                                'id_producto' => $productoModel->id_producto,
+                                'tipo_movimiento' => 'entrada',
+                                'cantidad' => $detalle->cantidad,
+                                'stock_anterior' => $stockAnterior,
+                                'stock_nuevo' => $stockNuevo,
+                                'tipo_documento' => 'eliminacion_venta',
+                                'id_documento' => $venta->id_venta,
+                                'documento_referencia' => $docRef,
+                                'motivo' => "Devolución por eliminación de {$tipo}",
+                                'id_almacen' => $productoModel->almacen,
+                                'id_empresa' => $idEmpresa,
+                                'id_usuario' => $user->id,
+                                'fecha_movimiento' => now(),
+                            ]);
+                        }
+                    }
+                }
 
                 // Eliminar pagos, productos y la venta
                 $venta->pagos()->delete();
