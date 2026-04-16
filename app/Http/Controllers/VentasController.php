@@ -791,10 +791,44 @@ class VentasController extends Controller
                                 ]);
                             }
                         } else {
-                            // Devolver al almacén madre
-                            $productoMadre = \App\Models\ProductoMadre::find($detalle->id_producto);
+                            // Devolver al almacén madre.
+                            // El descuento original se hizo emparejando por CÓDIGO
+                            // (productos.codigo → productos_madre.codigo), así que al
+                            // devolver debemos seguir el mismo camino. Si no, intentamos
+                            // directamente por id_producto (caso cotizaciones que ya
+                            // vienen del almacén madre).
+                            $codigoProducto = DB::table('productos')
+                                ->where('id_producto', $detalle->id_producto)
+                                ->value('codigo');
+
+                            $productoMadre = null;
+                            if ($codigoProducto) {
+                                $productoMadre = \App\Models\ProductoMadre::where('codigo', $codigoProducto)->first();
+                            }
+                            if (!$productoMadre) {
+                                $productoMadre = \App\Models\ProductoMadre::find($detalle->id_producto);
+                            }
+
                             if ($productoMadre) {
+                                $stockAnterior = (float) $productoMadre->cantidad;
                                 $productoMadre->increment('cantidad', $detalle->cantidad);
+
+                                MovimientoStock::create([
+                                    'id_producto' => $detalle->id_producto,
+                                    'tipo_movimiento' => 'entrada',
+                                    'cantidad' => $detalle->cantidad,
+                                    'stock_anterior' => $stockAnterior,
+                                    'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                                    'tipo_documento' => 'eliminacion_venta',
+                                    'id_documento' => $venta->id_venta,
+                                    'documento_referencia' => $docRef,
+                                    'motivo' => "Devolución a almacén madre por eliminación de {$tipo}",
+                                    'observaciones' => 'Producto madre: ' . $productoMadre->codigo,
+                                    'id_almacen' => 0,
+                                    'id_empresa' => $idEmpresa,
+                                    'id_usuario' => $user->id,
+                                    'fecha_movimiento' => now(),
+                                ]);
                             }
                         }
                     }
