@@ -281,7 +281,13 @@ export const useVentaForm = (ventaId = null) => {
             return;
         }
 
-        const existe = !esLibre && productos.find((p) => p.id_producto === productoActual.id_producto);
+        // Solo bloquear si existe un producto con el MISMO id_producto Y el mismo código/descripción.
+        // Si una fila anterior fue editada (código o descripción diferente), permitir agregar de nuevo.
+        const existe = !esLibre && productos.find((p) =>
+            p.id_producto === productoActual.id_producto
+            && (p.codigo || '') === (productoActual.codigo || '')
+            && (p.descripcion || '') === (productoActual.descripcion || '')
+        );
         if (existe) {
             toast.warning('El producto ya está en la lista');
             return;
