@@ -124,14 +124,32 @@ export const useCotizaciones = () => {
      * Lógica: RUC (11 dígitos) → Factura | DNI (8 dígitos) → Boleta
      * Ahora redirige con cotizacion_id para cargar los datos en VentaForm
      */
-    const handleConvertir = (cotizacion) => {
+    const handleConvertir = async (cotizacion) => {
         try {
-            // Determinar tipo según documento del cliente (si existe)
-            // Si no hay cliente o documento, por defecto boleta
-            const doc = (cotizacion.cliente?.documento || '').trim();
-            const tipoVenta = doc.length === 11 ? 'factura' : 'boleta';
-            
-            // Navegar pasando el ID de cotización
+            // Cargar la cotización completa para verificar si los productos son del almacén madre
+            const token = localStorage.getItem('auth_token');
+            const response = await fetch(`/api/cotizaciones/${cotizacion.id}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                },
+            });
+            const data = await response.json();
+
+            // Si algún detalle no tiene producto asociado (relación Producto es null),
+            // significa que el producto viene de productos_madre → forzar nota de venta
+            const detalles = data?.data?.detalles || [];
+            const esDesdeAlmacenMadre = detalles.length > 0 && detalles.some(d => !d.producto);
+
+            let tipoVenta;
+            if (esDesdeAlmacenMadre) {
+                tipoVenta = 'nota';
+            } else {
+                // Determinar tipo según documento del cliente (si existe)
+                const doc = (cotizacion.cliente?.documento || '').trim();
+                tipoVenta = doc.length === 11 ? 'factura' : 'boleta';
+            }
+
             window.location.href = `/ventas/productos?tipo=${tipoVenta}&cotizacion_id=${cotizacion.id}`;
 
         } catch (err) {
