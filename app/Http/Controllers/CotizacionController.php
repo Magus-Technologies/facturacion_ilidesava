@@ -87,7 +87,12 @@ class CotizacionController extends Controller
                 'aplicar_igv' => 'required|boolean',
                 'descuento' => 'nullable|numeric|min:0',
                 'productos' => 'required|array|min:1',
-                'productos.*.producto_id' => 'required|exists:productos,id_producto',
+                'productos.*.producto_id' => ['required', 'integer', function ($attribute, $value, $fail) {
+                    if ($value && !\App\Models\Producto::where('id_producto', $value)->exists()
+                        && !\App\Models\ProductoMadre::where('id_producto', $value)->exists()) {
+                        $fail('El producto seleccionado no existe.');
+                    }
+                }],
                 'productos.*.cantidad' => 'required|numeric|min:0.01',
                 'productos.*.precio_unitario' => 'required|numeric|min:0',
                 'productos.*.precio_especial' => 'nullable|numeric|min:0',
