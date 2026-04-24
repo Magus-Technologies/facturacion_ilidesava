@@ -270,7 +270,7 @@ class VentasController extends Controller
                     'id_empresa' => $user->id_empresa,
                     'id_usuario' => $user->id,
                     'fecha_registro' => now(),
-                    'direccion' => '',
+                    'direccion' => $validated['cliente_direccion'] ?? '',
                     'cotizacion_id' => $validated['cotizacion_id'] ?? null,
                     'nota_venta_id' => $validated['nota_venta_id'] ?? null,
                     'observaciones' => $validated['observaciones'] ?? null,
@@ -641,6 +641,7 @@ class VentasController extends Controller
                     'igv' => $validated['igv'],
                     'total' => $validated['total'],
                     'tipo_moneda' => $validated['tipo_moneda'],
+                    'direccion' => $validated['cliente_direccion'] ?? $venta->direccion,
                     'observaciones' => $validated['observaciones'] ?? null,
                 ]);
 

@@ -163,6 +163,12 @@ class SunatService
         $empresa = $venta->empresa;
         $cliente = $venta->cliente;
 
+        // Priorizar la dirección guardada en la venta (editada desde el formulario)
+        // sobre la dirección del cliente en el catálogo.
+        if (!empty($venta->direccion)) {
+            $cliente->direccion = $venta->direccion;
+        }
+
         $codSunat = $venta->tipoDocumento->cod_sunat;
         $igvRate = (float) ($empresa->igv ?? config('sunat.igv'));
 

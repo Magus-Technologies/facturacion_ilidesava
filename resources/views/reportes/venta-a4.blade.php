@@ -228,7 +228,7 @@
                     <span style="font-weight: bold; font-size: 8pt; color: #000;">{{ strlen($venta->cliente->documento ?? '') === 11 ? 'RUC' : (strlen($venta->cliente->documento ?? '') === 8 ? 'DNI' : 'CE') }}: </span>
                     <span style="font-size: 8pt; color: #000;">{{ $venta->cliente->documento ?? '-' }}</span><br>
                     <span style="font-weight: bold; font-size: 8pt; color: #000;">DIRECCIÓN: </span>
-                    <span style="font-size: 8pt; color: #000;">{{ $venta->cliente->direccion ?? '-' }}</span>
+                    <span style="font-size: 8pt; color: #000;">{{ $venta->direccion ?: ($venta->cliente->direccion ?? '-') }}</span>
                     @if($venta->cotizacion)
                     <br><span style="font-weight: bold; font-size: 8pt; color: #000;">REF. COT.: </span>
                     <span style="font-size: 8pt; color: #000;">COT-{{ str_pad($venta->cotizacion->numero, 6, '0', STR_PAD_LEFT) }}</span>
