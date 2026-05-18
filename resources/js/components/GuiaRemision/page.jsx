@@ -66,7 +66,7 @@ export default function GuiaRemisionPage() {
             }
 
             const data = await res.json();
-            setGuiaSeleccionada(data);
+            setGuiaSeleccionada(data.data || data);
             setIsModalOpen(true);
         } catch {
             const { toast } = await import("@/lib/sweetalert");
@@ -102,6 +102,10 @@ export default function GuiaRemisionPage() {
             const { toast } = await import("@/lib/sweetalert");
             toast.error("Error al descargar CDR");
         }
+    };
+
+    const handleEditar = (guia) => {
+        window.location.href = `/guia-remision/edit/${guia.id}`;
     };
 
     const handleEliminar = (guia) => {
@@ -154,6 +158,7 @@ export default function GuiaRemisionPage() {
         handleConsultarTicket,
         handleDescargarCdr,
         handleEliminar,
+        handleEditar,
     };
 
     const columns = getGuiaRemisionColumns(handlers, enviandoId);

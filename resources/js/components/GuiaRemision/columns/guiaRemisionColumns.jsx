@@ -12,6 +12,7 @@ import {
     Loader2,
     Search,
     Trash2,
+    Edit,
 } from "lucide-react";
 import { Button } from "../../ui/button";
 import {
@@ -152,6 +153,7 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
             const puedeConsultar = guia.estado === "enviado" && guia.ticket_sunat;
             const puedeCdr = guia.estado === "aceptado" && guia.cdr_url;
             const puedeEliminar = guia.estado !== "aceptado";
+            const puedeEditar = guia.estado !== "aceptado";
             const isEnviando = enviandoId === guia.id;
 
             if (isEnviando) {
@@ -182,6 +184,12 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
                                 <DropdownMenuItem onClick={() => handlers.handleView(guia)}>
                                     <Eye className="mr-2 h-4 w-4 text-blue-600" />
                                     Ver detalle
+                                </DropdownMenuItem>
+                            )}
+                            {puedeEditar && handlers.handleEditar && (
+                                <DropdownMenuItem onClick={() => handlers.handleEditar(guia)}>
+                                    <Edit className="mr-2 h-4 w-4 text-orange-600" />
+                                    Editar
                                 </DropdownMenuItem>
                             )}
                             {guia.nombre_xml && handlers.handleVerXml && (

@@ -160,6 +160,10 @@ Route::middleware('auth')->group(function () {
         return view('guiaRemision.guia-remision-add');
     })->name('guia-remision.add');
 
+    Route::get('/guia-remision/edit/{id}', function ($id) {
+        return view('guiaRemision.guia-remision-add')->with('guia_id', $id);
+    })->name('guia-remision.edit');
+
     // Nota de Crédito
     Route::get('/nota-credito', function () {
         return view('notaCredito.nota-credito');

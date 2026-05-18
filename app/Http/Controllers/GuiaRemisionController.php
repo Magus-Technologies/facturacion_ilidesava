@@ -34,7 +34,14 @@ class GuiaRemisionController extends Controller
             ->where('id_empresa', $request->user()->id_empresa)
             ->findOrFail($id);
 
-        return response()->json($guia);
+        $guia->departamento = $guia->empresa->departamento ?? '';
+        $guia->provincia = $guia->empresa->provincia ?? '';
+        $guia->distrito = $guia->empresa->distrito ?? '';
+
+        return response()->json([
+            'success' => true,
+            'data' => $guia,
+        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -471,6 +478,158 @@ class GuiaRemisionController extends Controller
                 'distrito' => $empresa->distrito ?? '',
             ],
         ]);
+    }
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $guia = GuiaRemision::where('id_empresa', $request->user()->id_empresa)
+            ->findOrFail($id);
+
+        if ($guia->estado === 'aceptado') {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se puede editar una guía aceptada por SUNAT',
+            ], 422);
+        }
+
+        try {
+            return DB::transaction(function () use ($request, $guia) {
+                $validated = $request->validate([
+                    'destinatario_tipo_doc' => 'required|in:1,4,6',
+                    'destinatario_documento' => 'required|string|max:15',
+                    'destinatario_nombre' => 'required|string|max:255',
+                    'destinatario_direccion' => 'required|string|max:500',
+                    'destinatario_ubigeo' => 'nullable|string|max:6',
+                    'motivo_traslado' => 'required|string|max:2',
+                    'descripcion_motivo' => 'nullable|string|max:255',
+                    'mod_transporte' => 'required|in:01,02',
+                    'fecha_traslado' => 'required|date',
+                    'peso_total' => 'required|numeric|min:0.001',
+                    'und_peso_total' => 'nullable|string|max:3',
+                    'observaciones' => 'nullable|string',
+                    'dir_partida' => 'nullable|string|max:500',
+                    'ubigeo_partida' => 'nullable|string|max:6',
+                    'detalles' => 'required|array|min:1',
+                    'detalles.*.descripcion' => 'required|string',
+                    'detalles.*.cantidad' => 'required|numeric|min:0.001',
+                    'detalles.*.unidad' => 'nullable|string|max:5',
+                    'detalles.*.codigo' => 'nullable|string|max:30',
+                    'detalles.*.id_producto' => 'nullable|integer',
+                ]);
+
+                if ($request->mod_transporte === '01') {
+                    $request->validate([
+                        'transportista_tipo_doc' => 'required|string|max:1',
+                        'transportista_documento' => 'required|string|max:15',
+                        'transportista_nombre' => 'required|string|max:255',
+                        'transportista_nro_mtc' => 'nullable|string|max:20',
+                    ]);
+                }
+
+                if ($request->mod_transporte === '02' && !$request->boolean('vehiculo_m1l')) {
+                    $request->validate([
+                        'conductor_tipo_doc' => 'required|string|max:1',
+                        'conductor_documento' => 'required|string|max:15',
+                        'conductor_nombres' => 'required|string|max:255',
+                        'conductor_apellidos' => 'required|string|max:255',
+                        'conductor_licencia' => 'required|string|max:20',
+                        'vehiculo_placa' => 'required|string|max:10',
+                    ]);
+                }
+
+                $empresa = Empresa::findOrFail($request->user()->id_empresa);
+
+                $guia->update([
+                    'destinatario_tipo_doc' => $request->destinatario_tipo_doc,
+                    'destinatario_documento' => $request->destinatario_documento,
+                    'destinatario_nombre' => $request->destinatario_nombre,
+                    'destinatario_direccion' => $request->destinatario_direccion,
+                    'destinatario_ubigeo' => $request->destinatario_ubigeo ?: '150101',
+                    'motivo_traslado' => $request->motivo_traslado,
+                    'descripcion_motivo' => $request->descripcion_motivo,
+                    'mod_transporte' => $request->mod_transporte,
+                    'fecha_traslado' => $request->fecha_traslado,
+                    'peso_total' => $request->peso_total,
+                    'und_peso_total' => $request->und_peso_total ?? 'KGM',
+                    'dir_partida' => $request->dir_partida ?: ($empresa->direccion ?: ''),
+                    'ubigeo_partida' => $request->ubigeo_partida ?: ($empresa->ubigeo ?: '150101'),
+                    'ubigeo_llegada' => $request->destinatario_ubigeo ?: '150101',
+                    'dir_llegada' => $request->destinatario_direccion,
+                    'transportista_tipo_doc' => $request->transportista_tipo_doc,
+                    'transportista_documento' => $request->transportista_documento,
+                    'transportista_nombre' => $request->transportista_nombre,
+                    'transportista_nro_mtc' => $request->transportista_nro_mtc,
+                    'conductor_tipo_doc' => $request->conductor_tipo_doc,
+                    'conductor_documento' => $request->conductor_documento,
+                    'conductor_nombres' => $request->conductor_nombres,
+                    'conductor_apellidos' => $request->conductor_apellidos,
+                    'conductor_licencia' => $request->conductor_licencia,
+                    'vehiculo_placa' => $request->vehiculo_placa,
+                    'vehiculo_m1l' => $request->boolean('vehiculo_m1l'),
+                    'observaciones' => $request->observaciones,
+                    'estado' => 'pendiente',
+                    'nombre_xml' => null,
+                    'xml_url' => null,
+                    'cdr_url' => null,
+                    'ticket_sunat' => null,
+                ]);
+
+                $guia->detalles()->delete();
+
+                foreach ($request->detalles as $detalle) {
+                    GuiaRemisionDetalle::create([
+                        'id_guia' => $guia->id,
+                        'id_producto' => $detalle['id_producto'] ?? null,
+                        'codigo' => $detalle['codigo'] ?? null,
+                        'descripcion' => $detalle['descripcion'],
+                        'cantidad' => $detalle['cantidad'],
+                        'unidad' => $detalle['unidad'] ?? 'NIU',
+                    ]);
+                }
+
+                $resultado = $this->sunatService->generarGuiaRemisionXml($guia);
+
+                $envio = null;
+                $ticket = null;
+                if ($resultado['success'] ?? false) {
+                    try {
+                        $guia->refresh();
+                        $envio = $this->sunatService->enviarGuiaRemision($guia);
+
+                        if (($envio['success'] ?? false) && $guia->ticket) {
+                            sleep(2);
+                            try {
+                                $ticket = $this->sunatService->consultarTicketGuia($guia);
+                            } catch (\Exception $e) {
+                                $ticket = ['success' => false, 'en_proceso' => true, 'message' => 'Enviado, consulta en proceso.'];
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        $envio = ['success' => false, 'message' => 'XML generado pero no se pudo enviar: ' . $e->getMessage()];
+                    }
+                }
+
+                $guia->load(['detalles']);
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $guia,
+                    'xml' => $resultado,
+                    'envio' => $envio,
+                    'ticket' => $ticket,
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('SUNAT - Error al actualizar guía de remisión', [
+                'guia_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la guía: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function ubigeos(Request $request): JsonResponse

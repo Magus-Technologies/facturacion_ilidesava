@@ -54,11 +54,13 @@ const getAuthHeaders = () => {
     };
 };
 
-export default function GuiaRemisionForm() {
+export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
     const [submitting, setSubmitting] = useState(false);
     const [motivos, setMotivos] = useState([]);
     const [empresa, setEmpresa] = useState(null);
     const [proximoNumero, setProximoNumero] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [guiaId, setGuiaId] = useState(initialGuiaId);
 
     // Búsqueda de venta
     const [serie, setSerie] = useState("");
@@ -170,13 +172,18 @@ export default function GuiaRemisionForm() {
     useEffect(() => {
         fetchMotivos();
         fetchEmpresa();
-        fetchProximoNumero();
 
-        // Si viene venta_id en la URL, cargar automáticamente
         const params = new URLSearchParams(window.location.search);
         const ventaId = params.get("venta_id");
-        if (ventaId) {
+
+        if (guiaId) {
+            setIsEditing(true);
+            setGuiaId(guiaId);
+            cargarGuiaPorId(guiaId);
+        } else if (ventaId) {
             cargarVentaPorId(ventaId);
+        } else {
+            fetchProximoNumero();
         }
     }, []);
 
@@ -288,6 +295,84 @@ export default function GuiaRemisionForm() {
         setBuscando(false);
     };
 
+    const cargarGuiaPorId = async (guiaIdParam) => {
+        setBuscando(true);
+        try {
+            const res = await fetch(`/api/guias-remision/${guiaIdParam}`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await res.json();
+            const g = data.data || data;
+
+            console.log("Guia data loaded:", g);
+
+            if (g && g.id) {
+                setVenta(g.venta || null);
+                setSerie(g.serie || "");
+                setNumero(String(g.numero || ""));
+
+                setDestinatario({
+                    tipo_doc: g.destinatario_tipo_doc || "6",
+                    documento: g.destinatario_documento || "",
+                    nombre: g.destinatario_nombre || "",
+                    direccion: g.dir_llegada || "",
+                    ubigeo: g.ubigeo_llegada || g.destinatario_ubigeo || "",
+                });
+                setClienteNombre(g.destinatario_nombre || "");
+
+                setPartida({
+                    direccion: g.dir_partida || "",
+                    ubigeo: g.ubigeo_partida || "",
+                    departamento: g.departamento || "",
+                    provincia: g.provincia || "",
+                    distrito: g.distrito || "",
+                });
+
+                const modTransporte = g.mod_transporte || "01";
+                const vehiculoM1l = g.vehiculo_m1l ? true : false;
+
+                setForm((prev) => ({
+                    ...prev,
+                    motivo_traslado: g.motivo_traslado || "01",
+                    descripcion_motivo: g.descripcion_motivo || "",
+                    mod_transporte: modTransporte,
+                    fecha_traslado: g.fecha_traslado ? g.fecha_traslado.split("T")[0] : new Date().toISOString().split("T")[0],
+                    peso_total: String(g.peso_total || ""),
+                    und_peso_total: g.und_peso_total || "KGM",
+                    transportista_tipo_doc: g.transportista_tipo_doc || "6",
+                    transportista_documento: g.transportista_documento || "",
+                    transportista_nombre: g.transportista_nombre || "",
+                    transportista_nro_mtc: g.transportista_nro_mtc || "",
+                    conductor_tipo_doc: g.conductor_tipo_doc || "1",
+                    conductor_documento: g.conductor_documento || "",
+                    conductor_nombres: g.conductor_nombres || "",
+                    conductor_apellidos: g.conductor_apellidos || "",
+                    conductor_licencia: g.conductor_licencia || "",
+                    vehiculo_placa: g.vehiculo_placa || "",
+                    vehiculo_m1l: vehiculoM1l,
+                    observaciones: g.observaciones || "",
+                }));
+
+                const dets = g.detalles || [];
+                console.log("Detalles loaded:", dets);
+                if (dets.length > 0) {
+                    setDetalles(
+                        dets.map((d) => ({
+                            id_producto: d.id_producto || null,
+                            codigo: d.codigo || "",
+                            descripcion: d.descripcion || "",
+                            cantidad: String(d.cantidad || 1),
+                            unidad: d.unidad || "NIU",
+                        }))
+                    );
+                }
+            }
+        } catch (err) {
+            console.error("Error cargando guía:", err);
+        }
+        setBuscando(false);
+    };
+
     const handleBuscarVenta = async () => {
         if (!serie.trim() || !numero.trim()) return;
         setBuscando(true);
@@ -353,13 +438,13 @@ export default function GuiaRemisionForm() {
     const handleClienteSelect = (cliente) => {
         const doc = cliente.documento || "";
         const tipDoc = cliente.tipo_doc || (doc.length === 11 ? "6" : doc.length === 8 ? "1" : "4");
-                    setDestinatario({
-                        tipo_doc: tipDoc,
-                        documento: doc,
-                        nombre: cliente.datos || "",
-                        direccion: data.venta.direccion || (cliente.direccion || ""),
-                        ubigeo: cliente.ubigeo || "",
-                    });
+        setDestinatario({
+            tipo_doc: tipDoc,
+            documento: doc,
+            nombre: cliente.datos || "",
+            direccion: cliente.direccion || "",
+            ubigeo: cliente.ubigeo || "",
+        });
         setClienteNombre(cliente.datos || "");
         if (errors.destinatario || errors.direccion) {
             setErrors((prev) => ({ ...prev, destinatario: undefined, direccion: undefined }));
@@ -460,25 +545,30 @@ export default function GuiaRemisionForm() {
 
         setSubmitting(true);
         try {
-            const res = await fetch("/api/guias-remision", {
-                method: "POST",
+            const payload = {
+                ...form,
+                id_venta: venta?.id_venta || null,
+                destinatario_tipo_doc: destinatario.tipo_doc,
+                destinatario_documento: destinatario.documento,
+                destinatario_nombre: destinatario.nombre,
+                destinatario_direccion: destinatario.direccion,
+                destinatario_ubigeo: destinatario.ubigeo,
+                dir_partida: partida.direccion,
+                ubigeo_partida: partida.ubigeo,
+                peso_total: parseFloat(form.peso_total),
+                detalles: detallesValidos.map((d) => ({
+                    ...d,
+                    cantidad: parseFloat(d.cantidad),
+                })),
+            };
+
+            const url = isEditing ? `/api/guias-remision/${guiaId}` : "/api/guias-remision";
+            const method = isEditing ? "PUT" : "POST";
+
+            const res = await fetch(url, {
+                method,
                 headers: getAuthHeaders(),
-                body: JSON.stringify({
-                    ...form,
-                    id_venta: venta?.id_venta || null,
-                    destinatario_tipo_doc: destinatario.tipo_doc,
-                    destinatario_documento: destinatario.documento,
-                    destinatario_nombre: destinatario.nombre,
-                    destinatario_direccion: destinatario.direccion,
-                    destinatario_ubigeo: destinatario.ubigeo,
-                    dir_partida: partida.direccion,
-                    ubigeo_partida: partida.ubigeo,
-                    peso_total: parseFloat(form.peso_total),
-                    detalles: detallesValidos.map((d) => ({
-                        ...d,
-                        cantidad: parseFloat(d.cantidad),
-                    })),
-                }),
+                body: JSON.stringify(payload),
             });
 
             const data = await res.json();
@@ -512,11 +602,11 @@ export default function GuiaRemisionForm() {
                                 Guías de Remisión
                             </a>
                             <span className="mx-2">/</span>
-                            <span className="text-gray-900">Nueva</span>
+                            <span className="text-gray-900">{isEditing ? "Editar" : "Nueva"}</span>
                         </nav>
                         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                            Nueva Guía de Remisión
-                            {proximoNumero && (
+                            {isEditing ? "Editar Guía de Remisión" : "Nueva Guía de Remisión"}
+                            {!isEditing && proximoNumero && (
                                 <span className="text-sm font-mono px-3 py-1 rounded-md bg-gray-100 text-gray-700 border border-gray-300">
                                     {proximoNumero.numero_completo}
                                 </span>
@@ -532,7 +622,7 @@ export default function GuiaRemisionForm() {
                             {submitting && (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             )}
-                            Crear Guía
+                            {isEditing ? "Actualizar Guía" : "Crear Guía"}
                         </Button>
                         <Button
                             variant="outline"

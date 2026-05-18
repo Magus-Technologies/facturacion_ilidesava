@@ -181,6 +181,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::get('guias-remision/exportar-excel', [\App\Http\Controllers\Exports\GuiaRemisionExportController::class, 'descargarExcel']);
     Route::get('guias-remision', [\App\Http\Controllers\GuiaRemisionController::class, 'index']);
     Route::post('guias-remision', [\App\Http\Controllers\GuiaRemisionController::class, 'store']);
+    Route::put('guias-remision/{id}', [\App\Http\Controllers\GuiaRemisionController::class, 'update']);
     Route::get('guias-remision/{id}/cdr', [\App\Http\Controllers\GuiaRemisionController::class, 'cdr']);
     Route::get('guias-remision/{id}', [\App\Http\Controllers\GuiaRemisionController::class, 'show']);
     Route::post('guias-remision/{id}/enviar', [\App\Http\Controllers\GuiaRemisionController::class, 'enviar']);
