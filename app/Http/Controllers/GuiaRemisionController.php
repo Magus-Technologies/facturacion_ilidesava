@@ -574,10 +574,13 @@ class GuiaRemisionController extends Controller
                     'ticket_sunat' => null,
                 ]);
 
+                $detallesOriginales = $guia->detalles()->get()->keyBy('id_producto')->toArray();
+
                 $guia->detalles()->delete();
 
+                $nuevosDetalles = [];
                 foreach ($request->detalles as $detalle) {
-                    GuiaRemisionDetalle::create([
+                    $nuevosDetalles[] = GuiaRemisionDetalle::create([
                         'id_guia' => $guia->id,
                         'id_producto' => $detalle['id_producto'] ?? null,
                         'codigo' => $detalle['codigo'] ?? null,
@@ -585,6 +588,44 @@ class GuiaRemisionController extends Controller
                         'cantidad' => $detalle['cantidad'],
                         'unidad' => $detalle['unidad'] ?? 'NIU',
                     ]);
+                }
+
+                if ($guia->id_venta && $venta = $guia->venta) {
+                    foreach ($nuevosDetalles as $nuevoDet) {
+                        $idProd = $nuevoDet->id_producto;
+                        if (!$idProd) continue;
+                        $yaExistia = collect($detallesOriginales)->has($idProd);
+                        if ($yaExistia) continue;
+
+                        $productoStock = \App\Models\Producto::where('id_empresa', $guia->id_empresa)
+                            ->where('almacen', '1')
+                            ->where('id_producto', $idProd)
+                            ->first();
+
+                        if ($productoStock && $productoStock->cantidad > 0) {
+                            $stockAnterior = (float) $productoStock->cantidad;
+                            $productoStock->decrement('cantidad', $nuevoDet->cantidad);
+                            if (isset($productoStock->ultima_salida)) {
+                                $productoStock->update(['ultima_salida' => now()]);
+                            }
+                            \App\Models\MovimientoStock::create([
+                                'id_producto' => $idProd,
+                                'tipo_movimiento' => 'salida',
+                                'cantidad' => $nuevoDet->cantidad,
+                                'stock_anterior' => $stockAnterior,
+                                'stock_nuevo' => $stockAnterior - $nuevoDet->cantidad,
+                                'tipo_documento' => 'guia_remision',
+                                'id_documento' => $guia->id,
+                                'documento_referencia' => $guia->serie . '-' . str_pad($guia->numero, 6, '0', STR_PAD_LEFT),
+                                'motivo' => 'Descuento stock por edición de guía',
+                                'observaciones' => 'Producto agregado a guía existente',
+                                'id_almacen' => 1,
+                                'id_empresa' => $guia->id_empresa,
+                                'id_usuario' => $request->user()->id,
+                                'fecha_movimiento' => now(),
+                            ]);
+                        }
+                    }
                 }
 
                 $resultado = $this->sunatService->generarGuiaRemisionXml($guia);

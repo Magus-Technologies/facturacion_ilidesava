@@ -40,9 +40,11 @@ import {
     Search,
     CheckCircle,
     FileText,
+    PackageSearch,
 } from "lucide-react";
 import { toast } from "@/lib/sweetalert";
 import ClienteAutocomplete from "../shared/ClienteAutocomplete";
+import ProductMultipleSearch from "../shared/ProductMultipleSearch";
 import { consultarDNI, consultarRUC } from "@/services/apisPeru";
 
 const getAuthHeaders = () => {
@@ -61,6 +63,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
     const [proximoNumero, setProximoNumero] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [guiaId, setGuiaId] = useState(initialGuiaId);
+    const [showProductSearch, setShowProductSearch] = useState(false);
 
     // Búsqueda de venta
     const [serie, setSerie] = useState("");
@@ -474,6 +477,19 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
     const removeDetalle = (index) => {
         if (detalles.length <= 1) return;
         setDetalles((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleMultipleProductsSelect = (productosSeleccionados) => {
+        const nuevosProductos = productosSeleccionados.map((p) => ({
+            id_producto: p.id_producto || p.productoid,
+            codigo: p.codigo || p.codigo_pp || "",
+            descripcion: p.nom_prod || p.descripcion || "",
+            cantidad: String(p.cantidad || 1),
+            unidad: "NIU",
+        }));
+        setDetalles((prev) => [...prev, ...nuevosProductos]);
+        setShowProductSearch(false);
+        toast.success(`${productosSeleccionados.length} producto(s) agregado(s)`);
     };
 
     const limpiarVenta = () => {
@@ -1184,6 +1200,16 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                                     type="button"
                                     variant="outline"
                                     size="sm"
+                                    onClick={() => setShowProductSearch(true)}
+                                    className="gap-1"
+                                >
+                                    <Search className="h-3 w-3" />
+                                    Buscar
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
                                     onClick={addDetalle}
                                     className="gap-1"
                                 >
@@ -1571,12 +1597,22 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                                 {submitting && (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 )}
-                                Crear Guía de Remisión
+                                {isEditing ? "Actualizar Guía de Remisión" : "Crear Guía de Remisión"}
                             </Button>
                         </CardFooter>
                     </Card>
                 </div>
             </div>
+
+            <ProductMultipleSearch
+                isOpen={showProductSearch}
+                onClose={() => setShowProductSearch(false)}
+                onProductsSelect={handleMultipleProductsSelect}
+                productosExistentes={detalles}
+                almacen="1"
+                afectaStock={true}
+                apiEndpoint={null}
+            />
         </MainLayout>
     );
 }
