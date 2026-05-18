@@ -263,7 +263,7 @@ export default function GuiaRemisionForm() {
                         tipo_doc: tipDoc,
                         documento: doc,
                         nombre: cliente.datos || "",
-                        direccion: cliente.direccion || "",
+                        direccion: v.direccion || (cliente.direccion || ""),
                         ubigeo: cliente.ubigeo || "",
                     });
                     setClienteNombre(cliente.datos || "");
@@ -353,13 +353,13 @@ export default function GuiaRemisionForm() {
     const handleClienteSelect = (cliente) => {
         const doc = cliente.documento || "";
         const tipDoc = cliente.tipo_doc || (doc.length === 11 ? "6" : doc.length === 8 ? "1" : "4");
-        setDestinatario({
-            tipo_doc: tipDoc,
-            documento: doc,
-            nombre: cliente.datos || "",
-            direccion: cliente.direccion || "",
-            ubigeo: cliente.ubigeo || "",
-        });
+                    setDestinatario({
+                        tipo_doc: tipDoc,
+                        documento: doc,
+                        nombre: cliente.datos || "",
+                        direccion: data.venta.direccion || (cliente.direccion || ""),
+                        ubigeo: cliente.ubigeo || "",
+                    });
         setClienteNombre(cliente.datos || "");
         if (errors.destinatario || errors.direccion) {
             setErrors((prev) => ({ ...prev, destinatario: undefined, direccion: undefined }));
