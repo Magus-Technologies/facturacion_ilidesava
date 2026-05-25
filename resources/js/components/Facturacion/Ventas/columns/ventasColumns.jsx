@@ -494,22 +494,22 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         Editar
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && !estaVendida && puedeEliminar && handlers.handleEliminar && (
+                                {!estaAnulada && !estaVendida && esNotaVenta && handlers.handleAnular && (
+                                    <DropdownMenuItem
+                                        onClick={() => handlers.handleAnular(venta)}
+                                        className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Anular
+                                    </DropdownMenuItem>
+                                )}
+                                {!estaAnulada && !estaVendida && !esNotaVenta && puedeEliminar && handlers.handleEliminar && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleEliminar(venta)}
                                         className="text-red-600 focus:bg-red-50 focus:text-red-700"
                                     >
                                         <Trash2 className="mr-2 h-4 w-4" />
                                         Eliminar
-                                    </DropdownMenuItem>
-                                )}
-                                {!estaAnulada && !estaVendida && ocultarSunatFila && !esNotaVenta && (
-                                    <DropdownMenuItem
-                                        onClick={() => handlers.handleAnular(venta)}
-                                        className="text-red-600 focus:bg-red-50 focus:text-red-700"
-                                    >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Anular venta
                                     </DropdownMenuItem>
                                 )}
                             </DropdownMenuContent>

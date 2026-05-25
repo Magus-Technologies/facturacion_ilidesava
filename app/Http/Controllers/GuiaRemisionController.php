@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Empresa;
 use App\Models\GuiaRemision;
 use App\Models\GuiaRemisionDetalle;
+use App\Models\MovimientoStock;
 use App\Models\MotivoTraslado;
 use App\Services\SunatService;
 use Illuminate\Http\JsonResponse;
@@ -191,6 +192,9 @@ class GuiaRemisionController extends Controller
                         'unidad' => $detalle['unidad'] ?? 'NIU',
                     ]);
                 }
+
+                $guia->load('detalles');
+                $this->descontarStockGuia($guia, $request->user());
 
                 $resultado = $this->sunatService->generarGuiaRemisionXml($guia);
 
@@ -687,5 +691,71 @@ class GuiaRemisionController extends Controller
         $ubigeos = $query->limit(20)->get();
 
         return response()->json($ubigeos);
+    }
+
+    private function descontarStockGuia(GuiaRemision $guia, $user): void
+    {
+        $empresa = Empresa::find($user->id_empresa);
+        $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
+        $docRef = $guia->serie . '-' . str_pad($guia->numero, 6, '0', STR_PAD_LEFT);
+
+        foreach ($guia->detalles as $detalle) {
+            if (!$detalle->id_producto) continue;
+
+            $codigoProducto = DB::table('productos')
+                ->where('id_producto', $detalle->id_producto)
+                ->value('codigo');
+
+            if (!$codigoProducto) continue;
+
+            $productoReal = null;
+            $idAlmacen = null;
+
+            if ($usaAlmacenPropio) {
+                $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                    ->where('almacen', '2')
+                    ->where('codigo', $codigoProducto)
+                    ->first();
+                if ($productoReal) {
+                    $idAlmacen = '2';
+                }
+            } else {
+                $productoReal = \App\Models\ProductoMadre::where('codigo', $codigoProducto)
+                    ->where('estado', '1')
+                    ->first();
+                if ($productoReal) {
+                    $idAlmacen = '0';
+                } else {
+                    $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                        ->where('codigo', $codigoProducto)
+                        ->first();
+                    if ($productoReal) {
+                        $idAlmacen = $productoReal->almacen;
+                    }
+                }
+            }
+
+            if ($productoReal && $idAlmacen !== null) {
+                $stockAnterior = (float) $productoReal->cantidad;
+                $productoReal->decrement('cantidad', $detalle->cantidad);
+                $stockNuevo = $stockAnterior - $detalle->cantidad;
+
+                MovimientoStock::create([
+                    'id_producto' => $detalle->id_producto,
+                    'tipo_movimiento' => 'salida',
+                    'cantidad' => $detalle->cantidad,
+                    'stock_anterior' => $stockAnterior,
+                    'stock_nuevo' => $stockNuevo,
+                    'tipo_documento' => 'guia_remision',
+                    'id_documento' => $guia->id,
+                    'documento_referencia' => $docRef,
+                    'motivo' => 'Salida por Guía de Remisión',
+                    'id_almacen' => $idAlmacen,
+                    'id_empresa' => $user->id_empresa,
+                    'id_usuario' => $user->id,
+                    'fecha_movimiento' => now(),
+                ]);
+            }
+        }
     }
 }

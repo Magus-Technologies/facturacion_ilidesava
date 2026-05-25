@@ -718,11 +718,19 @@ class VentasController extends Controller
             $user = $request->user();
             $venta = Venta::where('id_empresa', $user->id_empresa)->findOrFail($id);
 
-            // Tipos permitidos: nota de venta, boleta, factura
-            if (!in_array($venta->id_tido, [1, 2, 6])) {
+            // Notas de venta deben anularse, no eliminarse
+            if ($venta->id_tido == 6) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Solo se pueden eliminar notas de venta, boletas o facturas',
+                    'message' => 'Las notas de venta no se pueden eliminar. Use la opción anular.',
+                ], 422);
+            }
+
+            // Tipos permitidos: boleta, factura
+            if (!in_array($venta->id_tido, [1, 2])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden eliminar boletas o facturas',
                 ], 422);
             }
 
@@ -919,30 +927,87 @@ class VentasController extends Controller
                 // Cambiar estado de la venta
                 $venta->update(['estado' => '2']);
                 
-                // Retornar stock al almacén correcto si afectó stock
-                if ($venta->afecta_stock) {
-                    foreach ($venta->productosVentas as $detalle) {
-                        $producto = $detalle->producto;
-                        if ($producto) {
-                            $stockAnterior = $producto->cantidad;
-                            $producto->increment('cantidad', $detalle->cantidad);
-                            $stockNuevo = $stockAnterior + $detalle->cantidad;
+                // Retornar stock al almacén correcto
+                // Notas de venta: si stock_real_descontado=1, se descontó del almacén madre/2
+                // Boletas/Facturas: si afecta_stock=1, se descontó al crear
+                $retornarStock = $venta->afecta_stock || ($venta->id_tido == 6 && $venta->stock_real_descontado);
 
-                            MovimientoStock::create([
-                                'id_producto' => $producto->id_producto,
-                                'tipo_movimiento' => 'entrada',
-                                'cantidad' => $detalle->cantidad,
-                                'stock_anterior' => $stockAnterior,
-                                'stock_nuevo' => $stockNuevo,
-                                'tipo_documento' => 'anulacion_venta',
-                                'id_documento' => $venta->id_venta,
-                                'documento_referencia' => $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT),
-                                'motivo' => 'Anulación de venta',
-                                'id_almacen' => $producto->almacen,
-                                'id_empresa' => $user->id_empresa,
-                                'id_usuario' => $user->id,
-                                'fecha_movimiento' => now(),
-                            ]);
+                if ($retornarStock) {
+                    $empresa = \App\Models\Empresa::find($user->id_empresa);
+                    $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
+
+                    foreach ($venta->productosVentas as $detalle) {
+                        if (!$detalle->id_producto) continue;
+
+                        if ($venta->id_tido == 6) {
+                            // Nota de venta: devolver al almacén 2 o madre según configuración
+                            if ($usaAlmacenPropio) {
+                                $productoModel = \App\Models\Producto::where('id_producto', $detalle->id_producto)
+                                    ->where('id_empresa', $user->id_empresa)
+                                    ->where('almacen', '2')
+                                    ->first();
+                                if ($productoModel) {
+                                    $stockAnterior = $productoModel->cantidad;
+                                    $productoModel->increment('cantidad', $detalle->cantidad);
+                                    MovimientoStock::create([
+                                        'id_producto' => $productoModel->id_producto,
+                                        'tipo_movimiento' => 'entrada',
+                                        'cantidad' => $detalle->cantidad,
+                                        'stock_anterior' => $stockAnterior,
+                                        'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                                        'tipo_documento' => 'anulacion_venta',
+                                        'id_documento' => $venta->id_venta,
+                                        'documento_referencia' => $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT),
+                                        'motivo' => 'Anulación de nota de venta',
+                                        'id_almacen' => '2',
+                                        'id_empresa' => $user->id_empresa,
+                                        'id_usuario' => $user->id,
+                                        'fecha_movimiento' => now(),
+                                    ]);
+                                }
+                            } else {
+                                // Devolver al almacén madre buscando por código
+                                $codigoProducto = DB::table('productos')
+                                    ->where('id_producto', $detalle->id_producto)
+                                    ->value('codigo');
+
+                                $productoMadre = null;
+                                if ($codigoProducto) {
+                                    $productoMadre = \App\Models\ProductoMadre::where('codigo', $codigoProducto)->first();
+                                }
+                                if (!$productoMadre) {
+                                    $productoMadre = \App\Models\ProductoMadre::find($detalle->id_producto);
+                                }
+                                if ($productoMadre) {
+                                    $stockAnterior = (float) $productoMadre->cantidad;
+                                    $productoMadre->increment('cantidad', $detalle->cantidad);
+                                    // Nota: no creamos movimiento_stock porque el FK apunta a productos, no productos_madre
+                                }
+                            }
+                        } else {
+                            // Boleta/Factura: devolver al almacén del producto
+                            $producto = $detalle->producto;
+                            if ($producto) {
+                                $stockAnterior = $producto->cantidad;
+                                $producto->increment('cantidad', $detalle->cantidad);
+                                $stockNuevo = $stockAnterior + $detalle->cantidad;
+
+                                MovimientoStock::create([
+                                    'id_producto' => $producto->id_producto,
+                                    'tipo_movimiento' => 'entrada',
+                                    'cantidad' => $detalle->cantidad,
+                                    'stock_anterior' => $stockAnterior,
+                                    'stock_nuevo' => $stockNuevo,
+                                    'tipo_documento' => 'anulacion_venta',
+                                    'id_documento' => $venta->id_venta,
+                                    'documento_referencia' => $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT),
+                                    'motivo' => 'Anulación de venta',
+                                    'id_almacen' => $producto->almacen,
+                                    'id_empresa' => $user->id_empresa,
+                                    'id_usuario' => $user->id,
+                                    'fecha_movimiento' => now(),
+                                ]);
+                            }
                         }
                     }
                 }
