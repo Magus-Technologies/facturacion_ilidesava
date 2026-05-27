@@ -1,13 +1,33 @@
 import axios from 'axios';
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
+
 window.axios = axios;
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-// Interceptor global para Axios (manejo de token expirado o no autorizado)
-window.axios.interceptors.response.use(
+window.Pusher = Pusher;
+
+window.Echo = new Echo({
+    broadcaster: 'pusher',
+    key: import.meta.env.VITE_PUSHER_APP_KEY || 'local',
+    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1',
+    host: import.meta.env.VITE_PUSHER_HOST || '127.0.0.1',
+    port: import.meta.env.VITE_PUSHER_PORT || 6001,
+    wsHost: import.meta.env.VITE_PUSHER_HOST || '127.0.0.1',
+    wsPort: import.meta.env.VITE_PUSHER_PORT || 6001,
+    forceTLS: false,
+    encrypted: false,
+    disableStats: true,
+    boardcastTransport: 'ws',
+});
+
+window.Echo.connector.pusher.config.host = import.meta.env.VITE_PUSHER_HOST || window.location.hostname;
+window.Echo.connector.pusher.config.port = import.meta.env.VITE_PUSHER_PORT || 6001;
+
+axios.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Solo redirigir si NO estamos en la página de login
         if (error.response && error.response.status === 401 && !window.location.pathname.includes('/login')) {
             localStorage.removeItem('auth_token');
             window.location.href = '/login';
@@ -16,17 +36,13 @@ window.axios.interceptors.response.use(
     }
 );
 
-// Interceptor global simulado para la función nativa window.fetch (ya que React usa fetch)
 const originalFetch = window.fetch;
 window.fetch = async function () {
     const response = await originalFetch.apply(this, arguments);
-
-    // Solo redirigir si recibimos 401 Y NO estamos en la página de login
     if (response.status === 401 && !window.location.pathname.includes('/login')) {
         localStorage.removeItem('auth_token');
         window.location.href = '/login';
-        return new Promise(() => {}); // Detenemos la ejecución de este request para que no choque con la UI al redirigirse
+        return new Promise(() => {});
     }
-
     return response;
 };

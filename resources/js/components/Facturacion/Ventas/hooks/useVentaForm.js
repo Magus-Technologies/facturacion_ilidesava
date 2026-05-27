@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { toast } from '@/lib/sweetalert';
+import { toast, confirm } from '@/lib/sweetalert';
 import {
     calcularSubtotal,
     calcularIGV,
@@ -416,99 +416,111 @@ export const useVentaForm = (ventaId = null) => {
             return;
         }
 
-        setSaving(true);
-        try {
-            const token = localStorage.getItem('auth_token');
-            const totales = calcularTotales();
+        const ejecutarGuardado = async () => {
+            setSaving(true);
+            try {
+                const token = localStorage.getItem('auth_token');
+                const totales = calcularTotales();
 
-            const dataToSend = prepararDatosVenta(cliente, formData, productos, totales);
+                const dataToSend = prepararDatosVenta(cliente, formData, productos, totales);
 
-            const url = isEditing ? `/api/ventas/${ventaId}` : '/api/ventas';
-            const method = isEditing ? 'PUT' : 'POST';
+                const url = isEditing ? `/api/ventas/${ventaId}` : '/api/ventas';
 
-            // Usar FormData para soportar subida de voucher
-            const formDataObj = new FormData();
+                // Usar FormData para soportar subida de voucher
+                const formDataObj = new FormData();
 
-            // Agregar todos los campos de la venta
-            Object.keys(dataToSend).forEach(key => {
-                if (key === 'productos') {
-                    dataToSend.productos.forEach((prod, i) => {
-                        Object.keys(prod).forEach(pk => {
-                            if (prod[pk] !== null && prod[pk] !== undefined) {
-                                formDataObj.append(`productos[${i}][${pk}]`, prod[pk]);
-                            }
+                // Agregar todos los campos de la venta
+                Object.keys(dataToSend).forEach(key => {
+                    if (key === 'productos') {
+                        dataToSend.productos.forEach((prod, i) => {
+                            Object.keys(prod).forEach(pk => {
+                                if (prod[pk] !== null && prod[pk] !== undefined) {
+                                    formDataObj.append(`productos[${i}][${pk}]`, prod[pk]);
+                                }
+                            });
                         });
-                    });
-                } else if (key === 'empresas_ids') {
-                    (dataToSend.empresas_ids || []).forEach((id, i) => {
-                        formDataObj.append(`empresas_ids[${i}]`, id);
-                    });
-                } else if (key === 'cuotas') {
-                    (dataToSend.cuotas || []).forEach((cuota, i) => {
-                        formDataObj.append(`cuotas[${i}][fecha]`, cuota.fecha);
-                        formDataObj.append(`cuotas[${i}][monto]`, cuota.monto);
-                    });
-                } else if (dataToSend[key] !== null && dataToSend[key] !== undefined) {
-                    formDataObj.append(key, dataToSend[key]);
-                }
-            });
-
-            // Agregar datos de pagos (múltiples)
-            const pagos = Array.isArray(metodoPago) ? metodoPago : [metodoPago];
-            pagos.forEach((pago, i) => {
-                formDataObj.append(`pagos[${i}][id_tipo_pago]`, pago.id_tipo_pago);
-                if (pago.numero_operacion) {
-                    formDataObj.append(`pagos[${i}][numero_operacion]`, pago.numero_operacion);
-                }
-                if (pago.banco) {
-                    formDataObj.append(`pagos[${i}][banco]`, pago.banco);
-                }
-                if (pago.voucher_file) {
-                    formDataObj.append(`pagos[${i}][voucher]`, pago.voucher_file);
-                }
-            });
-
-            // Para PUT con FormData, usar POST + _method
-            const actualMethod = isEditing ? 'POST' : 'POST';
-            if (isEditing) {
-                formDataObj.append('_method', 'PUT');
-            }
-
-            const response = await fetch(url, {
-                method: actualMethod,
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: 'application/json',
-                },
-                body: formDataObj,
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                toast.success(isEditing ? 'Venta actualizada' : 'Venta creada exitosamente');
-
-                // Guardar datos de la venta y mostrar modal de impresión
-                setVentaGuardada({
-                    id_venta: data.venta.id_venta,
-                    numero_completo: data.venta.numero_completo,
-                    tipo: formData.id_tido
+                    } else if (key === 'empresas_ids') {
+                        (dataToSend.empresas_ids || []).forEach((id, i) => {
+                            formDataObj.append(`empresas_ids[${i}]`, id);
+                        });
+                    } else if (key === 'cuotas') {
+                        (dataToSend.cuotas || []).forEach((cuota, i) => {
+                            formDataObj.append(`cuotas[${i}][fecha]`, cuota.fecha);
+                            formDataObj.append(`cuotas[${i}][monto]`, cuota.monto);
+                        });
+                    } else if (dataToSend[key] !== null && dataToSend[key] !== undefined) {
+                        formDataObj.append(key, dataToSend[key]);
+                    }
                 });
-                setShowPrintModal(true);
-            } else {
-                // Mostrar errores de validación detallados
-                if (data.errors) {
-                    const errores = Object.values(data.errors).flat().join('\n');
-                    toast.error(errores);
-                } else {
-                    toast.error(data.message || 'Error al guardar la venta');
+
+                // Agregar datos de pagos (múltiples)
+                const pagos = Array.isArray(metodoPago) ? metodoPago : [metodoPago];
+                pagos.forEach((pago, i) => {
+                    formDataObj.append(`pagos[${i}][id_tipo_pago]`, pago.id_tipo_pago);
+                    if (pago.numero_operacion) {
+                        formDataObj.append(`pagos[${i}][numero_operacion]`, pago.numero_operacion);
+                    }
+                    if (pago.banco) {
+                        formDataObj.append(`pagos[${i}][banco]`, pago.banco);
+                    }
+                    if (pago.voucher_file) {
+                        formDataObj.append(`pagos[${i}][voucher]`, pago.voucher_file);
+                    }
+                });
+
+                // Para PUT con FormData, usar POST + _method
+                if (isEditing) {
+                    formDataObj.append('_method', 'PUT');
                 }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json',
+                    },
+                    body: formDataObj,
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    toast.success(isEditing ? 'Venta actualizada' : 'Venta creada exitosamente');
+
+                    // Guardar datos de la venta y mostrar modal de impresión
+                    setVentaGuardada({
+                        id_venta: data.venta.id_venta,
+                        numero_completo: data.venta.numero_completo,
+                        tipo: formData.id_tido,
+                    });
+                    setShowPrintModal(true);
+                } else {
+                    if (data.errors) {
+                        const errores = Object.values(data.errors).flat().join('\n');
+                        toast.error(errores);
+                    } else {
+                        toast.error(data.message || 'Error al guardar la venta');
+                    }
+                }
+            } catch (error) {
+                console.error('Error guardando venta:', error);
+                toast.error('Error al guardar la venta');
+            } finally {
+                setSaving(false);
             }
-        } catch (error) {
-            console.error('Error guardando venta:', error);
-            toast.error('Error al guardar la venta');
-        } finally {
-            setSaving(false);
+        };
+
+        if (!isEditing) {
+            await confirm({
+                title: 'Crear comprobante',
+                message: '¿Deseas crear el comprobante ahora? Se generará el documento en el sistema.',
+                confirmText: 'Sí, crear',
+                cancelText: 'No',
+                icon: 'question',
+                onConfirm: ejecutarGuardado,
+            });
+        } else {
+            await ejecutarGuardado();
         }
     };
 

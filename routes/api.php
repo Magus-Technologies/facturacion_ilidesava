@@ -58,6 +58,87 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::post('empresas/{id}', [\App\Http\Controllers\EmpresaController::class, 'update']); // POST para FormData con logo
     Route::delete('empresas/{id}/logo', [\App\Http\Controllers\EmpresaController::class, 'deleteLogo']);
 
+    // Notificaciones de comprobantes para envío automático
+    Route::get('notificaciones/comprobantes-autoenvio', function (\Illuminate\Http\Request $request) {
+        $user = $request->user();
+        $idEmpresa = $user->id_empresa;
+
+// Definir los horarios programados (en formato HH:mm) para cada tipo de comprobante
+        $schedules = [
+            'guias' => '02:00',
+            'facturas' => '02:30',
+            'boletas' => '03:00',
+        ];
+        $now = \Illuminate\Support\Carbon::now(config('app.timezone'));
+
+        // Helper para minutos restantes de un horario dado
+        $calcMinutes = function (string $time) use ($now) {
+            $candidate = \Illuminate\Support\Carbon::parse($now->format('Y-m-d') . " $time", config('app.timezone'));
+            if ($now->greaterThanOrEqualTo($candidate)) {
+                $candidate->addDay();
+            }
+            return $now->diffInMinutes($candidate, false);
+        };
+
+        // Cálculo del próximo envío global (el más cercano)
+        $globalMinutes = null;
+        foreach ($schedules as $time) {
+            $candidate = \Illuminate\Support\Carbon::parse($now->format('Y-m-d') . " $time", config('app.timezone'));
+            if ($now->lessThan($candidate)) {
+                $globalMinutes = $now->diffInMinutes($candidate, false);
+                break;
+            }
+        }
+        if (is_null($globalMinutes)) {
+            // Todas las horas pasaron, usar la primera del día siguiente
+            $first = \Illuminate\Support\Carbon::parse($now->format('Y-m-d') . " {$schedules['guias']}", config('app.timezone'));
+            $first->addDay();
+            $globalMinutes = $now->diffInMinutes($first, false);
+        }
+
+        $minutesGuias = $calcMinutes($schedules['guias']);
+        $minutesFacturas = $calcMinutes($schedules['facturas']);
+        $minutesBoletas = $calcMinutes($schedules['boletas']);
+
+        $guias = \App\Models\GuiaRemision::where('id_empresa', $idEmpresa)
+            ->where('estado', 'pendiente')
+            ->whereNotNull('nombre_xml')
+            ->where('nombre_xml', '!=', '')
+            ->count();
+
+        $facturas = \App\Models\Venta::where('id_empresa', $idEmpresa)
+            ->where('estado_sunat', '0')
+            ->whereNotNull('nombre_xml')
+            ->where('nombre_xml', '!=', '')
+            ->where('nombre_xml', 'like', '%-01-%')
+            ->count();
+
+        $boletas = \App\Models\Venta::where('id_empresa', $idEmpresa)
+            ->where('estado_sunat', '0')
+            ->whereNotNull('nombre_xml')
+            ->where('nombre_xml', '!=', '')
+            ->where('nombre_xml', 'like', '%-03-%')
+            ->count();
+
+        $total = $guias + $facturas + $boletas;
+
+        return response()->json([
+            'success' => true,
+            'count' => $total,
+            'detail' => [
+                'guias' => $guias,
+                'facturas' => $facturas,
+                'boletas' => $boletas,
+            ],
+            'show' => $total > 0,
+            'minutes_before_send' => $globalMinutes,
+            'minutes_guias' => $minutesGuias,
+            'minutes_facturas' => $minutesFacturas,
+            'minutes_boletas' => $minutesBoletas,
+        ]);
+
+    });
+
     // Almacén Madre
     Route::get('almacen-madre/dashboard', [\App\Http\Controllers\AlmacenMadreController::class, 'dashboard']);
     Route::get('almacen-madre/productos', [\App\Http\Controllers\AlmacenMadreController::class, 'productos']);

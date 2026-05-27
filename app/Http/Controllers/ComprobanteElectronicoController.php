@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ComprobantesAutoEnvioUpdated;
 use App\Models\Venta;
 use App\Services\SunatService;
 use Illuminate\Http\JsonResponse;
@@ -26,6 +27,7 @@ class ComprobanteElectronicoController extends Controller
                     'xml_url' => $resultado['xml_url'],
                     'nombre_xml' => $resultado['nombre_archivo'],
                 ]);
+                ComprobantesAutoEnvioUpdated::dispatch();
             }
 
             return response()->json($resultado);
@@ -68,6 +70,11 @@ class ComprobanteElectronicoController extends Controller
             }
 
             $resultado = $this->sunatService->enviarComprobante($venta);
+
+            if (!empty($resultado['success'])) {
+                ComprobantesAutoEnvioUpdated::dispatch();
+            }
+
             return response()->json($resultado);
         } catch (\Exception $e) {
             Log::error('SUNAT - Error al enviar comprobante', [

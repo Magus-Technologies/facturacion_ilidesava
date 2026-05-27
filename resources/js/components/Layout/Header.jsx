@@ -15,7 +15,13 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
     const [user, setUser] = useState(null);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showEmpresaMenu, setShowEmpresaMenu] = useState(false);
-    const [notifications, setNotifications] = useState(3);
+    const [showNotifMenu, setShowNotifMenu] = useState(false);
+    const [notificationDetail, setNotificationDetail] = useState(null);
+    const [notifications, setNotifications] = useState(0);
+    const [globalCountdown, setGlobalCountdown] = useState(0);
+    const [countdownFacturas, setCountdownFacturas] = useState(0);
+    const [countdownBoletas, setCountdownBoletas] = useState(0);
+    const [countdownGuias, setCountdownGuias] = useState(0);
     const [empresas, setEmpresas] = useState([]);
     const [empresaActiva, setEmpresaActiva] = useState(null);
 
@@ -37,6 +43,75 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
     }, []);
 
     const isAdmin = user?.rol_id === 1;
+
+    const fetchPendingAutoSendCount = async () => {
+        try {
+            const token = localStorage.getItem("auth_token");
+            const res = await fetch("/api/notificaciones/comprobantes-autoenvio", {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/json",
+                },
+            });
+            const data = await res.json();
+            if (data.success && data.show) {
+                setNotifications(data.count || 0);
+                const detail = data.detail || {};
+                detail.minutes_guias = data.minutes_guias;
+                detail.minutes_facturas = data.minutes_facturas;
+                detail.minutes_boletas = data.minutes_boletas;
+                setNotificationDetail(detail);
+                setGlobalCountdown(data.minutes_before_send ? Math.round(data.minutes_before_send * 60) : 0);
+                setCountdownFacturas(data.minutes_facturas ? Math.round(data.minutes_facturas * 60) : 0);
+                setCountdownBoletas(data.minutes_boletas ? Math.round(data.minutes_boletas * 60) : 0);
+                setCountdownGuias(data.minutes_guias ? Math.round(data.minutes_guias * 60) : 0);
+            } else {
+                setNotifications(0);
+                setNotificationDetail(null);
+                setGlobalCountdown(0);
+                setCountdownFacturas(0);
+                setCountdownBoletas(0);
+                setCountdownGuias(0);
+            }
+        } catch (err) {
+            setNotifications(0);
+        }
+    };
+
+    useEffect(() => {
+        fetchPendingAutoSendCount();
+        const intervalId = setInterval(fetchPendingAutoSendCount, 60 * 1000);
+        return () => clearInterval(intervalId);
+    }, []);
+
+    useEffect(() => {
+        if (globalCountdown <= 0) return;
+        const timer = setInterval(() => {
+            setGlobalCountdown(prev => (prev > 0 ? prev - 1 : 0));
+            setCountdownFacturas(prev => (prev > 0 ? prev - 1 : 0));
+            setCountdownBoletas(prev => (prev > 0 ? prev - 1 : 0));
+            setCountdownGuias(prev => (prev > 0 ? prev - 1 : 0));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const formatCountdown = (seconds) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    useEffect(() => {
+        if (!window.Echo) return;
+        const channel = window.Echo.private('notificaciones');
+        channel.listen('.ComprobantesAutoEnvioUpdated', () => {
+            fetchPendingAutoSendCount();
+        });
+        return () => {
+            channel.stopListening('.ComprobantesAutoEnvioUpdated');
+        };
+    }, []);
 
     const handleCambiarEmpresa = async (empresa) => {
         setShowEmpresaMenu(false);
@@ -236,14 +311,90 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
                 {/* Right Side - Notifications & User */}
                 <div className="flex items-center gap-3">
                     {/* Notifications */}
-                    <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                        <Bell className="h-5 w-5 text-gray-600" />
-                        {notifications > 0 && (
-                            <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                                {notifications}
-                            </span>
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowNotifMenu(!showNotifMenu)}
+                            className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                            <Bell className="h-5 w-5 text-gray-600" />
+                            {notifications > 0 && (
+                                <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                                    {notifications}
+                                </span>
+                            )}
+                        </button>
+
+                        {showNotifMenu && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-10"
+                                    onClick={() => setShowNotifMenu(false)}
+                                />
+                                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-200 py-3 z-50">
+                                    <div className="px-4 py-2 border-b border-gray-100">
+                                        <p className="text-xs font-semibold text-gray-500 uppercase">
+                                            Pendientes de envío
+                                        </p>
+                                    </div>
+                                    <div className="py-2">
+                                        {notificationDetail ? (
+                                            <>
+                                                <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-50">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-700">Facturas</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {countdownFacturas > 0 && (
+                                                            <span className="text-[10px] text-gray-400 tabular-nums">
+                                                                {formatCountdown(countdownFacturas)}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-sm font-semibold text-primary-600">
+                                                            {notificationDetail.facturas || 0}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-50">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-700">Boletas</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {countdownBoletas > 0 && (
+                                                            <span className="text-[10px] text-gray-400 tabular-nums">
+                                                                {formatCountdown(countdownBoletas)}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-sm font-semibold text-primary-600">
+                                                            {notificationDetail.boletas || 0}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-50">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-gray-700">Guías</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {countdownGuias > 0 && (
+                                                            <span className="text-[10px] text-gray-400 tabular-nums">
+                                                                {formatCountdown(countdownGuias)}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-sm font-semibold text-primary-600">
+                                                            {notificationDetail.guias || 0}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                                                Sin documentos pendientes
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
                         )}
-                    </button>
+                    </div>
 
                     {/* User Menu */}
                     <div className="relative">
