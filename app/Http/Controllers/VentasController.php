@@ -545,12 +545,22 @@ class VentasController extends Controller
             $user = $request->user();
             $venta = Venta::where('id_empresa', $user->id_empresa)->findOrFail($id);
 
-            // Solo permitir editar notas de venta
-            if ($venta->id_tido != 6) {
+            // Solo permitir editar notas de venta, boletas y facturas
+            if (!in_array($venta->id_tido, [1, 2, 6])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Solo se pueden editar notas de venta',
+                    'message' => 'Tipo de documento no editable',
                 ], 422);
+            }
+
+            // Boleta/Factura: solo si aún no tiene XML ni fue enviada a SUNAT
+            if (in_array($venta->id_tido, [1, 2])) {
+                if ($venta->nombre_xml || ($venta->estado_sunat && $venta->estado_sunat !== '0')) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No se puede editar una boleta/factura que ya fue enviada a SUNAT',
+                    ], 422);
+                }
             }
 
             // No editar si está anulada
@@ -645,6 +655,9 @@ class VentasController extends Controller
                     'observaciones' => $validated['observaciones'] ?? null,
                 ]);
 
+                // Capturar detalles viejos antes de reemplazar (necesarios para ajuste de stock)
+                $detallesViejos = $venta->productosVentas()->get();
+
                 // Reemplazar productos
                 $venta->productosVentas()->delete();
                 foreach ($validated['productos'] as $producto) {
@@ -658,6 +671,211 @@ class VentasController extends Controller
                         'descripcion' => $producto['descripcion'] ?? null,
                         'codigo_producto' => $producto['codigo_producto'] ?? null,
                     ]);
+                }
+
+                // Ajustar stock en almacén madre solo si ya fue descontado previamente
+                if ($venta->stock_real_descontado) {
+                    $empresa = \App\Models\Empresa::find($user->id_empresa);
+                    $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
+                    $docRef = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
+
+                    // 1. Devolver stock de los detalles viejos
+                    foreach ($detallesViejos as $detalle) {
+                        if (!$detalle->id_producto) continue;
+
+                        if ($usaAlmacenPropio) {
+                            $productoModel = \App\Models\Producto::where('id_producto', $detalle->id_producto)
+                                ->where('id_empresa', $user->id_empresa)
+                                ->where('almacen', '2')
+                                ->first();
+                            if ($productoModel) {
+                                $stockAnterior = $productoModel->cantidad;
+                                $productoModel->increment('cantidad', $detalle->cantidad);
+                                MovimientoStock::create([
+                                    'id_producto' => $productoModel->id_producto,
+                                    'tipo_movimiento' => 'entrada',
+                                    'cantidad' => $detalle->cantidad,
+                                    'stock_anterior' => $stockAnterior,
+                                    'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                                    'tipo_documento' => 'edicion_venta',
+                                    'id_documento' => $venta->id_venta,
+                                    'documento_referencia' => $docRef,
+                                    'motivo' => 'Devolución a almacén 2 por edición de nota de venta',
+                                    'id_almacen' => '2',
+                                    'id_empresa' => $user->id_empresa,
+                                    'id_usuario' => $user->id,
+                                    'fecha_movimiento' => now(),
+                                ]);
+                            }
+                        } else {
+                            $codigoProducto = DB::table('productos')
+                                ->where('id_producto', $detalle->id_producto)
+                                ->value('codigo');
+
+                            $productoMadre = null;
+                            if ($codigoProducto) {
+                                $productoMadre = \App\Models\ProductoMadre::where('codigo', $codigoProducto)->first();
+                            }
+                            if (!$productoMadre) {
+                                $productoMadre = \App\Models\ProductoMadre::find($detalle->id_producto);
+                            }
+
+                            if ($productoMadre) {
+                                $stockAnterior = (float) $productoMadre->cantidad;
+                                $productoMadre->increment('cantidad', $detalle->cantidad);
+                                MovimientoStock::create([
+                                    'id_producto' => $detalle->id_producto,
+                                    'tipo_movimiento' => 'entrada',
+                                    'cantidad' => $detalle->cantidad,
+                                    'stock_anterior' => $stockAnterior,
+                                    'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                                    'tipo_documento' => 'edicion_venta',
+                                    'id_documento' => $venta->id_venta,
+                                    'documento_referencia' => $docRef,
+                                    'motivo' => 'Devolución a almacén madre por edición de nota de venta',
+                                    'observaciones' => 'Producto madre: ' . $productoMadre->codigo,
+                                    'id_almacen' => 0,
+                                    'id_empresa' => $user->id_empresa,
+                                    'id_usuario' => $user->id,
+                                    'fecha_movimiento' => now(),
+                                ]);
+                            }
+                        }
+                    }
+
+                    // 2. Descontar stock de los detalles nuevos
+                    foreach ($validated['productos'] as $producto) {
+                        $idProducto = $producto['id_producto'] ?? null;
+                        if (!$idProducto) continue;
+
+                        if ($usaAlmacenPropio) {
+                            $productoModel = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                                ->where('almacen', '2')
+                                ->where('id_producto', $idProducto)
+                                ->first();
+                            if ($productoModel) {
+                                $stockAnterior = $productoModel->cantidad;
+                                $productoModel->decrement('cantidad', $producto['cantidad']);
+                                MovimientoStock::create([
+                                    'id_producto' => $productoModel->id_producto,
+                                    'tipo_movimiento' => 'salida',
+                                    'cantidad' => $producto['cantidad'],
+                                    'stock_anterior' => $stockAnterior,
+                                    'stock_nuevo' => $stockAnterior - $producto['cantidad'],
+                                    'tipo_documento' => 'edicion_venta',
+                                    'id_documento' => $venta->id_venta,
+                                    'documento_referencia' => $docRef,
+                                    'motivo' => 'Descuento almacén 2 por edición de nota de venta',
+                                    'id_almacen' => '2',
+                                    'id_empresa' => $user->id_empresa,
+                                    'id_usuario' => $user->id,
+                                    'fecha_movimiento' => now(),
+                                ]);
+                            }
+                        } else {
+                            $productoMadre = \App\Models\ProductoMadre::find($idProducto);
+
+                            if (!$productoMadre) {
+                                $codigoProducto = DB::table('productos')
+                                    ->where('id_producto', $idProducto)
+                                    ->value('codigo');
+                                if ($codigoProducto) {
+                                    $productoMadre = \App\Models\ProductoMadre::where('codigo', $codigoProducto)
+                                        ->where('estado', '1')
+                                        ->first();
+                                }
+                            }
+
+                            if ($productoMadre) {
+                                $stockAnterior = (float) $productoMadre->cantidad;
+                                $productoMadre->decrement('cantidad', $producto['cantidad']);
+
+                                $idProductoMovimiento = $idProducto;
+                                $prodEquivalente = DB::table('productos')
+                                    ->where('codigo', $productoMadre->codigo)
+                                    ->where('id_empresa', $venta->id_empresa)
+                                    ->value('id_producto');
+                                if ($prodEquivalente) {
+                                    $idProductoMovimiento = $prodEquivalente;
+                                }
+
+                                if (DB::table('productos')->where('id_producto', $idProductoMovimiento)->exists()) {
+                                    MovimientoStock::create([
+                                        'id_producto' => $idProductoMovimiento,
+                                        'tipo_movimiento' => 'salida',
+                                        'cantidad' => $producto['cantidad'],
+                                        'stock_anterior' => $stockAnterior,
+                                        'stock_nuevo' => $stockAnterior - $producto['cantidad'],
+                                        'tipo_documento' => 'edicion_venta',
+                                        'id_documento' => $venta->id_venta,
+                                        'documento_referencia' => $docRef,
+                                        'motivo' => 'Descuento almacén madre por edición de nota de venta',
+                                        'observaciones' => 'Producto: ' . $productoMadre->codigo,
+                                        'id_almacen' => 0,
+                                        'id_empresa' => $user->id_empresa,
+                                        'id_usuario' => $user->id,
+                                        'fecha_movimiento' => now(),
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Ajustar stock para boletas/facturas si afecta_stock=true
+                if (in_array($venta->id_tido, [1, 2]) && $venta->afecta_stock) {
+                    $docRefBF = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
+
+                    // 1. Devolver stock de los detalles viejos
+                    foreach ($detallesViejos as $detalle) {
+                        if (!$detalle->id_producto) continue;
+                        $productoModel = \App\Models\Producto::find($detalle->id_producto);
+                        if ($productoModel) {
+                            $stockAnterior = $productoModel->cantidad;
+                            $productoModel->increment('cantidad', $detalle->cantidad);
+                            MovimientoStock::create([
+                                'id_producto' => $detalle->id_producto,
+                                'tipo_movimiento' => 'entrada',
+                                'cantidad' => $detalle->cantidad,
+                                'stock_anterior' => $stockAnterior,
+                                'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                                'tipo_documento' => 'edicion_venta',
+                                'id_documento' => $venta->id_venta,
+                                'documento_referencia' => $docRefBF,
+                                'motivo' => 'Devolución por edición de boleta/factura',
+                                'id_almacen' => $productoModel->almacen,
+                                'id_empresa' => $user->id_empresa,
+                                'id_usuario' => $user->id,
+                                'fecha_movimiento' => now(),
+                            ]);
+                        }
+                    }
+
+                    // 2. Descontar stock de los detalles nuevos
+                    foreach ($validated['productos'] as $producto) {
+                        $idProducto = $producto['id_producto'] ?? null;
+                        if (!$idProducto) continue;
+                        $productoModel = \App\Models\Producto::find($idProducto);
+                        if ($productoModel) {
+                            $stockAnterior = $productoModel->cantidad;
+                            $productoModel->decrement('cantidad', $producto['cantidad']);
+                            MovimientoStock::create([
+                                'id_producto' => $idProducto,
+                                'tipo_movimiento' => 'salida',
+                                'cantidad' => $producto['cantidad'],
+                                'stock_anterior' => $stockAnterior,
+                                'stock_nuevo' => $stockAnterior - $producto['cantidad'],
+                                'tipo_documento' => 'edicion_venta',
+                                'id_documento' => $venta->id_venta,
+                                'documento_referencia' => $docRefBF,
+                                'motivo' => 'Descuento por edición de boleta/factura',
+                                'id_almacen' => $productoModel->almacen,
+                                'id_empresa' => $user->id_empresa,
+                                'id_usuario' => $user->id,
+                                'fecha_movimiento' => now(),
+                            ]);
+                        }
+                    }
                 }
 
                 // Reemplazar pagos

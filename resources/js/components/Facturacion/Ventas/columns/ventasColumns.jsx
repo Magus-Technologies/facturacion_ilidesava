@@ -485,7 +485,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         Guía de Remisión
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && !estaVendida && esNotaVenta && handlers.handleEditar && (
+                                {!estaAnulada && !estaVendida && (esNotaVenta || esSunatPendiente) && handlers.handleEditar && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleEditar(venta)}
                                         className="text-blue-600 focus:bg-blue-50 focus:text-blue-700"

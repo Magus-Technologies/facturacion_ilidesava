@@ -120,8 +120,8 @@ export const useVentaForm = (ventaId = null) => {
                                 : detalle.producto;
                             return {
                                 id_producto: detalle.id_producto,
-                                codigo: prod?.codigo || detalle.codigo_producto || '',
-                                descripcion: prod?.nombre || detalle.descripcion || '',
+                                codigo: detalle.codigo_producto || prod?.codigo || '',
+                                descripcion: detalle.descripcion || prod?.nombre || '',
                                 cantidad: detalle.cantidad,
                                 precioVenta: detalle.precio_unitario,
                                 precio_mostrado: detalle.precio_unitario,
