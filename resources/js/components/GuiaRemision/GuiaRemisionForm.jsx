@@ -284,8 +284,8 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                     setDetalles(
                         prods.map((p) => ({
                             id_producto: p.id_producto || null,
-                            codigo: p.producto?.codigo || p.codigo_producto || "",
-                            descripcion: p.producto?.nombre || p.descripcion || "Producto",
+                            codigo: p.codigo_producto || p.producto?.codigo || "",
+                            descripcion: p.descripcion || p.producto?.nombre || "Producto",
                             cantidad: String(p.cantidad || 1),
                             unidad: p.unidad_medida || "NIU",
                         }))
@@ -413,10 +413,8 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                     setDetalles(
                         prods.map((p) => ({
                             id_producto: p.id_producto || null,
-                            codigo:
-                                p.producto?.codigo || p.codigo_producto || "",
-                            descripcion:
-                                p.producto?.nombre || p.descripcion || "Producto",
+                            codigo: p.codigo_producto || p.producto?.codigo || "",
+                            descripcion: p.descripcion || p.producto?.nombre || "Producto",
                             cantidad: String(p.cantidad || 1),
                             unidad: p.unidad_medida || "NIU",
                         }))
