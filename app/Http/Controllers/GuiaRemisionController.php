@@ -206,15 +206,6 @@ class GuiaRemisionController extends Controller
                         $guia->refresh();
                         $envio = $this->sunatService->enviarGuiaRemision($guia);
 
-                        // Si el envío fue exitoso y hay ticket, consultar automáticamente
-                        if (($envio['success'] ?? false) && $guia->ticket) {
-                            sleep(2); // Esperar un momento para que SUNAT procese
-                            try {
-                                $ticket = $this->sunatService->consultarTicketGuia($guia);
-                            } catch (\Exception $e) {
-                                $ticket = ['success' => false, 'en_proceso' => true, 'message' => 'Enviado, pero la consulta del ticket está en proceso.'];
-                            }
-                        }
                     } catch (\Exception $e) {
                         Log::warning('SUNAT - No se pudo enviar guía automáticamente', [
                             'guia' => $guia->serie . '-' . $guia->numero,
@@ -260,47 +251,6 @@ class GuiaRemisionController extends Controller
 
         try {
             $resultado = $this->sunatService->enviarGuiaRemision($guia);
-
-            // Si el envío fue exitoso y hay ticket, consultar automáticamente
-            if (($resultado['success'] ?? false) && $guia->fresh()->ticket) {
-                sleep(2);
-                try {
-                    $guia->refresh();
-                    $ticketResult = $this->sunatService->consultarTicketGuia($guia);
-
-                    if ($ticketResult['success'] ?? false) {
-                        return response()->json([
-                            'success' => true,
-                            'message' => $ticketResult['mensaje'] ?? 'Guía aceptada por SUNAT',
-                            'estado' => 'aceptado',
-                        ]);
-                    } elseif ($ticketResult['en_proceso'] ?? false) {
-                        return response()->json([
-                            'success' => true,
-                            'message' => 'Guía enviada. SUNAT aún está procesando, consulte el ticket en unos momentos.',
-                            'estado' => 'enviado',
-                            'en_proceso' => true,
-                        ]);
-                    } else {
-                        return response()->json([
-                            'success' => false,
-                            'message' => $ticketResult['message'] ?? 'Guía rechazada por SUNAT',
-                            'estado' => 'rechazado',
-                        ]);
-                    }
-                } catch (\Exception $e) {
-                    Log::warning('SUNAT - Guía enviada pero falló consulta de ticket', [
-                        'guia' => $guia->serie . '-' . $guia->numero,
-                        'error' => $e->getMessage(),
-                    ]);
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Guía enviada a SUNAT. Consulte el ticket para confirmar el estado.',
-                        'estado' => 'enviado',
-                        'en_proceso' => true,
-                    ]);
-                }
-            }
 
             return response()->json($resultado);
         } catch (\Exception $e) {
@@ -641,14 +591,6 @@ class GuiaRemisionController extends Controller
                         $guia->refresh();
                         $envio = $this->sunatService->enviarGuiaRemision($guia);
 
-                        if (($envio['success'] ?? false) && $guia->ticket) {
-                            sleep(2);
-                            try {
-                                $ticket = $this->sunatService->consultarTicketGuia($guia);
-                            } catch (\Exception $e) {
-                                $ticket = ['success' => false, 'en_proceso' => true, 'message' => 'Enviado, consulta en proceso.'];
-                            }
-                        }
                     } catch (\Exception $e) {
                         $envio = ['success' => false, 'message' => 'XML generado pero no se pudo enviar: ' . $e->getMessage()];
                     }
