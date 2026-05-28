@@ -43,6 +43,7 @@ import {
     PackageSearch,
 } from "lucide-react";
 import { toast } from "@/lib/sweetalert";
+import Swal from "sweetalert2";
 import ClienteAutocomplete from "../shared/ClienteAutocomplete";
 import ProductMultipleSearch from "../shared/ProductMultipleSearch";
 import { consultarDNI, consultarRUC } from "@/services/apisPeru";
@@ -556,6 +557,131 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
             return;
         }
         setErrors({});
+
+        const detallesValidosConf = detalles.filter(
+            (d) => d.descripcion && parseFloat(d.cantidad) > 0
+        );
+        const tipoDocLabel = destinatario.tipo_doc === "6" ? "RUC" : destinatario.tipo_doc === "4" ? "CE" : "DNI";
+        const motivoSel = motivos.find((m) => m.codigo === form.motivo_traslado);
+        const motivoLabel = motivoSel ? `${motivoSel.codigo} - ${motivoSel.descripcion}` : form.motivo_traslado;
+        const modTransporteLabel = form.mod_transporte === "01" ? "Público" : "Privado";
+        const escape = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+        const transporteBloque = form.mod_transporte === "01"
+            ? `
+                <div><span class="text-gray-500">Transportista:</span> <span class="font-medium">${escape(form.transportista_nombre || "—")}</span></div>
+                <div><span class="text-gray-500">RUC:</span> <span class="font-mono">${escape(form.transportista_documento || "—")}</span></div>
+                ${form.transportista_nro_mtc ? `<div><span class="text-gray-500">MTC:</span> <span class="font-mono">${escape(form.transportista_nro_mtc)}</span></div>` : ""}
+                ${form.vehiculo_m1l ? `<div class="text-amber-700 text-xs mt-1">Vehículo M1/L (placa y conductor opcionales)</div>` : ""}
+            `
+            : form.vehiculo_m1l
+                ? `
+                    <div class="text-amber-700 text-xs">Vehículo M1/L (datos opcionales)</div>
+                    ${form.vehiculo_placa ? `<div><span class="text-gray-500">Placa:</span> <span class="font-mono">${escape(form.vehiculo_placa)}</span></div>` : ""}
+                `
+                : `
+                    <div><span class="text-gray-500">Conductor:</span> <span class="font-medium">${escape(`${form.conductor_nombres} ${form.conductor_apellidos}`.trim() || "—")}</span></div>
+                    <div><span class="text-gray-500">DNI:</span> <span class="font-mono">${escape(form.conductor_documento || "—")}</span></div>
+                    <div><span class="text-gray-500">Licencia:</span> <span class="font-mono">${escape(form.conductor_licencia || "—")}</span></div>
+                    <div><span class="text-gray-500">Placa:</span> <span class="font-mono">${escape(form.vehiculo_placa || "—")}</span></div>
+                `;
+
+        const itemsHtml = detallesValidosConf.slice(0, 8).map((d, i) => `
+            <tr class="border-t border-gray-100">
+                <td class="px-2 py-1 text-gray-400">${String(i + 1).padStart(2, "0")}</td>
+                <td class="px-2 py-1 font-mono text-xs">${escape(d.codigo || "—")}</td>
+                <td class="px-2 py-1">${escape(d.descripcion)}</td>
+                <td class="px-2 py-1 text-right">${escape(d.cantidad)} ${escape(d.unidad || "NIU")}</td>
+            </tr>
+        `).join("");
+        const itemsExtra = detallesValidosConf.length > 8
+            ? `<tr><td colspan="4" class="px-2 py-1 text-center text-xs text-gray-500 italic">… y ${detallesValidosConf.length - 8} item(s) más</td></tr>`
+            : "";
+
+        const numeroLabel = isEditing
+            ? `${serie}-${String(numero).padStart(8, "0")}`
+            : (proximoNumero?.numero_completo || "—");
+
+        const html = `
+            <div class="text-left text-sm space-y-3" style="max-height: 60vh; overflow-y: auto;">
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <div class="text-xs uppercase font-semibold text-orange-700 mb-1">Guía</div>
+                    <div class="font-mono font-bold text-base">${escape(numeroLabel)}</div>
+                    <div class="text-xs text-gray-600 mt-1">Fecha traslado: <span class="font-medium">${escape(form.fecha_traslado)}</span> · Motivo: <span class="font-medium">${escape(motivoLabel)}</span></div>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div class="text-xs uppercase font-semibold text-blue-700 mb-1">Destinatario</div>
+                    <div class="font-semibold">${escape(destinatario.nombre)}</div>
+                    <div class="text-xs text-gray-600">${tipoDocLabel}: <span class="font-mono">${escape(destinatario.documento)}</span></div>
+                    <div class="mt-2 pt-2 border-t border-blue-200">
+                        <div class="text-xs uppercase font-semibold text-red-700 mb-1">📍 Dirección de llegada</div>
+                        <div class="font-medium text-gray-900">${escape(destinatario.direccion)}</div>
+                        ${destinatario.ubigeo ? `<div class="text-xs text-gray-500 mt-1">Ubigeo: ${escape(destinatario.ubigeo)}</div>` : ""}
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div class="text-xs uppercase font-semibold text-gray-700 mb-1">📍 Punto de partida</div>
+                    <div class="font-medium text-gray-900">${escape(partida.direccion || "—")}</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        ${escape(partida.departamento || "")}${partida.provincia ? " / " + escape(partida.provincia) : ""}${partida.distrito ? " / " + escape(partida.distrito) : ""}
+                        ${partida.ubigeo ? ` · Ubigeo: ${escape(partida.ubigeo)}` : ""}
+                    </div>
+                </div>
+
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                    <div class="text-xs uppercase font-semibold text-purple-700 mb-1">Transporte (${escape(modTransporteLabel)})</div>
+                    ${transporteBloque}
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs uppercase font-semibold text-amber-700">Items (${detallesValidosConf.length})</div>
+                        <div class="text-xs text-gray-600">Peso: <span class="font-bold">${escape(form.peso_total)} ${escape(form.und_peso_total)}</span></div>
+                    </div>
+                    <table class="w-full text-xs">
+                        <thead>
+                            <tr class="text-gray-500">
+                                <th class="px-2 py-1 text-left w-8">#</th>
+                                <th class="px-2 py-1 text-left">Código</th>
+                                <th class="px-2 py-1 text-left">Descripción</th>
+                                <th class="px-2 py-1 text-right">Cant.</th>
+                            </tr>
+                        </thead>
+                        <tbody>${itemsHtml}${itemsExtra}</tbody>
+                    </table>
+                </div>
+
+                ${form.observaciones || form.descripcion_motivo ? `
+                <div class="bg-white border border-gray-200 rounded-lg p-3 text-xs">
+                    ${form.descripcion_motivo ? `<div><span class="text-gray-500">Detalle motivo:</span> ${escape(form.descripcion_motivo)}</div>` : ""}
+                    ${form.observaciones ? `<div class="${form.descripcion_motivo ? "mt-1" : ""}"><span class="text-gray-500">Observaciones:</span> ${escape(form.observaciones)}</div>` : ""}
+                </div>
+                ` : ""}
+            </div>
+        `;
+
+        const result = await Swal.fire({
+            title: isEditing ? "Confirmar actualización" : "Confirmar creación de guía",
+            html,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: isEditing ? "Sí, actualizar" : "Sí, crear y enviar",
+            cancelButtonText: "Revisar",
+            confirmButtonColor: "#f97316",
+            cancelButtonColor: "#6b7280",
+            width: "640px",
+            focusCancel: true,
+            customClass: {
+                popup: "rounded-2xl shadow-2xl",
+                confirmButton: "px-6 py-2.5 rounded-lg",
+                cancelButton: "px-6 py-2.5 rounded-lg",
+                htmlContainer: "text-left",
+            },
+        });
+
+        if (!result.isConfirmed) return;
 
         setSubmitting(true);
         try {
