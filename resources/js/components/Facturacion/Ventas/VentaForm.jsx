@@ -299,7 +299,9 @@ export default function VentaForm({ ventaId = null }) {
                             </span>
                         </nav>
                         <h1 className="text-2xl font-bold text-gray-900">
-                            {isEditing ? "Editar Venta" : "Nueva Venta"}
+                            {isEditing
+                                ? (formData.id_tido === "6" ? "Editar Nota de Venta" : formData.id_tido === "2" ? "Editar Factura" : "Editar Boleta")
+                                : (formData.id_tido === "6" ? "Nueva Nota de Venta" : formData.id_tido === "2" ? "Nueva Factura" : "Nueva Boleta")}
                         </h1>
                     </div>
                     <div className="flex gap-3">

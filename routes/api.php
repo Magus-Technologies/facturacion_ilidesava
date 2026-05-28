@@ -221,6 +221,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::post('ventas/{id}/anular', [\App\Http\Controllers\VentasController::class, 'anular'])->middleware('permission:ventas.delete');
     Route::get('ventas/{id}/preview-descontar-stock', [\App\Http\Controllers\VentasController::class, 'previewDescontarStock'])->middleware('permission:ventas.edit');
     Route::post('ventas/{id}/descontar-stock', [\App\Http\Controllers\VentasController::class, 'descontarStock'])->middleware('permission:ventas.edit');
+    Route::get('ventas/{id}/historial-stock', [\App\Http\Controllers\VentasController::class, 'historialStock'])->middleware('permission:ventas.view');
 
     // Compras
     Route::get('compras', [\App\Http\Controllers\CompraController::class, 'index'])->middleware('permission:compras.view');

@@ -98,6 +98,17 @@ class ProductoController extends Controller
                     : 'Producto creado exitosamente',
                 'data' => $producto,
             ], 201);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->errorInfo[1] === 1062) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya existe un producto con ese código en este almacén. Usá un código diferente.',
+                ], 422);
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear producto: ' . $e->getMessage()
+            ], 500);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -127,6 +138,17 @@ class ProductoController extends Controller
                 'data' => $resultado['producto'],
                 'sincronizado' => $resultado['sincronizado'],
             ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->errorInfo[1] === 1062) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya existe un producto con ese código en este almacén. Usá un código diferente.',
+                ], 422);
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar producto: ' . $e->getMessage()
+            ], 500);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

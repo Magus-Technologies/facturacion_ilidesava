@@ -723,22 +723,31 @@ class VentasController extends Controller
                             if ($productoMadre) {
                                 $stockAnterior = (float) $productoMadre->cantidad;
                                 $productoMadre->increment('cantidad', $detalle->cantidad);
-                                MovimientoStock::create([
-                                    'id_producto' => $detalle->id_producto,
-                                    'tipo_movimiento' => 'entrada',
-                                    'cantidad' => $detalle->cantidad,
-                                    'stock_anterior' => $stockAnterior,
-                                    'stock_nuevo' => $stockAnterior + $detalle->cantidad,
-                                    'tipo_documento' => 'edicion_venta',
-                                    'id_documento' => $venta->id_venta,
-                                    'documento_referencia' => $docRef,
-                                    'motivo' => 'Devolución a almacén madre por edición de nota de venta',
-                                    'observaciones' => 'Producto madre: ' . $productoMadre->codigo,
-                                    'id_almacen' => 0,
-                                    'id_empresa' => $user->id_empresa,
-                                    'id_usuario' => $user->id,
-                                    'fecha_movimiento' => now(),
-                                ]);
+
+                                // movimientos_stock tiene FK a productos — resolver ID válido
+                                $idMovimiento = DB::table('productos')
+                                    ->where('codigo', $productoMadre->codigo)
+                                    ->where('id_empresa', $user->id_empresa)
+                                    ->value('id_producto');
+
+                                if ($idMovimiento) {
+                                    MovimientoStock::create([
+                                        'id_producto' => $idMovimiento,
+                                        'tipo_movimiento' => 'entrada',
+                                        'cantidad' => $detalle->cantidad,
+                                        'stock_anterior' => $stockAnterior,
+                                        'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                                        'tipo_documento' => 'edicion_venta',
+                                        'id_documento' => $venta->id_venta,
+                                        'documento_referencia' => $docRef,
+                                        'motivo' => 'Devolución a almacén madre por edición de nota de venta',
+                                        'observaciones' => 'Producto madre: ' . $productoMadre->codigo,
+                                        'id_almacen' => 0,
+                                        'id_empresa' => $user->id_empresa,
+                                        'id_usuario' => $user->id,
+                                        'fecha_movimiento' => now(),
+                                    ]);
+                                }
                             }
                         }
                     }
@@ -1338,6 +1347,75 @@ class VentasController extends Controller
                 'success' => false,
                 'message' => 'Error al obtener preview: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Historial de stock descontado para una nota de venta (solo lectura).
+     * Lee los detalles de la venta y resuelve el stock actual en productos_madre.
+     */
+    public function historialStock(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $venta = Venta::with('productosVentas')->where('id_empresa', $user->id_empresa)->findOrFail($id);
+
+            $empresa = \App\Models\Empresa::find($user->id_empresa);
+            $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
+
+            $items = [];
+            foreach ($venta->productosVentas as $detalle) {
+                $nombre = $detalle->descripcion ?? null;
+                $codigo = $detalle->codigo_producto ?? null;
+                $stockActual = null;
+
+                if ($usaAlmacenPropio) {
+                    $prod = \App\Models\Producto::where('id_producto', $detalle->id_producto)
+                        ->where('id_empresa', $user->id_empresa)
+                        ->where('almacen', '2')
+                        ->first();
+                    if ($prod) {
+                        $nombre = $nombre ?: $prod->nombre;
+                        $codigo = $codigo ?: $prod->codigo;
+                        $stockActual = $prod->cantidad;
+                    }
+                } else {
+                    // Intentar por código primero
+                    $codigoProd = DB::table('productos')
+                        ->where('id_producto', $detalle->id_producto)
+                        ->value('codigo');
+
+                    $madre = null;
+                    if ($codigoProd) {
+                        $madre = \App\Models\ProductoMadre::where('codigo', $codigoProd)->first();
+                    }
+                    if (!$madre) {
+                        $madre = \App\Models\ProductoMadre::find($detalle->id_producto);
+                    }
+
+                    if ($madre) {
+                        $nombre = $nombre ?: $madre->nombre;
+                        $codigo = $codigo ?: $madre->codigo;
+                        $stockActual = $madre->cantidad;
+                    }
+                }
+
+                $items[] = [
+                    'codigo'          => $codigo,
+                    'nombre'          => $nombre,
+                    'cantidad_venta'  => (float) $detalle->cantidad,
+                    'stock_actual'    => $stockActual,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $items,
+                'stock_real_descontado' => (bool) $venta->stock_real_descontado,
+                'fecha_venta' => $venta->fecha_emision,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
