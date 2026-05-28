@@ -959,6 +959,11 @@ class SunatService
                 'status' => $apiEx->hasResponse() ? $apiEx->getResponse()->getStatusCode() : null,
                 'response' => $responseBody,
             ]);
+            $guia->update([
+                'estado' => 'rechazado',
+                'codigo_sunat' => $apiEx->hasResponse() ? (string) $apiEx->getResponse()->getStatusCode() : 'API',
+                'mensaje_sunat' => mb_substr($responseBody, 0, 1000),
+            ]);
             throw new \Exception("SUNAT rechazó la guía: {$responseBody}");
         }
 
