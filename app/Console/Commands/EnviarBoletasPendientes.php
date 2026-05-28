@@ -46,22 +46,29 @@ class EnviarBoletasPendientes extends Command
 
             $this->info("Empresa {$empresa->ruc}: {$boletas->count()} boleta(s) pendiente(s).");
 
-            try {
-                $fechaResumen = now()->format('Y-m-d');
-                $this->line("Enviando resumen diario para {$boletas->count()} boleta(s)...");
-                $resultado = $sunatService->resumenDiario($empresa, $boletas->all(), $fechaResumen);
+            // Agrupar por fecha de emisión: el Resumen Diario de SUNAT exige boletas de la misma fecha
+            $boletasPorFecha = $boletas->groupBy(function ($b) {
+                return \Illuminate\Support\Carbon::parse($b->fecha_emision)->format('Y-m-d');
+            });
 
-                if (!empty($resultado['success'])) {
-                    $this->info("  → Resumen enviado. Ticket: {$resultado['ticket']}");
-                } else {
-                    $this->error("  → Falló el resumen: " . ($resultado['message'] ?? 'Sin detalle'));
+            foreach ($boletasPorFecha as $fechaEmision => $boletasFecha) {
+                try {
+                    $this->line("Enviando resumen para {$fechaEmision} con {$boletasFecha->count()} boleta(s)...");
+                    $resultado = $sunatService->resumenDiario($empresa, $boletasFecha->all(), $fechaEmision);
+
+                    if (!empty($resultado['success'])) {
+                        $this->info("  → Resumen enviado ({$fechaEmision}). Ticket: {$resultado['ticket']}");
+                    } else {
+                        $this->error("  → Falló el resumen ({$fechaEmision}): " . ($resultado['message'] ?? 'Sin detalle'));
+                    }
+                } catch (\Exception $e) {
+                    Log::error('SUNAT - Error al enviar boletas en task programada', [
+                        'empresa_id' => $empresa->id_empresa,
+                        'fecha' => $fechaEmision,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $this->error("  → Error ({$fechaEmision}): " . $e->getMessage());
                 }
-            } catch (\Exception $e) {
-                Log::error('SUNAT - Error al enviar boletas en task programada', [
-                    'empresa_id' => $empresa->id_empresa,
-                    'error' => $e->getMessage(),
-                ]);
-                $this->error("  → Error: " . $e->getMessage());
             }
         }
 
