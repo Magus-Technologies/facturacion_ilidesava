@@ -1351,36 +1351,68 @@ class VentasController extends Controller
     }
 
     /**
-     * Historial real de movimientos de stock para una venta (solo lectura)
+     * Historial de stock descontado para una nota de venta (solo lectura).
+     * Lee los detalles de la venta y resuelve el stock actual en productos_madre.
      */
     public function historialStock(Request $request, int $id): JsonResponse
     {
         try {
             $user = $request->user();
-            $venta = Venta::where('id_empresa', $user->id_empresa)->findOrFail($id);
+            $venta = Venta::with('productosVentas')->where('id_empresa', $user->id_empresa)->findOrFail($id);
 
-            $movimientos = DB::table('movimientos_stock as m')
-                ->leftJoin('productos as p', 'p.id_producto', '=', 'm.id_producto')
-                ->where('m.id_documento', $id)
-                ->whereIn('m.tipo_documento', ['almacen_madre', 'edicion_venta', 'eliminacion_venta'])
-                ->select([
-                    'm.tipo_movimiento',
-                    'm.cantidad',
-                    'm.stock_anterior',
-                    'm.stock_nuevo',
-                    'm.motivo',
-                    'm.observaciones',
-                    'm.fecha_movimiento',
-                    'p.nombre',
-                    'p.codigo',
-                ])
-                ->orderBy('m.id_movimiento')
-                ->get();
+            $empresa = \App\Models\Empresa::find($user->id_empresa);
+            $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
+
+            $items = [];
+            foreach ($venta->productosVentas as $detalle) {
+                $nombre = $detalle->descripcion ?? null;
+                $codigo = $detalle->codigo_producto ?? null;
+                $stockActual = null;
+
+                if ($usaAlmacenPropio) {
+                    $prod = \App\Models\Producto::where('id_producto', $detalle->id_producto)
+                        ->where('id_empresa', $user->id_empresa)
+                        ->where('almacen', '2')
+                        ->first();
+                    if ($prod) {
+                        $nombre = $nombre ?: $prod->nombre;
+                        $codigo = $codigo ?: $prod->codigo;
+                        $stockActual = $prod->cantidad;
+                    }
+                } else {
+                    // Intentar por código primero
+                    $codigoProd = DB::table('productos')
+                        ->where('id_producto', $detalle->id_producto)
+                        ->value('codigo');
+
+                    $madre = null;
+                    if ($codigoProd) {
+                        $madre = \App\Models\ProductoMadre::where('codigo', $codigoProd)->first();
+                    }
+                    if (!$madre) {
+                        $madre = \App\Models\ProductoMadre::find($detalle->id_producto);
+                    }
+
+                    if ($madre) {
+                        $nombre = $nombre ?: $madre->nombre;
+                        $codigo = $codigo ?: $madre->codigo;
+                        $stockActual = $madre->cantidad;
+                    }
+                }
+
+                $items[] = [
+                    'codigo'          => $codigo,
+                    'nombre'          => $nombre,
+                    'cantidad_venta'  => (float) $detalle->cantidad,
+                    'stock_actual'    => $stockActual,
+                ];
+            }
 
             return response()->json([
                 'success' => true,
-                'data' => $movimientos,
+                'data' => $items,
                 'stock_real_descontado' => (bool) $venta->stock_real_descontado,
+                'fecha_venta' => $venta->fecha_emision,
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);

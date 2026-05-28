@@ -109,50 +109,34 @@ export default function DescontarStockModal({
                     <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                 </div>
             ) : soloVer ? (
-                /* ── Modo historial real ── */
+                /* ── Modo historial: productos descontados en esta venta ── */
                 <div className="space-y-3">
                     {historial.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-8">No se encontraron movimientos registrados.</p>
+                        <p className="text-sm text-gray-500 text-center py-8">No se encontraron productos en esta venta.</p>
                     ) : (
                         <div className="overflow-x-auto rounded-lg border border-gray-200">
                             <table className="w-full text-sm">
                                 <thead className="bg-gray-50">
                                     <tr>
+                                        <th className="text-left px-3 py-2 font-medium text-gray-600">Código</th>
                                         <th className="text-left px-3 py-2 font-medium text-gray-600">Producto</th>
-                                        <th className="text-center px-3 py-2 font-medium text-gray-600">Tipo</th>
-                                        <th className="text-center px-3 py-2 font-medium text-gray-600">Cantidad</th>
-                                        <th className="text-center px-3 py-2 font-medium text-gray-600">Antes</th>
-                                        <th className="text-center px-3 py-2 font-medium text-gray-600">Después</th>
-                                        <th className="text-left px-3 py-2 font-medium text-gray-600">Fecha</th>
+                                        <th className="text-center px-3 py-2 font-medium text-gray-600">Descontado</th>
+                                        <th className="text-center px-3 py-2 font-medium text-gray-600">Stock actual</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {historial.map((m, idx) => (
+                                    {historial.map((item, idx) => (
                                         <tr key={idx}>
-                                            <td className="px-3 py-2">
-                                                <p className="font-medium text-gray-900">{m.nombre || m.observaciones || "—"}</p>
-                                                {m.codigo && <p className="text-xs text-gray-400 font-mono">{m.codigo}</p>}
-                                            </td>
+                                            <td className="px-3 py-2 font-mono text-xs text-gray-500">{item.codigo || "—"}</td>
+                                            <td className="px-3 py-2 text-gray-900">{item.nombre || "—"}</td>
                                             <td className="px-3 py-2 text-center">
-                                                {m.tipo_movimiento === "salida" ? (
-                                                    <span className="inline-flex items-center gap-1 text-red-600 font-medium">
-                                                        <ArrowDown className="h-3 w-3" /> Salida
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 text-green-600 font-medium">
-                                                        <ArrowUp className="h-3 w-3" /> Entrada
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-3 py-2 text-center font-bold">{m.cantidad}</td>
-                                            <td className="px-3 py-2 text-center text-gray-500">{m.stock_anterior}</td>
-                                            <td className="px-3 py-2 text-center font-medium">
-                                                <span className={m.stock_nuevo < m.stock_anterior ? "text-red-600" : "text-green-600"}>
-                                                    {m.stock_nuevo}
+                                                <span className="inline-flex items-center gap-1 text-red-600 font-bold">
+                                                    <ArrowDown className="h-3 w-3" />
+                                                    {item.cantidad_venta}
                                                 </span>
                                             </td>
-                                            <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
-                                                {new Date(m.fecha_movimiento).toLocaleString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                            <td className="px-3 py-2 text-center font-medium text-gray-700">
+                                                {item.stock_actual ?? "—"}
                                             </td>
                                         </tr>
                                     ))}
