@@ -77,15 +77,21 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
             const fecha = row.original.fecha_emision;
             const createdAt = row.original.created_at;
             if (!fecha) return "-";
-            const fechaStr = new Date(fecha + "T12:00:00").toLocaleDateString("es-PE", {
+            const fechaDate = new Date(fecha);
+            const fechaStr = isNaN(fechaDate) ? fecha : fechaDate.toLocaleDateString("es-PE", {
                 day: "2-digit",
                 month: "2-digit",
                 year: "numeric",
+                timeZone: "America/Lima",
             });
             let horaStr = null;
             if (createdAt) {
                 const d = new Date(String(createdAt).replace(" ", "T"));
-                horaStr = isNaN(d) ? null : d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+                horaStr = isNaN(d) ? null : d.toLocaleTimeString("es-PE", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "America/Lima",
+                });
             }
             return (
                 <div className="text-sm">
