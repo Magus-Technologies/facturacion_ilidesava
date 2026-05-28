@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\ComprobantesAutoEnvioUpdated;
 use App\Models\Empresa;
 use App\Models\GuiaRemision;
 use App\Models\GuiaRemisionDetalle;
@@ -199,27 +198,11 @@ class GuiaRemisionController extends Controller
 
                 $resultado = $this->sunatService->generarGuiaRemisionXml($guia);
 
-                if ($resultado['success'] ?? false) {
-                    ComprobantesAutoEnvioUpdated::dispatch();
-                    try {
-                        $guia->refresh();
-                        $envio = $this->sunatService->enviarGuiaRemision($guia);
-                        if (!empty($envio['success'])) {
-                            ComprobantesAutoEnvioUpdated::dispatch();
-                        }
-                    } catch (\Exception $e) {
-                        $envio = ['success' => false, 'message' => 'XML generado pero no se pudo enviar: ' . $e->getMessage()];
-                    }
-                }
-
-                // Enviar automáticamente a SUNAT después de generar el XML
                 $envio = null;
-                $ticket = null;
                 if ($resultado['success'] ?? false) {
                     try {
                         $guia->refresh();
                         $envio = $this->sunatService->enviarGuiaRemision($guia);
-
                     } catch (\Exception $e) {
                         Log::warning('SUNAT - No se pudo enviar guía automáticamente', [
                             'guia' => $guia->serie . '-' . $guia->numero,
@@ -236,7 +219,7 @@ class GuiaRemisionController extends Controller
                     'data' => $guia,
                     'xml' => $resultado,
                     'envio' => $envio,
-                    'ticket' => $ticket,
+                    'ticket' => $envio['ticket'] ?? null,
                 ], 201);
             });
         } catch (\Exception $e) {
@@ -265,10 +248,6 @@ class GuiaRemisionController extends Controller
 
         try {
             $resultado = $this->sunatService->enviarGuiaRemision($guia);
-
-            if (!empty($resultado['success'])) {
-                ComprobantesAutoEnvioUpdated::dispatch();
-            }
 
             return response()->json($resultado);
         } catch (\Exception $e) {
@@ -603,12 +582,10 @@ class GuiaRemisionController extends Controller
                 $resultado = $this->sunatService->generarGuiaRemisionXml($guia);
 
                 $envio = null;
-                $ticket = null;
                 if ($resultado['success'] ?? false) {
                     try {
                         $guia->refresh();
                         $envio = $this->sunatService->enviarGuiaRemision($guia);
-
                     } catch (\Exception $e) {
                         $envio = ['success' => false, 'message' => 'XML generado pero no se pudo enviar: ' . $e->getMessage()];
                     }
@@ -621,7 +598,7 @@ class GuiaRemisionController extends Controller
                     'data' => $guia,
                     'xml' => $resultado,
                     'envio' => $envio,
-                    'ticket' => $ticket,
+                    'ticket' => $envio['ticket'] ?? null,
                 ]);
             });
         } catch (\Exception $e) {

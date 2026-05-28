@@ -84,8 +84,9 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
         return () => clearInterval(intervalId);
     }, []);
 
+    const hasCountdown = globalCountdown > 0;
     useEffect(() => {
-        if (globalCountdown <= 0) return;
+        if (!hasCountdown) return;
         const timer = setInterval(() => {
             setGlobalCountdown(prev => (prev > 0 ? prev - 1 : 0));
             setCountdownFacturas(prev => (prev > 0 ? prev - 1 : 0));
@@ -93,7 +94,7 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
             setCountdownGuias(prev => (prev > 0 ? prev - 1 : 0));
         }, 1000);
         return () => clearInterval(timer);
-    }, []);
+    }, [hasCountdown]);
 
     const formatCountdown = (seconds) => {
         const h = Math.floor(seconds / 3600);
@@ -101,17 +102,6 @@ export default function Header({ toggleSidebar, isSidebarOpen, isCollapsed }) {
         const s = seconds % 60;
         return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
-
-    useEffect(() => {
-        if (!window.Echo) return;
-        const channel = window.Echo.private('notificaciones');
-        channel.listen('.ComprobantesAutoEnvioUpdated', () => {
-            fetchPendingAutoSendCount();
-        });
-        return () => {
-            channel.stopListening('.ComprobantesAutoEnvioUpdated');
-        };
-    }, []);
 
     const handleCambiarEmpresa = async (empresa) => {
         setShowEmpresaMenu(false);
