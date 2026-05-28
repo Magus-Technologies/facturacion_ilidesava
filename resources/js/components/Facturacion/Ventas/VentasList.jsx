@@ -31,6 +31,7 @@ export default function VentasList() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [sunatLoadingId, setSunatLoadingId] = useState(null);
     const [stockModalVenta, setStockModalVenta] = useState(null);
+    const [stockVerVenta, setStockVerVenta] = useState(null);
     const [whatsAppModal, setWhatsAppModal] = useState({ open: false, mensaje: "", clienteNombre: "" });
 
     const handleGenerarXml = async (venta) => {
@@ -136,6 +137,10 @@ export default function VentasList() {
         setStockModalVenta(venta);
     };
 
+    const handleVerStock = (venta) => {
+        setStockVerVenta(venta);
+    };
+
     const handleWhatsApp = (venta) => {
         const token = localStorage.getItem("auth_token");
         const serie = venta.serie;
@@ -184,6 +189,7 @@ export default function VentasList() {
             handleDescargarCdr,
             handleGenerarGuia,
             handleDescontarStock,
+            handleVerStock,
             handleWhatsApp,
             handleEditar,
             handleEliminar,
@@ -247,6 +253,14 @@ export default function VentasList() {
                 onClose={() => setStockModalVenta(null)}
                 venta={stockModalVenta}
                 onConfirm={confirmarDescontarStock}
+            />
+
+            <DescontarStockModal
+                isOpen={!!stockVerVenta}
+                onClose={() => setStockVerVenta(null)}
+                venta={stockVerVenta}
+                onConfirm={() => {}}
+                soloVer
             />
 
             <WhatsAppModal

@@ -36,7 +36,7 @@ class ProductoRequest extends FormRequest
             'usar_multiprecio' => 'nullable|in:0,1',
             'moneda' => 'nullable|in:PEN,USD',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'replicar_empresas' => 'nullable|boolean',
+            'replicar_empresas' => 'nullable|in:0,1,true,false',
         ];
     }
 

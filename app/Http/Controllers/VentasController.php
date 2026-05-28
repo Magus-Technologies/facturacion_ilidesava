@@ -723,22 +723,31 @@ class VentasController extends Controller
                             if ($productoMadre) {
                                 $stockAnterior = (float) $productoMadre->cantidad;
                                 $productoMadre->increment('cantidad', $detalle->cantidad);
-                                MovimientoStock::create([
-                                    'id_producto' => $detalle->id_producto,
-                                    'tipo_movimiento' => 'entrada',
-                                    'cantidad' => $detalle->cantidad,
-                                    'stock_anterior' => $stockAnterior,
-                                    'stock_nuevo' => $stockAnterior + $detalle->cantidad,
-                                    'tipo_documento' => 'edicion_venta',
-                                    'id_documento' => $venta->id_venta,
-                                    'documento_referencia' => $docRef,
-                                    'motivo' => 'Devolución a almacén madre por edición de nota de venta',
-                                    'observaciones' => 'Producto madre: ' . $productoMadre->codigo,
-                                    'id_almacen' => 0,
-                                    'id_empresa' => $user->id_empresa,
-                                    'id_usuario' => $user->id,
-                                    'fecha_movimiento' => now(),
-                                ]);
+
+                                // movimientos_stock tiene FK a productos — resolver ID válido
+                                $idMovimiento = DB::table('productos')
+                                    ->where('codigo', $productoMadre->codigo)
+                                    ->where('id_empresa', $user->id_empresa)
+                                    ->value('id_producto');
+
+                                if ($idMovimiento) {
+                                    MovimientoStock::create([
+                                        'id_producto' => $idMovimiento,
+                                        'tipo_movimiento' => 'entrada',
+                                        'cantidad' => $detalle->cantidad,
+                                        'stock_anterior' => $stockAnterior,
+                                        'stock_nuevo' => $stockAnterior + $detalle->cantidad,
+                                        'tipo_documento' => 'edicion_venta',
+                                        'id_documento' => $venta->id_venta,
+                                        'documento_referencia' => $docRef,
+                                        'motivo' => 'Devolución a almacén madre por edición de nota de venta',
+                                        'observaciones' => 'Producto madre: ' . $productoMadre->codigo,
+                                        'id_almacen' => 0,
+                                        'id_empresa' => $user->id_empresa,
+                                        'id_usuario' => $user->id,
+                                        'fecha_movimiento' => now(),
+                                    ]);
+                                }
                             }
                         }
                     }
@@ -1338,6 +1347,43 @@ class VentasController extends Controller
                 'success' => false,
                 'message' => 'Error al obtener preview: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Historial real de movimientos de stock para una venta (solo lectura)
+     */
+    public function historialStock(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $venta = Venta::where('id_empresa', $user->id_empresa)->findOrFail($id);
+
+            $movimientos = DB::table('movimientos_stock as m')
+                ->leftJoin('productos as p', 'p.id_producto', '=', 'm.id_producto')
+                ->where('m.id_documento', $id)
+                ->whereIn('m.tipo_documento', ['almacen_madre', 'edicion_venta', 'eliminacion_venta'])
+                ->select([
+                    'm.tipo_movimiento',
+                    'm.cantidad',
+                    'm.stock_anterior',
+                    'm.stock_nuevo',
+                    'm.motivo',
+                    'm.observaciones',
+                    'm.fecha_movimiento',
+                    'p.nombre',
+                    'p.codigo',
+                ])
+                ->orderBy('m.id_movimiento')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $movimientos,
+                'stock_real_descontado' => (bool) $venta->stock_real_descontado,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 

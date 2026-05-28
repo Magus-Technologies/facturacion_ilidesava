@@ -421,9 +421,12 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                     </DropdownMenuItem>
                                 )}
                                 {!estaAnulada && !ocultarStock && venta.stock_real_descontado && (
-                                    <DropdownMenuItem disabled className="text-green-600 opacity-100">
+                                    <DropdownMenuItem
+                                        onClick={() => handlers.handleVerStock && handlers.handleVerStock(venta)}
+                                        className="text-green-600 focus:bg-green-50 focus:text-green-700"
+                                    >
                                         <PackageCheck className="mr-2 h-4 w-4" />
-                                        Ya descontado
+                                        Ver stock descontado
                                     </DropdownMenuItem>
                                 )}
                                 {!estaAnulada && !ocultarStock && !venta.stock_real_descontado && handlers.handleDescontarStock && (
