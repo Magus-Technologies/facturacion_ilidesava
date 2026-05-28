@@ -75,15 +75,25 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
         header: "Fecha",
         cell: ({ row }) => {
             const fecha = row.original.fecha_emision;
+            const createdAt = row.original.created_at;
             if (!fecha) return "-";
+            const fechaStr = new Date(fecha + "T12:00:00").toLocaleDateString("es-PE", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+            });
+            let horaStr = null;
+            if (createdAt) {
+                const d = new Date(createdAt);
+                horaStr = d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+            }
             return (
-                <span className="text-sm text-gray-600">
-                    {new Date(fecha).toLocaleDateString("es-PE", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                    })}
-                </span>
+                <div className="text-sm">
+                    <span className="text-gray-700">{fechaStr}</span>
+                    {horaStr && (
+                        <span className="block text-xs text-gray-400">{horaStr}</span>
+                    )}
+                </div>
             );
         },
     },
