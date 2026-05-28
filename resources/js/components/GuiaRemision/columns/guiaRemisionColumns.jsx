@@ -84,8 +84,8 @@ export const getGuiaRemisionColumns = (handlers, enviandoId = null) => [
             });
             let horaStr = null;
             if (createdAt) {
-                const d = new Date(createdAt);
-                horaStr = d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+                const d = new Date(String(createdAt).replace(" ", "T"));
+                horaStr = isNaN(d) ? null : d.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
             }
             return (
                 <div className="text-sm">
