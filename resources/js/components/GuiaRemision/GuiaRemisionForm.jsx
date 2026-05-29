@@ -667,7 +667,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
             html,
             icon: "question",
             showCancelButton: true,
-            confirmButtonText: isEditing ? "Sí, actualizar" : "Sí, crear y enviar",
+            confirmButtonText: isEditing ? "Sí, actualizar" : "Sí, crear",
             cancelButtonText: "Revisar",
             confirmButtonColor: "#f97316",
             cancelButtonColor: "#6b7280",

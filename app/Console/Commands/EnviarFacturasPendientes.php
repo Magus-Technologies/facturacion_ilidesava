@@ -10,12 +10,18 @@ use Illuminate\Support\Facades\Log;
 
 class EnviarFacturasPendientes extends Command
 {
-    protected $signature = 'sunat:enviar-facturas-pendientes {--empresa= : RUC de la empresa a procesar (opcional, procesa todas si se omite)}';
+    protected $signature = 'sunat:enviar-facturas-pendientes {--empresa= : RUC de la empresa a procesar (opcional, procesa todas si se omite)} {--dry-run : Simula el proceso sin enviar nada a SUNAT}';
 
     protected $description = 'Enviar automáticamente facturas pendientes a SUNAT';
 
     public function handle(SunatService $sunatService): int
     {
+        $dryRun = $this->option('dry-run');
+
+        if ($dryRun) {
+            $this->warn('*** MODO DRY-RUN: no se enviará nada a SUNAT ***');
+        }
+
         $this->info('Buscando facturas pendientes para enviar...');
 
         $rucFiltro = $this->option('empresa');
@@ -38,6 +44,8 @@ class EnviarFacturasPendientes extends Command
                 ->where('estado', '!=', '2')
                 ->where('estado', '!=', 'A')
                 ->whereHas('tipoDocumento', fn ($q) => $q->where('cod_sunat', '01'))
+                ->orderBy('serie')
+                ->orderBy('numero')
                 ->get();
 
             if ($facturas->isEmpty()) {
@@ -51,18 +59,31 @@ class EnviarFacturasPendientes extends Command
                 try {
                     // Generar el XML si aún no existe
                     if (empty($factura->xml_url) && empty($factura->nombre_xml)) {
-                        $this->line("Generando XML factura {$factura->serie}-{$factura->numero}...");
-                        $xml = $sunatService->generarXml($factura);
-                        if (empty($xml['success'])) {
-                            $this->error("  → No se pudo generar XML: " . ($xml['message'] ?? 'Sin detalle'));
-                            continue;
+                        if ($dryRun) {
+                            $this->line("  [DRY-RUN] Generaría XML para factura {$factura->serie}-{$factura->numero}.");
+                        } else {
+                            $this->line("Generando XML factura {$factura->serie}-{$factura->numero}...");
+                            $xml = $sunatService->generarXml($factura);
+                            if (empty($xml['success'])) {
+                                $this->error("  → No se pudo generar XML: " . ($xml['message'] ?? 'Sin detalle'));
+                                continue;
+                            }
+                            $factura->update([
+                                'hash_cpe' => $xml['hash'],
+                                'xml_url' => $xml['xml_url'],
+                                'nombre_xml' => $xml['nombre_archivo'],
+                            ]);
+                            $factura->refresh();
                         }
-                        $factura->update([
-                            'hash_cpe' => $xml['hash'],
-                            'xml_url' => $xml['xml_url'],
-                            'nombre_xml' => $xml['nombre_archivo'],
-                        ]);
-                        $factura->refresh();
+                    } else {
+                        if ($dryRun) {
+                            $this->line("  [OK] Ya tiene XML: {$factura->nombre_xml}");
+                        }
+                    }
+
+                    if ($dryRun) {
+                        $this->info("  [DRY-RUN] Enviaría factura {$factura->serie}-{$factura->numero} a SUNAT.");
+                        continue;
                     }
 
                     $this->line("Enviando factura {$factura->serie}-{$factura->numero}...");

@@ -10,12 +10,18 @@ use Illuminate\Support\Facades\Log;
 
 class EnviarBoletasPendientes extends Command
 {
-    protected $signature = 'sunat:enviar-boletas-pendientes {--empresa= : RUC de la empresa a procesar (opcional, procesa todas si se omite)}';
+    protected $signature = 'sunat:enviar-boletas-pendientes {--empresa= : RUC de la empresa a procesar (opcional, procesa todas si se omite)} {--dry-run : Simula el proceso sin enviar nada a SUNAT}';
 
     protected $description = 'Enviar automáticamente boletas pendientes a SUNAT via Resumen Diario';
 
     public function handle(SunatService $sunatService): int
     {
+        $dryRun = $this->option('dry-run');
+
+        if ($dryRun) {
+            $this->warn('*** MODO DRY-RUN: no se enviará nada a SUNAT ***');
+        }
+
         $this->info('Buscando boletas pendientes para enviar...');
 
         $rucFiltro = $this->option('empresa');
@@ -38,6 +44,8 @@ class EnviarBoletasPendientes extends Command
                 ->where('estado', '!=', '2')
                 ->where('estado', '!=', 'A')
                 ->whereHas('tipoDocumento', fn ($q) => $q->where('cod_sunat', '03'))
+                ->orderBy('serie')
+                ->orderBy('numero')
                 ->get();
 
             if ($boletas->isEmpty()) {
@@ -50,6 +58,13 @@ class EnviarBoletasPendientes extends Command
             // Generar el XML individual de cada boleta que aún no lo tenga
             foreach ($boletas as $boleta) {
                 if (!empty($boleta->xml_url) || !empty($boleta->nombre_xml)) {
+                    if ($dryRun) {
+                        $this->line("  [OK] Boleta {$boleta->serie}-{$boleta->numero} ya tiene XML.");
+                    }
+                    continue;
+                }
+                if ($dryRun) {
+                    $this->line("  [DRY-RUN] Generaría XML para boleta {$boleta->serie}-{$boleta->numero}.");
                     continue;
                 }
                 try {
@@ -79,6 +94,11 @@ class EnviarBoletasPendientes extends Command
             });
 
             foreach ($boletasPorFecha as $fechaEmision => $boletasFecha) {
+                if ($dryRun) {
+                    $this->info("  [DRY-RUN] Enviaría Resumen Diario de {$fechaEmision} con {$boletasFecha->count()} boleta(s): " .
+                        $boletasFecha->map(fn ($b) => "{$b->serie}-{$b->numero}")->implode(', '));
+                    continue;
+                }
                 try {
                     $this->line("Enviando resumen para {$fechaEmision} con {$boletasFecha->count()} boleta(s)...");
                     $resultado = $sunatService->resumenDiario($empresa, $boletasFecha->all(), $fechaEmision);
