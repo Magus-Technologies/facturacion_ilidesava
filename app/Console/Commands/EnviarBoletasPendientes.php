@@ -19,7 +19,7 @@ class EnviarBoletasPendientes extends Command
         $this->info('Buscando boletas pendientes para enviar...');
 
         $rucFiltro = $this->option('empresa');
-        $query = Empresa::where('activo', true);
+        $query = Empresa::where('estado', '1');
         if ($rucFiltro) {
             $query->where('ruc', $rucFiltro);
             $this->info("Filtrando por empresa RUC: {$rucFiltro}");
@@ -32,11 +32,12 @@ class EnviarBoletasPendientes extends Command
         }
 
         foreach ($empresas as $empresa) {
-            $boletas = Venta::where('id_empresa', $empresa->id_empresa)
+            $boletas = Venta::with(['empresa', 'cliente', 'productosVentas', 'tipoDocumento', 'cuotas'])
+                ->where('id_empresa', $empresa->id_empresa)
                 ->where('estado_sunat', '0')
-                ->whereNotNull('nombre_xml')
-                ->where('nombre_xml', '!=', '')
-                ->where('nombre_xml', 'like', '%-03-%')
+                ->where('estado', '!=', '2')
+                ->where('estado', '!=', 'A')
+                ->whereHas('tipoDocumento', fn ($q) => $q->where('cod_sunat', '03'))
                 ->get();
 
             if ($boletas->isEmpty()) {
@@ -45,6 +46,32 @@ class EnviarBoletasPendientes extends Command
             }
 
             $this->info("Empresa {$empresa->ruc}: {$boletas->count()} boleta(s) pendiente(s).");
+
+            // Generar el XML individual de cada boleta que aún no lo tenga
+            foreach ($boletas as $boleta) {
+                if (!empty($boleta->xml_url) || !empty($boleta->nombre_xml)) {
+                    continue;
+                }
+                try {
+                    $this->line("Generando XML boleta {$boleta->serie}-{$boleta->numero}...");
+                    $xml = $sunatService->generarXml($boleta);
+                    if (!empty($xml['success'])) {
+                        $boleta->update([
+                            'hash_cpe' => $xml['hash'],
+                            'xml_url' => $xml['xml_url'],
+                            'nombre_xml' => $xml['nombre_archivo'],
+                        ]);
+                    } else {
+                        $this->error("  → No se pudo generar XML boleta {$boleta->serie}-{$boleta->numero}: " . ($xml['message'] ?? 'Sin detalle'));
+                    }
+                } catch (\Exception $e) {
+                    Log::error('SUNAT - Error al generar XML de boleta en task programada', [
+                        'boleta_id' => $boleta->id_venta,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $this->error("  → Error generando XML boleta {$boleta->serie}-{$boleta->numero}: " . $e->getMessage());
+                }
+            }
 
             // Agrupar por fecha de emisión: el Resumen Diario de SUNAT exige boletas de la misma fecha
             $boletasPorFecha = $boletas->groupBy(function ($b) {
@@ -57,6 +84,13 @@ class EnviarBoletasPendientes extends Command
                     $resultado = $sunatService->resumenDiario($empresa, $boletasFecha->all(), $fechaEmision);
 
                     if (!empty($resultado['success'])) {
+                        // Marcar las boletas como enviadas (en proceso) para no reenviarlas en la próxima corrida
+                        foreach ($boletasFecha as $b) {
+                            $b->update([
+                                'estado_sunat' => '3',
+                                'mensaje_sunat' => 'Resumen diario enviado. Ticket: ' . ($resultado['ticket'] ?? ''),
+                            ]);
+                        }
                         $this->info("  → Resumen enviado ({$fechaEmision}). Ticket: {$resultado['ticket']}");
                     } else {
                         $this->error("  → Falló el resumen ({$fechaEmision}): " . ($resultado['message'] ?? 'Sin detalle'));

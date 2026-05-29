@@ -19,7 +19,7 @@ class EnviarGuiasPendientes extends Command
         $this->info('Buscando guías pendientes para enviar...');
 
         $rucFiltro = $this->option('empresa');
-        $query = Empresa::where('activo', true);
+        $query = Empresa::where('estado', '1');
         if ($rucFiltro) {
             $query->where('ruc', $rucFiltro);
             $this->info("Filtrando por empresa RUC: {$rucFiltro}");
@@ -34,8 +34,6 @@ class EnviarGuiasPendientes extends Command
         foreach ($empresas as $empresa) {
             $guias = GuiaRemision::where('id_empresa', $empresa->id_empresa)
                 ->where('estado', 'pendiente')
-                ->whereNotNull('nombre_xml')
-                ->where('nombre_xml', '!=', '')
                 ->get();
 
             if ($guias->isEmpty()) {
@@ -47,6 +45,17 @@ class EnviarGuiasPendientes extends Command
 
             foreach ($guias as $guia) {
                 try {
+                    // Generar el XML si aún no existe
+                    if (empty($guia->nombre_xml)) {
+                        $this->line("Generando XML guía {$guia->serie}-{$guia->numero}...");
+                        $xml = $sunatService->generarGuiaRemisionXml($guia);
+                        if (empty($xml['success'])) {
+                            $this->error("  → No se pudo generar XML: " . ($xml['message'] ?? 'Sin detalle'));
+                            continue;
+                        }
+                        $guia->refresh();
+                    }
+
                     $this->line("Enviando guía {$guia->serie}-{$guia->numero}...");
                     $resultado = $sunatService->enviarGuiaRemision($guia);
                     if (!empty($resultado['success'])) {
