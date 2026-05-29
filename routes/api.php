@@ -65,9 +65,9 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
 
 // Definir los horarios programados (en formato HH:mm) para cada tipo de comprobante
         $schedules = [
-            'guias' => '02:00',
             'facturas' => '02:30',
             'boletas' => '03:00',
+            'guias' => '03:30',
         ];
         $now = \Illuminate\Support\Carbon::now(config('app.timezone'));
 
@@ -91,7 +91,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
         }
         if (is_null($globalMinutes)) {
             // Todas las horas pasaron, usar la primera del día siguiente
-            $first = \Illuminate\Support\Carbon::parse($now->format('Y-m-d') . " {$schedules['guias']}", config('app.timezone'));
+            $first = \Illuminate\Support\Carbon::parse($now->format('Y-m-d') . " {$schedules['facturas']}", config('app.timezone'));
             $first->addDay();
             $globalMinutes = $now->diffInMinutes($first, false);
         }

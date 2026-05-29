@@ -19,7 +19,7 @@ class EnviarFacturasPendientes extends Command
         $this->info('Buscando facturas pendientes para enviar...');
 
         $rucFiltro = $this->option('empresa');
-        $query = Empresa::where('activo', true);
+        $query = Empresa::where('estado', '1');
         if ($rucFiltro) {
             $query->where('ruc', $rucFiltro);
             $this->info("Filtrando por empresa RUC: {$rucFiltro}");
@@ -32,11 +32,12 @@ class EnviarFacturasPendientes extends Command
         }
 
         foreach ($empresas as $empresa) {
-            $facturas = Venta::where('id_empresa', $empresa->id_empresa)
+            $facturas = Venta::with(['empresa', 'cliente', 'productosVentas', 'tipoDocumento', 'cuotas'])
+                ->where('id_empresa', $empresa->id_empresa)
                 ->where('estado_sunat', '0')
-                ->whereNotNull('nombre_xml')
-                ->where('nombre_xml', '!=', '')
-                ->where('nombre_xml', 'like', '%-01-%')
+                ->where('estado', '!=', '2')
+                ->where('estado', '!=', 'A')
+                ->whereHas('tipoDocumento', fn ($q) => $q->where('cod_sunat', '01'))
                 ->get();
 
             if ($facturas->isEmpty()) {
@@ -48,6 +49,22 @@ class EnviarFacturasPendientes extends Command
 
             foreach ($facturas as $factura) {
                 try {
+                    // Generar el XML si aún no existe
+                    if (empty($factura->xml_url) && empty($factura->nombre_xml)) {
+                        $this->line("Generando XML factura {$factura->serie}-{$factura->numero}...");
+                        $xml = $sunatService->generarXml($factura);
+                        if (empty($xml['success'])) {
+                            $this->error("  → No se pudo generar XML: " . ($xml['message'] ?? 'Sin detalle'));
+                            continue;
+                        }
+                        $factura->update([
+                            'hash_cpe' => $xml['hash'],
+                            'xml_url' => $xml['xml_url'],
+                            'nombre_xml' => $xml['nombre_archivo'],
+                        ]);
+                        $factura->refresh();
+                    }
+
                     $this->line("Enviando factura {$factura->serie}-{$factura->numero}...");
                     $resultado = $sunatService->enviarComprobante($factura);
                     if (!empty($resultado['success'])) {
