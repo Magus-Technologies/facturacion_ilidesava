@@ -29,6 +29,7 @@ import PlantillaImpresion from "./components/Configuracion/PlantillaImpresion";
 import CuentasPorCobrar from "./components/Facturacion/CuentasPorCobrar/CuentasPorCobrar";
 
 import "./bootstrap";
+import { enforceSession } from "./session-guard";
 import "../css/app.css";
 import "../css/select-custom.css";
 
@@ -109,9 +110,16 @@ function mountAll() {
     });
 }
 
+// Valida la sesión contra el servidor ANTES de montar. Si la sesión murió,
+// enforceSession redirige al login y no se monta nada (evita el estado zombi).
+async function bootstrapApp() {
+    const ok = await enforceSession();
+    if (ok) mountAll();
+}
+
 // Montamos al cargar el DOM
 if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", mountAll);
+    document.addEventListener("DOMContentLoaded", bootstrapApp);
 } else {
-    mountAll();
+    bootstrapApp();
 }
