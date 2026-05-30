@@ -198,28 +198,12 @@ class GuiaRemisionController extends Controller
 
                 $resultado = $this->sunatService->generarGuiaRemisionXml($guia);
 
-                $envio = null;
-                if ($resultado['success'] ?? false) {
-                    try {
-                        $guia->refresh();
-                        $envio = $this->sunatService->enviarGuiaRemision($guia);
-                    } catch (\Exception $e) {
-                        Log::warning('SUNAT - No se pudo enviar guía automáticamente', [
-                            'guia' => $guia->serie . '-' . $guia->numero,
-                            'error' => $e->getMessage(),
-                        ]);
-                        $envio = ['success' => false, 'message' => 'XML generado pero no se pudo enviar: ' . $e->getMessage()];
-                    }
-                }
-
                 $guia->load(['detalles']);
 
                 return response()->json([
                     'success' => true,
                     'data' => $guia,
                     'xml' => $resultado,
-                    'envio' => $envio,
-                    'ticket' => $envio['ticket'] ?? null,
                 ], 201);
             });
         } catch (\Exception $e) {
@@ -581,24 +565,12 @@ class GuiaRemisionController extends Controller
 
                 $resultado = $this->sunatService->generarGuiaRemisionXml($guia);
 
-                $envio = null;
-                if ($resultado['success'] ?? false) {
-                    try {
-                        $guia->refresh();
-                        $envio = $this->sunatService->enviarGuiaRemision($guia);
-                    } catch (\Exception $e) {
-                        $envio = ['success' => false, 'message' => 'XML generado pero no se pudo enviar: ' . $e->getMessage()];
-                    }
-                }
-
                 $guia->load(['detalles']);
 
                 return response()->json([
                     'success' => true,
                     'data' => $guia,
                     'xml' => $resultado,
-                    'envio' => $envio,
-                    'ticket' => $envio['ticket'] ?? null,
                 ]);
             });
         } catch (\Exception $e) {
