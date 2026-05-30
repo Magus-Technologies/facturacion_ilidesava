@@ -45,10 +45,35 @@ class AuthController extends Controller
         // Iniciar sesión de Laravel (para exportaciones vía web)
         \Illuminate\Support\Facades\Auth::login($user);
 
-        // Generar token con Sanctum (válido por 8 horas)
-        $token = $user->createToken('auth_token', ['*'], now()->addHours(8))->plainTextToken;
+        // Generar token con la misma vida que la sesión web (un solo reloj)
+        $token = $user->createToken('auth_token', ['*'], $this->tokenExpiration())->plainTextToken;
 
-        // Cargar empresas disponibles para el usuario
+        $payload = $this->buildAuthPayload($user);
+
+        return response()->json(array_merge([
+            'success' => true,
+            'message' => 'Login exitoso',
+            'token' => $token,
+        ], $payload));
+    }
+
+    /**
+     * Vencimiento del token Sanctum, atado al lifetime de la sesión web
+     * para que ambos relojes mueran juntos (evita el estado "sesión viva,
+     * token muerto" que dejaba al usuario en una pantalla sin datos).
+     */
+    private function tokenExpiration(): \Illuminate\Support\Carbon
+    {
+        return now()->addMinutes((int) config('session.lifetime'));
+    }
+
+    /**
+     * Construye el payload de sesión (usuario + empresas + permisos).
+     * Reutilizado por login y verify para que el front siempre reciba
+     * los mismos datos frescos desde el servidor.
+     */
+    private function buildAuthPayload(User $user): array
+    {
         $empresas = $user->empresasDisponibles()
             ->map(fn ($e) => [
                 'id_empresa' => $e->id_empresa,
@@ -59,20 +84,14 @@ class AuthController extends Controller
                 'direccion' => $e->direccion,
             ]);
 
-        // Cargar permisos del usuario
         $permissions = [];
         if ($user->rol_id == 1) {
-            // Admin tiene todos los permisos automáticamente
             $permissions = \App\Models\Permission::pluck('name')->toArray();
         } elseif ($user->rol) {
-            // Otros roles: solo sus permisos asignados
             $permissions = $user->rol->permissions->pluck('name')->toArray();
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Login exitoso',
-            'token' => $token,
+        return [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -82,7 +101,7 @@ class AuthController extends Controller
             ],
             'empresas' => $empresas,
             'permissions' => $permissions,
-        ]);
+        ];
     }
 
     /**
@@ -148,8 +167,8 @@ class AuthController extends Controller
         // Revocar token actual
         $request->user()->currentAccessToken()->delete();
 
-        // Crear nuevo token
-        $token = $user->createToken('auth_token', ['*'], now()->addHours(8))->plainTextToken;
+        // Crear nuevo token con la misma vida que la sesión web
+        $token = $user->createToken('auth_token', ['*'], $this->tokenExpiration())->plainTextToken;
 
         return response()->json([
             'success' => true,
@@ -208,16 +227,9 @@ class AuthController extends Controller
      */
     public function verify(Request $request)
     {
-        return response()->json([
+        return response()->json(array_merge([
             'success' => true,
             'message' => 'Token válido',
-            'user' => [
-                'id' => $request->user()->id,
-                'name' => $request->user()->name,
-                'email' => $request->user()->email,
-                'rol_id' => $request->user()->rol_id,
-                'id_empresa' => $request->user()->id_empresa,
-            ]
-        ]);
+        ], $this->buildAuthPayload($request->user())));
     }
 }
