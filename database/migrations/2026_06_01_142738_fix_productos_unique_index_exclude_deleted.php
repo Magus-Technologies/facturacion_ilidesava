@@ -3,33 +3,22 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-// Reemplaza el índice único (codigo, id_empresa, almacen) por uno funcional
-// que excluye los productos eliminados (estado = '0').
+// Elimina el índice UNIQUE (codigo, id_empresa, almacen) que bloqueaba
+// la reutilización de códigos de productos eliminados (estado='0').
 //
-// MySQL no tiene partial indexes, pero sí functional indexes (8.0+).
-// La expresión devuelve NULL cuando el producto está eliminado, y los NULLs
-// no generan conflicto de unicidad en MySQL, eliminando el problema de
-// "código ya existe" al reusar el código de un producto borrado.
+// La unicidad sobre productos ACTIVOS se aplica a nivel de aplicación en
+// ProductoService::assertCodigoDisponible(), que excluye estado='0'.
+// No se agrega un nuevo índice DB para mantener compatibilidad con
+// MySQL 8.0 y MariaDB (que difieren en soporte de functional indexes).
 return new class extends Migration
 {
     public function up(): void
     {
         DB::statement('ALTER TABLE productos DROP INDEX unique_codigo_empresa_almacen');
-
-        // Activa la restricción solo para productos activos (estado != '0').
-        // Cuando estado = '0' (eliminado), la expresión devuelve NULL → sin conflicto.
-        DB::statement("
-            ALTER TABLE productos
-            ADD UNIQUE INDEX unique_codigo_activo_empresa_almacen (
-                (IF(estado = '0' OR estado IS NULL OR codigo IS NULL, NULL, CONCAT(codigo, '|', id_empresa, '|', COALESCE(almacen, ''))))
-            )
-        ");
     }
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE productos DROP INDEX unique_codigo_activo_empresa_almacen');
-
         DB::statement('
             ALTER TABLE productos
             ADD UNIQUE INDEX unique_codigo_empresa_almacen (codigo, id_empresa, almacen)
