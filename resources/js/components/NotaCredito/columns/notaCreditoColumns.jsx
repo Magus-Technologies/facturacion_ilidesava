@@ -7,6 +7,7 @@ import {
     Eye,
     FileCode,
     FileDown,
+    FileText,
     MoreHorizontal,
     Loader2,
 } from "lucide-react";
@@ -156,6 +157,12 @@ export const getNotaCreditoColumns = (handlers, enviandoId = null) => [
                                 <DropdownMenuItem onClick={() => handlers.handleView(nota)}>
                                     <Eye className="mr-2 h-4 w-4 text-blue-600" />
                                     Ver detalle
+                                </DropdownMenuItem>
+                            )}
+                            {handlers.handleVerPdf && (
+                                <DropdownMenuItem onClick={() => handlers.handleVerPdf(nota)}>
+                                    <FileText className="mr-2 h-4 w-4 text-red-600" />
+                                    Ver PDF A4
                                 </DropdownMenuItem>
                             )}
                             {nota.nombre_xml && handlers.handleVerXml && (

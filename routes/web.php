@@ -210,3 +210,8 @@ Route::get('/reporteCOT/a4.php', function (Request $request) {
 Route::get('/reporteGR/a4.php', function (Request $request) {
     return app(\App\Http\Controllers\Reportes\GuiaRemisionPdfController::class)->generarA4($request->get('id'));
 });
+
+// PDFs de notas de crédito
+Route::get('/reporteNC/a4.php', function (Request $request) {
+    return app(\App\Http\Controllers\Reportes\NotaCreditoPdfController::class)->generarA4($request->get('id'));
+});

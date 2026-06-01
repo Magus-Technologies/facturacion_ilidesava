@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import MainLayout from "../Layout/MainLayout";
 import { useNotasCredito } from "./hooks/useNotasCredito";
 import { getNotaCreditoColumns } from "./columns/notaCreditoColumns";
+import DetallesNotaCreditoModal from "./DetallesNotaCreditoModal";
 
 export default function NotaCreditoPage() {
     const {
@@ -20,6 +21,8 @@ export default function NotaCreditoPage() {
     } = useNotasCredito();
 
     const [enviandoId, setEnviandoId] = useState(null);
+    const [notaSeleccionada, setNotaSeleccionada] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleVerXml = (nota) => {
         if (!nota.nombre_xml) return;
@@ -55,10 +58,32 @@ export default function NotaCreditoPage() {
         setEnviandoId(null);
     };
 
+    const handleView = async (nota) => {
+        const token = localStorage.getItem("auth_token");
+        try {
+            const res = await fetch(`/api/notas-credito/${nota.id}`, {
+                headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                setNotaSeleccionada(data.data);
+            } else {
+                setNotaSeleccionada(nota);
+            }
+        } catch {
+            setNotaSeleccionada(nota);
+        }
+        setIsModalOpen(true);
+    };
+
+    const handleVerPdf = (nota) => {
+        const token = localStorage.getItem("auth_token");
+        window.open(`/reporteNC/a4.php?id=${nota.id}&token=${token}`, "_blank");
+    };
+
     const handlers = {
-        handleView: (nota) => {
-            // TODO: Implementar modal de detalle
-        },
+        handleView,
+        handleVerPdf,
         handleEnviar,
         handleVerXml,
         handleDescargarCdr,
@@ -129,6 +154,12 @@ export default function NotaCreditoPage() {
                     />
                 )}
             </div>
+
+            <DetallesNotaCreditoModal
+                nota={notaSeleccionada}
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+            />
         </MainLayout>
     );
 }
