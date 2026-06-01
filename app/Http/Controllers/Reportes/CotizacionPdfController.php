@@ -42,7 +42,7 @@ class CotizacionPdfController extends Controller
             $numero = str_pad($cotizacion->numero, 6, '0', STR_PAD_LEFT);
             $mpdf->SetTitle("Cotización COT-{$numero}");
             $mpdf->WriteHTML($html);
-            $mpdf->Output("Cotizacion-COT-{$numero}-ticket.pdf", 'I');
+            $mpdf->Output("Cotizacion-COT-{$numero}-ticket.pdf", 'D');
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->view('errors.pdf-no-encontrado', [], 404);
@@ -102,7 +102,7 @@ class CotizacionPdfController extends Controller
 
             return response($dompdf->output(), 200, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {

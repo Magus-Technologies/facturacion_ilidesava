@@ -43,7 +43,7 @@ class CompraPdfController extends Controller
 
             return response($dompdf->output(), 200, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->view('errors.pdf-no-encontrado', [], 404);
@@ -105,7 +105,7 @@ class CompraPdfController extends Controller
                     "-" .
                     str_pad($compra->numero, 6, "0", STR_PAD_LEFT) .
                     ".pdf",
-                "I",
+                "D",
             );
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->view('errors.pdf-no-encontrado', [], 404);
