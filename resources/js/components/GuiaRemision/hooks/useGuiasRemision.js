@@ -60,16 +60,10 @@ export const useGuiasRemision = () => {
             const data = await res.json();
 
             if (data.success) {
-                if (data.ticket?.success) {
-                    toast.success('Guía creada, enviada y aceptada por SUNAT');
-                } else if (data.ticket?.en_proceso) {
-                    toast.info('Guía enviada a SUNAT. Aún en proceso, consulte el ticket en unos momentos.', 'En proceso');
-                } else if (data.envio?.success) {
-                    toast.success('Guía creada y enviada a SUNAT. Consulte el ticket para confirmar.');
-                } else if (data.envio) {
-                    toast.warning(data.envio.message || 'Guía creada pero no se pudo enviar a SUNAT. Puede reintentarlo manualmente.', 'Envío pendiente');
+                if (data.xml?.success) {
+                    toast.success('Guía creada. Será enviada a SUNAT automáticamente.');
                 } else {
-                    toast.success('Guía de remisión creada y XML generado');
+                    toast.warning('Guía creada, pero hubo un problema al generar el XML. Verifique los datos.');
                 }
                 fetchGuias();
                 return data;
