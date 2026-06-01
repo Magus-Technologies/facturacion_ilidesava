@@ -98,6 +98,11 @@ class ProductoController extends Controller
                     : 'Producto creado exitosamente',
                 'data' => $producto,
             ], 201);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->errorInfo[1] === 1062) {
                 return response()->json([
@@ -138,6 +143,11 @@ class ProductoController extends Controller
                 'data' => $resultado['producto'],
                 'sincronizado' => $resultado['sincronizado'],
             ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->errorInfo[1] === 1062) {
                 return response()->json([

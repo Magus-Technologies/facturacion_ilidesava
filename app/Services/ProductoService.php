@@ -64,6 +64,8 @@ class ProductoService
         $data['id_empresa'] = $idEmpresa;
         $data['fecha_registro'] = now();
 
+        $this->assertCodigoDisponible($data['codigo'], $idEmpresa, $data['almacen']);
+
         $producto = Producto::create($data);
 
         $producto->load(['categoria', 'unidad']);
@@ -72,10 +74,36 @@ class ProductoService
     }
 
     /**
+     * Lanza una excepción si ya existe un producto ACTIVO con ese código
+     * en la misma empresa y almacén. Productos eliminados (estado=0) no
+     * bloquean la reutilización del código.
+     */
+    private function assertCodigoDisponible(string $codigo, int $idEmpresa, string $almacen, ?int $excludeId = null): void
+    {
+        $query = Producto::where('codigo', $codigo)
+            ->where('id_empresa', $idEmpresa)
+            ->where('almacen', $almacen)
+            ->where('estado', '1');
+
+        if ($excludeId) {
+            $query->where('id_producto', '!=', $excludeId);
+        }
+
+        if ($query->exists()) {
+            throw new \RuntimeException('Ya existe un producto activo con ese código en este almacén. Usá un código diferente.');
+        }
+    }
+
+    /**
      * Actualizar producto
      */
     public function actualizar(Producto $producto, array $data): array
     {
+        if (!empty($data['codigo']) && $data['codigo'] !== $producto->codigo) {
+            $almacen = $data['almacen'] ?? $producto->almacen;
+            $this->assertCodigoDisponible($data['codigo'], $producto->id_empresa, $almacen, $producto->id_producto);
+        }
+
         $producto->update($data);
 
         $producto->load(['categoria', 'unidad']);
