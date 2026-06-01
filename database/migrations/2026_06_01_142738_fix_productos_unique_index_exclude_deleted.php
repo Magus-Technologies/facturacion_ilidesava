@@ -14,7 +14,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('ALTER TABLE productos DROP INDEX unique_codigo_empresa_almacen');
+        $exists = DB::select("SHOW INDEX FROM productos WHERE Key_name = 'unique_codigo_empresa_almacen'");
+        if (!empty($exists)) {
+            DB::statement('ALTER TABLE productos DROP INDEX unique_codigo_empresa_almacen');
+        }
     }
 
     public function down(): void
