@@ -165,6 +165,14 @@ export default function DetallesVentaModal({ venta, isOpen, onClose }) {
                 <div className="flex w-full items-center justify-between">
                     <div className="flex gap-2">
                         <Button
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => handlePrint("a4")}
+                        >
+                            <Printer className="h-4 w-4" />
+                            Imprimir A4
+                        </Button>
+                        <Button
                             variant="outline"
                             size="sm"
                             className="gap-2"
@@ -172,15 +180,6 @@ export default function DetallesVentaModal({ venta, isOpen, onClose }) {
                         >
                             <Printer className="h-4 w-4" />
                             Imprimir Ticket
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => handlePrint("a4")}
-                        >
-                            <Printer className="h-4 w-4" />
-                            Imprimir A4
                         </Button>
                     </div>
                     <Button onClick={onClose} variant="secondary" size="sm">
