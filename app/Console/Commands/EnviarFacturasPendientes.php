@@ -57,8 +57,9 @@ class EnviarFacturasPendientes extends Command
 
             foreach ($facturas as $factura) {
                 try {
-                    // Generar el XML si aún no existe
-                    if (empty($factura->xml_url) && empty($factura->nombre_xml)) {
+                    // Generar el XML si no existe en BD o si el archivo físico fue eliminado
+                    $xmlPath = $factura->xml_url ? storage_path("app/{$factura->xml_url}") : null;
+                    if (empty($factura->xml_url) || empty($factura->nombre_xml) || !$xmlPath || !file_exists($xmlPath)) {
                         if ($dryRun) {
                             $this->line("  [DRY-RUN] Generaría XML para factura {$factura->serie}-{$factura->numero}.");
                         } else {

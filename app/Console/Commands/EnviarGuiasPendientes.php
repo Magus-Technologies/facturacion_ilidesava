@@ -54,23 +54,25 @@ class EnviarGuiasPendientes extends Command
 
             foreach ($guias as $guia) {
                 try {
-                    // Validar que la factura/boleta vinculada ya fue aceptada por SUNAT
+                    // Validar que la factura/boleta vinculada fue enviada a SUNAT
+                    // '1' = aceptada, '3' = en proceso via Resumen Diario (boletas)
                     if ($guia->id_venta) {
                         $venta = $guia->venta;
-                        if (!$venta || $venta->estado_sunat !== '1') {
+                        if (!$venta || !in_array($venta->estado_sunat, ['1', '3'])) {
                             $ventaInfo = $venta
                                 ? "({$venta->serie}-{$venta->numero}, estado_sunat={$venta->estado_sunat})"
                                 : '(no encontrada)';
-                            $this->warn("  [BLOQUEADA] Guía {$guia->serie}-{$guia->numero}: factura/boleta {$ventaInfo} aún no aceptada.");
+                            $this->warn("  [BLOQUEADA] Guía {$guia->serie}-{$guia->numero}: factura/boleta {$ventaInfo} aún no enviada a SUNAT.");
                             continue;
                         }
                         if ($dryRun) {
-                            $this->line("  [OK] Factura/boleta {$guia->venta->serie}-{$guia->venta->numero} aceptada.");
+                            $this->line("  [OK] Factura/boleta {$guia->venta->serie}-{$guia->venta->numero} enviada (estado_sunat={$venta->estado_sunat}).");
                         }
                     }
 
-                    // Generar el XML si aún no existe
-                    if (empty($guia->nombre_xml)) {
+                    // Generar el XML si no existe o si el archivo físico fue eliminado
+                    $xmlPath = $guia->xml_url ? storage_path("app/{$guia->xml_url}") : null;
+                    if (empty($guia->nombre_xml) || !$xmlPath || !file_exists($xmlPath)) {
                         if ($dryRun) {
                             $this->line("  [DRY-RUN] Generaría XML para guía {$guia->serie}-{$guia->numero}.");
                         } else {

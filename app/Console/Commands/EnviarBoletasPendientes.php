@@ -55,9 +55,10 @@ class EnviarBoletasPendientes extends Command
 
             $this->info("Empresa {$empresa->ruc}: {$boletas->count()} boleta(s) pendiente(s).");
 
-            // Generar el XML individual de cada boleta que aún no lo tenga
+            // Generar el XML individual de cada boleta que aún no lo tenga o cuyo archivo fue eliminado
             foreach ($boletas as $boleta) {
-                if (!empty($boleta->xml_url) || !empty($boleta->nombre_xml)) {
+                $xmlPath = $boleta->xml_url ? storage_path("app/{$boleta->xml_url}") : null;
+                if ((!empty($boleta->xml_url) || !empty($boleta->nombre_xml)) && $xmlPath && file_exists($xmlPath)) {
                     if ($dryRun) {
                         $this->line("  [OK] Boleta {$boleta->serie}-{$boleta->numero} ya tiene XML.");
                     }
