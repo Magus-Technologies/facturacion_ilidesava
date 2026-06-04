@@ -64,7 +64,6 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
     const [proximoNumero, setProximoNumero] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [guiaId, setGuiaId] = useState(initialGuiaId);
-    const [guiaCargada, setGuiaCargada] = useState(false);
     const [showProductSearch, setShowProductSearch] = useState(false);
 
     // Búsqueda de venta
@@ -334,7 +333,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                     distrito: g.distrito || "",
                 });
 
-                const modTransporte = g.mod_transporte || "01";
+                const modTransporte = g.mod_transporte ? String(g.mod_transporte).padStart(2, "0") : "01";
                 const vehiculoM1l = g.vehiculo_m1l ? true : false;
 
                 setForm((prev) => ({
@@ -377,7 +376,6 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
         } catch (err) {
             console.error("Error cargando guía:", err);
         }
-        setGuiaCargada(true);
         setBuscando(false);
     };
 
@@ -1572,7 +1570,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                                 />
                             </div>
 
-                            {(initialGuiaId ? guiaCargada && form.mod_transporte === "01" : form.mod_transporte === "01") && (
+                            {form.mod_transporte === "01" && (
                                 <div>
                                     <Label className="text-xs text-gray-500 mb-1.5 block">
                                         Fecha Entrega al Transportista <span className="text-red-500">*</span>
