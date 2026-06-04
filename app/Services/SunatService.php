@@ -807,6 +807,9 @@ class SunatService
         // Greenter usa timezone America/Lima en Twig, crear DateTimes en esa zona
         $fechaEmision = $this->fechaParaGreenter($guia->getRawOriginal('fecha_emision'), $guia->created_at);
         $fechaTraslado = $this->fechaParaGreenter($guia->getRawOriginal('fecha_traslado'));
+        $fechaEntregaTransportista = $guia->getRawOriginal('fecha_entrega_transportista')
+            ? $this->fechaParaGreenter($guia->getRawOriginal('fecha_entrega_transportista'))
+            : $fechaTraslado;
 
         $destinatario = (new Client())
             ->setTipoDoc($guia->destinatario_tipo_doc)
@@ -828,13 +831,16 @@ class SunatService
             $shipment->setIndicadores(['SUNAT_Envio_IndicadorTrasladoVehiculoM1L']);
         }
 
-        if ($guia->mod_transporte === '01' && $guia->transportista_documento) {
-            $transportista = (new Transportist())
-                ->setTipoDoc($guia->transportista_tipo_doc)
-                ->setNumDoc($guia->transportista_documento)
-                ->setRznSocial($guia->transportista_nombre)
-                ->setNroMtc($guia->transportista_nro_mtc);
-            $shipment->setTransportista($transportista);
+        if ($guia->mod_transporte === '01') {
+            $shipment->setFecEntregaTransportista($fechaEntregaTransportista);
+            if ($guia->transportista_documento) {
+                $transportista = (new Transportist())
+                    ->setTipoDoc($guia->transportista_tipo_doc)
+                    ->setNumDoc($guia->transportista_documento)
+                    ->setRznSocial($guia->transportista_nombre)
+                    ->setNroMtc($guia->transportista_nro_mtc);
+                $shipment->setTransportista($transportista);
+            }
         }
 
         if ($guia->mod_transporte === '02') {

@@ -17,6 +17,7 @@ class GuiaRemision extends Model
         'serie',
         'numero',
         'fecha_emision',
+        'fecha_entrega_transportista',
         'destinatario_tipo_doc',
         'destinatario_documento',
         'destinatario_nombre',
@@ -55,6 +56,7 @@ class GuiaRemision extends Model
     protected $casts = [
         'fecha_emision' => 'date',
         'fecha_traslado' => 'date',
+        'fecha_entrega_transportista' => 'date',
         'peso_total' => 'decimal:3',
         'numero' => 'integer',
     ];

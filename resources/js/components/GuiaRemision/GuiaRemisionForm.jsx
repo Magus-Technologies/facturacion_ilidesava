@@ -97,6 +97,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
         descripcion_motivo: "",
         mod_transporte: "01",
         fecha_traslado: new Date().toISOString().split("T")[0],
+        fecha_entrega_transportista: "",
         peso_total: "",
         und_peso_total: "KGM",
         transportista_tipo_doc: "6",
@@ -341,6 +342,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                     descripcion_motivo: g.descripcion_motivo || "",
                     mod_transporte: modTransporte,
                     fecha_traslado: g.fecha_traslado ? g.fecha_traslado.split("T")[0] : new Date().toISOString().split("T")[0],
+                    fecha_entrega_transportista: g.fecha_entrega_transportista ? g.fecha_entrega_transportista.split("T")[0] : "",
                     peso_total: String(g.peso_total || ""),
                     und_peso_total: g.und_peso_total || "KGM",
                     transportista_tipo_doc: g.transportista_tipo_doc || "6",
@@ -521,6 +523,9 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
             if (!form.transportista_nombre?.trim()) {
                 newErrors.transportista_nombre = "El nombre del transportista es requerido";
             }
+            if (!form.fecha_entrega_transportista?.trim()) {
+                newErrors.fecha_entrega_transportista = "La fecha de entrega al transportista es requerida";
+            }
         }
         if (form.mod_transporte === "02") {
             if (!form.vehiculo_m1l) {
@@ -687,6 +692,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
         try {
             const payload = {
                 ...form,
+                fecha_entrega_transportista: form.mod_transporte === "01" ? (form.fecha_entrega_transportista || form.fecha_traslado) : null,
                 id_venta: venta?.id_venta || null,
                 destinatario_tipo_doc: destinatario.tipo_doc,
                 destinatario_documento: destinatario.documento,
@@ -1563,6 +1569,28 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                                     }
                                 />
                             </div>
+
+                            {form.mod_transporte === "01" && (
+                                <div>
+                                    <Label className="text-xs text-gray-500 mb-1.5 block">
+                                        Fecha Entrega al Transportista <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        type="date"
+                                        value={form.fecha_entrega_transportista}
+                                        onChange={(e) =>
+                                            handleChange(
+                                                "fecha_entrega_transportista",
+                                                e.target.value
+                                            )
+                                        }
+                                        className={errors.fecha_entrega_transportista ? "border-red-500" : ""}
+                                    />
+                                    {errors.fecha_entrega_transportista && (
+                                        <p className="text-red-500 text-xs mt-1">{errors.fecha_entrega_transportista}</p>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
