@@ -24,6 +24,7 @@ use App\Models\Empresa;
 $guiasPorResetear = [
     ['ruc' => '20612058424', 'serie' => 'T002', 'numero' => 522],
     ['ruc' => '20511598452', 'serie' => 'T002', 'numero' => 1322],
+    ['ruc' => '20511598452', 'serie' => 'T002', 'numero' => 1323],
 ];
 
 $resultados = [];
