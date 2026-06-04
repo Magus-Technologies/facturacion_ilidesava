@@ -18,21 +18,36 @@ $app = require_once __DIR__ . '/../bootstrap/app.php';
 $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 use App\Models\GuiaRemision;
+use App\Models\Empresa;
 
-$series  = [
-    ['serie' => 'T002', 'numero' => 522],
-    ['serie' => 'T002', 'numero' => 1322],
+// Guías a resetear: identificadas por RUC de empresa + serie + número
+$guiasPorResetear = [
+    ['ruc' => '20612058424', 'serie' => 'T002', 'numero' => 522],
+    ['ruc' => '20511598452', 'serie' => 'T002', 'numero' => 1322],
 ];
 
 $resultados = [];
 
-foreach ($series as $item) {
-    $guia = GuiaRemision::where('serie', $item['serie'])
+foreach ($guiasPorResetear as $item) {
+    $empresa = Empresa::where('ruc', $item['ruc'])->first();
+
+    if (!$empresa) {
+        $resultados[] = "❌ {$item['serie']}-{$item['numero']} (RUC {$item['ruc']}): Empresa no encontrada";
+        continue;
+    }
+
+    $guia = GuiaRemision::where('id_empresa', $empresa->id_empresa)
+        ->where('serie', $item['serie'])
         ->where('numero', $item['numero'])
         ->first();
 
     if (!$guia) {
-        $resultados[] = "❌ {$item['serie']}-{$item['numero']}: No encontrada";
+        $resultados[] = "❌ {$item['serie']}-{$item['numero']} (RUC {$item['ruc']}): Guía no encontrada";
+        continue;
+    }
+
+    if ($guia->estado === 'aceptado') {
+        $resultados[] = "⛔ {$item['serie']}-{$item['numero']} (RUC {$item['ruc']}): No se puede resetear, está aceptada por SUNAT";
         continue;
     }
 
@@ -46,7 +61,7 @@ foreach ($series as $item) {
         'mensaje_sunat' => null,
     ]);
 
-    $resultados[] = "✅ {$item['serie']}-{$item['numero']}: Reseteada a pendiente";
+    $resultados[] = "✅ {$item['serie']}-{$item['numero']} (RUC {$item['ruc']} — {$empresa->razon_social}): Reseteada a pendiente";
 }
 ?>
 <!DOCTYPE html>
