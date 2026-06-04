@@ -141,7 +141,6 @@ export default function CompraDetallesModal({ isOpen, onClose, compraId }) {
         <div className="flex items-center justify-between w-full">
             <div className="flex gap-2">
                 <Button
-                    variant="outline"
                     size="sm"
                     onClick={() => handlePrint("a4")}
                 >
