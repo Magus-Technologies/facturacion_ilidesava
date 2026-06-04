@@ -64,7 +64,6 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
     const [proximoNumero, setProximoNumero] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [guiaId, setGuiaId] = useState(initialGuiaId);
-    const [formLoaded, setFormLoaded] = useState(!initialGuiaId);
     const [showProductSearch, setShowProductSearch] = useState(false);
 
     // Búsqueda de venta
@@ -377,7 +376,6 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
         } catch (err) {
             console.error("Error cargando guía:", err);
         }
-        setFormLoaded(true);
         setBuscando(false);
     };
 
@@ -1572,7 +1570,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                                 />
                             </div>
 
-                            {formLoaded && form.mod_transporte === "01" && (
+                            {form.mod_transporte === "01" && (
                                 <div>
                                     <Label className="text-xs text-gray-500 mb-1.5 block">
                                         Fecha Entrega al Transportista <span className="text-red-500">*</span>
