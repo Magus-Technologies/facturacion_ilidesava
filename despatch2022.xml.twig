@@ -129,9 +129,9 @@
 			</cac:CarrierParty>
             {% endif %}
             {% if envio.modTraslado == '01' and (envio.fecEntregaTransportista or envio.fecTraslado) %}
-			<cac:ActualPickupTransportEvent>
+			<cac:LoadingTransportEvent>
 				<cbc:OccurrenceDate>{{ (envio.fecEntregaTransportista ?? envio.fecTraslado)|date('Y-m-d') }}</cbc:OccurrenceDate>
-			</cac:ActualPickupTransportEvent>
+			</cac:LoadingTransportEvent>
             {% endif %}
 			{% for chofer in envio.choferes %}
 			<cac:DriverPerson>

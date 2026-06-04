@@ -334,7 +334,6 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                 });
 
                 const modTransporte = g.mod_transporte ? String(g.mod_transporte).padStart(2, "0") : "01";
-                console.log("DEBUG guia cargada:", { mod_transporte_raw: g.mod_transporte, mod_transporte_parsed: modTransporte, id: g.id });
                 const vehiculoM1l = g.vehiculo_m1l ? true : false;
 
                 setForm((prev) => ({
