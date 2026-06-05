@@ -15,7 +15,7 @@ class CotizacionPdfController extends Controller
     /**
      * Generar PDF en formato Ticket 80mm
      */
-    public function generarTicket($id)
+    public function generarTicket($id, $download = false)
     {
         try {
             $cotizacion = Cotizacion::with([
@@ -42,7 +42,7 @@ class CotizacionPdfController extends Controller
             $numero = str_pad($cotizacion->numero, 6, '0', STR_PAD_LEFT);
             $mpdf->SetTitle("Cotización COT-{$numero}");
             $mpdf->WriteHTML($html);
-            $mpdf->Output("Cotizacion-COT-{$numero}-ticket.pdf", 'D');
+            $mpdf->Output("Cotizacion-COT-{$numero}-ticket.pdf", $download ? 'D' : 'I');
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->view('errors.pdf-no-encontrado', [], 404);
@@ -58,7 +58,7 @@ class CotizacionPdfController extends Controller
     /**
      * Generar PDF en formato A4
      */
-    public function generarA4($id)
+    public function generarA4($id, $download = false)
     {
         try {
             $cotizacion = Cotizacion::with([
@@ -102,7 +102,7 @@ class CotizacionPdfController extends Controller
 
             return response($dompdf->output(), 200, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Disposition' => ($download ? 'attachment' : 'inline') . '; filename="' . $filename . '"',
             ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {

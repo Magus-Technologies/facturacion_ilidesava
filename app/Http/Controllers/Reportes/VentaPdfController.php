@@ -16,7 +16,7 @@ class VentaPdfController extends Controller
     /**
      * Generar PDF en formato A4
      */
-    public function generarA4($id)
+    public function generarA4($id, $download = false)
     {
         try {
             $venta = Venta::with([
@@ -73,7 +73,7 @@ class VentaPdfController extends Controller
 
             return response($dompdf->output(), 200, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Disposition' => ($download ? 'attachment' : 'inline') . '; filename="' . $filename . '"',
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->view('errors.pdf-no-encontrado', [], 404);
@@ -94,7 +94,7 @@ class VentaPdfController extends Controller
     /**
      * Generar PDF en formato Ticket (8cm)
      */
-    public function generarTicket($id)
+    public function generarTicket($id, $download = false)
     {
         try {
             $venta = Venta::with([
@@ -141,7 +141,7 @@ class VentaPdfController extends Controller
                     "-" .
                     str_pad($venta->numero, 6, "0", STR_PAD_LEFT) .
                     ".pdf",
-                "D",
+                $download ? "D" : "I",
             );
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->view('errors.pdf-no-encontrado', [], 404);

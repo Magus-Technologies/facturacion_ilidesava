@@ -184,10 +184,10 @@ Route::middleware('auth')->group(function () {
 
 // PDFs de ventas
 Route::get('/reporteNV/ticket.php', function (Request $request) {
-    return app(\App\Http\Controllers\Reportes\VentaPdfController::class)->generarTicket($request->get('id'));
+    return app(\App\Http\Controllers\Reportes\VentaPdfController::class)->generarTicket($request->get('id'), $request->boolean('download'));
 });
 Route::get('/reporteNV/a4.php', function (Request $request) {
-    return app(\App\Http\Controllers\Reportes\VentaPdfController::class)->generarA4($request->get('id'));
+    return app(\App\Http\Controllers\Reportes\VentaPdfController::class)->generarA4($request->get('id'), $request->boolean('download'));
 });
 
 // PDFs de compras
@@ -200,10 +200,10 @@ Route::get('/reporteOC/a4.php', function (Request $request) {
 
 // PDFs de cotizaciones
 Route::get('/reporteCOT/ticket.php', function (Request $request) {
-    return app(\App\Http\Controllers\Reportes\CotizacionPdfController::class)->generarTicket($request->get('id'));
+    return app(\App\Http\Controllers\Reportes\CotizacionPdfController::class)->generarTicket($request->get('id'), $request->boolean('download'));
 });
 Route::get('/reporteCOT/a4.php', function (Request $request) {
-    return app(\App\Http\Controllers\Reportes\CotizacionPdfController::class)->generarA4($request->get('id'));
+    return app(\App\Http\Controllers\Reportes\CotizacionPdfController::class)->generarA4($request->get('id'), $request->boolean('download'));
 });
 
 // PDFs de guías de remisión

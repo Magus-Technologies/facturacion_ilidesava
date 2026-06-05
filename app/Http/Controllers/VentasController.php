@@ -278,6 +278,24 @@ class VentasController extends Controller
 
                 $afectaStock = $validated['id_tido'] == 6 ? false : ($validated['afecta_stock'] ?? true);
 
+                // Precargar todos los productos del catálogo de una sola vez para evitar N+1
+                $idsProductosCatalogo = collect($validated['productos'])
+                    ->pluck('id_producto')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $productosMap = empty($idsProductosCatalogo) ? collect() :
+                    \App\Models\Producto::whereIn('id_producto', $idsProductosCatalogo)
+                        ->where('id_empresa', $user->id_empresa)
+                        ->get()
+                        ->keyBy('id_producto');
+
+                $productosVentaData = [];
+                $movimientosStockData = [];
+                $now = now();
+
                 // Crear productos de la venta y descontar stock
                 foreach ($validated['productos'] as $producto) {
                     $idProducto = $producto['id_producto'] ?? null;
@@ -315,13 +333,13 @@ class VentasController extends Controller
                         $descripcionFinal = $productoLibre->nombre;
                         $codigoFinal = $productoLibre->codigo;
                     } elseif ($idProducto && !$descripcionFinal) {
-                        // Producto del catálogo: guardar nombre actual como snapshot
-                        $productoModel = \App\Models\Producto::find($idProducto);
+                        // Producto del catálogo: usar precarga para snapshot
+                        $productoModel = $productosMap->get($idProducto);
                         $descripcionFinal = $productoModel?->nombre ?? 'Producto';
                         $codigoFinal = $productoModel?->codigo ?? 'P001';
                     }
 
-                    ProductoVenta::create([
+                    $productosVentaData[] = [
                         'id_venta' => $venta->id_venta,
                         'id_producto' => $idProducto,
                         'cantidad' => $producto['cantidad'],
@@ -333,18 +351,20 @@ class VentasController extends Controller
                         'tipo_afectacion_igv' => $producto['tipo_afectacion_igv'] ?? '10',
                         'descripcion' => $descripcionFinal,
                         'codigo_producto' => $codigoFinal,
-                    ]);
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
 
                     // Descontar stock del producto si aplica (nunca para productos libres)
                     if ($afectaStock && !$esProductoLibre) {
-                        $productoModel = \App\Models\Producto::find($idProducto);
+                        $productoModel = $productosMap->get($idProducto);
                         if ($productoModel) {
                             $stockAnterior = $productoModel->cantidad;
-                            $productoModel->decrement('cantidad', $producto['cantidad']);
-                            $productoModel->update(['ultima_salida' => now()]);
+                            // Decrement atómico + actualizar ultima_salida en un solo query
+                            $productoModel->decrement('cantidad', $producto['cantidad'], ['ultima_salida' => $now]);
                             $stockNuevo = $stockAnterior - $producto['cantidad'];
 
-                            MovimientoStock::create([
+                            $movimientosStockData[] = [
                                 'id_producto' => $productoModel->id_producto,
                                 'tipo_movimiento' => 'salida',
                                 'cantidad' => $producto['cantidad'],
@@ -357,10 +377,20 @@ class VentasController extends Controller
                                 'id_almacen' => $productoModel->almacen,
                                 'id_empresa' => $user->id_empresa,
                                 'id_usuario' => $user->id,
-                                'fecha_movimiento' => now(),
-                            ]);
+                                'fecha_movimiento' => $now,
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ];
                         }
                     }
+                }
+
+                // Bulk inserts para reducir drásticamente las queries N+1
+                if (!empty($productosVentaData)) {
+                    ProductoVenta::insert($productosVentaData);
+                }
+                if (!empty($movimientosStockData)) {
+                    MovimientoStock::insert($movimientosStockData);
                 }
 
                 // Guardar empresas seleccionadas en tabla pivot

@@ -1,7 +1,7 @@
 import { Printer, FileText, Download } from "lucide-react";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 /**
  * Modal para mostrar preview de PDF y opciones de impresión
@@ -13,9 +13,9 @@ export default function PrintOptionsModal({
     numeroCompleto,
     tipo = "venta",
 }) {
-    const [formato, setFormato] = useState("ticket"); // 'ticket' o 'a4'
+    const [formato, setFormato] = useState("a4"); // 'ticket' o 'a4'
 
-    const getPdfUrl = useCallback(() => {
+    const getPdfUrl = useCallback((download = false) => {
         const folder =
             tipo === "compra"
                 ? "reporteOC"
@@ -23,11 +23,12 @@ export default function PrintOptionsModal({
                   ? "reporteCOT"
                   : "reporteNV";
 
-        if (formato === "ticket") {
-            return `/${folder}/ticket.php?id=${ventaId}`;
-        } else {
-            return `/${folder}/a4.php?id=${ventaId}`;
-        }
+        const base =
+            formato === "ticket"
+                ? `/${folder}/ticket.php?id=${ventaId}`
+                : `/${folder}/a4.php?id=${ventaId}`;
+
+        return download ? `${base}&download=1` : base;
     }, [tipo, formato, ventaId]);
 
     const handlePrint = useCallback(() => {
@@ -38,8 +39,32 @@ export default function PrintOptionsModal({
     }, []);
 
     const handleDownload = useCallback(() => {
-        window.open(getPdfUrl(), "_blank");
+        const url = getPdfUrl(true);
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.src = url;
+        document.body.appendChild(iframe);
+        setTimeout(() => {
+            if (iframe.parentNode) {
+                document.body.removeChild(iframe);
+            }
+        }, 5000);
     }, [getPdfUrl]);
+
+    // Descargar automáticamente al abrir el modal (solo una vez)
+    const yaDescargado = useRef(false);
+    useEffect(() => {
+        if (isOpen && ventaId && !yaDescargado.current) {
+            yaDescargado.current = true;
+            const timer = setTimeout(() => {
+                handleDownload();
+            }, 800);
+            return () => clearTimeout(timer);
+        }
+        if (!isOpen) {
+            yaDescargado.current = false;
+        }
+    }, [isOpen, ventaId, handleDownload]);
 
     return (
         <Modal
