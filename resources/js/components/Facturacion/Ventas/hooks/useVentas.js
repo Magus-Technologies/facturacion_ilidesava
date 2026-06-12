@@ -111,6 +111,17 @@ export const useVentas = () => {
     };
 
     /**
+     * Clonar una venta (boleta, factura o nota de venta) — abre el formulario
+     * de nueva venta con los datos precargados (cliente, productos, cuotas)
+     */
+    const handleClonar = (venta) => {
+        const tipoMap = { '1': 'boleta', '2': 'factura', '6': 'nota' };
+        const tipo = tipoMap[String(venta.id_tido)];
+        if (!tipo) return;
+        window.location.href = `/ventas/productos?tipo=${tipo}&clonar_id=${venta.id_venta}`;
+    };
+
+    /**
      * Eliminar nota de venta con doble confirmación
      */
     const handleEliminar = async (venta) => {
@@ -177,6 +188,7 @@ export const useVentas = () => {
         handlePrint,
         handleNuevaVenta,
         handleEditar,
+        handleClonar,
         handleEliminar,
     };
 };

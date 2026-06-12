@@ -55,6 +55,7 @@ export default function VentaForm({ ventaId = null }) {
             const tipoParam = urlParams.get("tipo");
             const cotizacionIdParam = urlParams.get("cotizacion_id");
             const notaVentaIdParam = urlParams.get("nota_venta_id");
+            const clonarIdParam = urlParams.get("clonar_id");
 
             const tipoMap = { boleta: "1", factura: "2", nota: "6" };
 
@@ -204,6 +205,105 @@ export default function VentaForm({ ventaId = null }) {
                     }
                 };
                 fetchNotaVenta();
+            }
+
+            // Si hay clonar_id, precargar todo desde la venta original (clonado)
+            if (clonarIdParam) {
+                const fetchVentaClonar = async () => {
+                    try {
+                        const token = localStorage.getItem("auth_token");
+                        const response = await fetch(
+                            `/api/ventas/${clonarIdParam}`,
+                            {
+                                headers: {
+                                    Authorization: `Bearer ${token}`,
+                                    Accept: "application/json",
+                                },
+                            },
+                        );
+                        const data = await response.json();
+
+                        if (data.success) {
+                            const venta = data.venta;
+                            const clienteObj = venta.cliente || {};
+
+                            // Cuotas de la venta original (BD: fecha_vencimiento/monto_cuota).
+                            // SUNAT exige fecha de cuota posterior a la emisión:
+                            // si la fecha original ya pasó, moverla a 30 días desde hoy.
+                            const hoyStr = new Date().toISOString().split("T")[0];
+                            const cuotas = (venta.cuotas || []).map((c) => {
+                                let fecha = (c.fecha_vencimiento || c.fecha || "").split("T")[0];
+                                if (!fecha || fecha <= hoyStr) {
+                                    const f = new Date();
+                                    f.setDate(f.getDate() + 30);
+                                    fecha = f.toISOString().split("T")[0];
+                                }
+                                return {
+                                    fecha,
+                                    monto: c.monto_cuota || c.monto || 0,
+                                };
+                            });
+                            const sumaCuotas = cuotas.reduce(
+                                (s, c) => s + parseFloat(c.monto || 0),
+                                0,
+                            );
+                            const totalVenta = parseFloat(venta.total || 0);
+                            // Inicial: usar la guardada, o deducirla de total - cuotas
+                            // (ventas antiguas no persistían el monto inicial)
+                            const inicialGuardada = parseFloat(venta.monto_inicial || 0);
+                            const montoInicial = inicialGuardada > 0
+                                ? inicialGuardada
+                                : (cuotas.length > 0 && totalVenta - sumaCuotas > 0.01
+                                    ? Math.round((totalVenta - sumaCuotas) * 100) / 100
+                                    : 0);
+
+                            setFormData((prev) => ({
+                                ...prev,
+                                num_doc: clienteObj.documento || "",
+                                nom_cli: clienteObj.datos || "",
+                                dir_cli: clienteObj.direccion || venta.direccion || "",
+                                tipo_moneda: venta.tipo_moneda || "PEN",
+                                aplicar_igv: parseFloat(venta.igv || 0) > 0,
+                                observaciones: venta.observaciones || "",
+                                id_tipo_pago: String(venta.id_tipo_pago || "1"),
+                                cuotas,
+                                tiene_inicial: montoInicial > 0,
+                                monto_inicial: montoInicial,
+                                fecha_vencimiento: cuotas.length > 0
+                                    ? cuotas[cuotas.length - 1].fecha
+                                    : prev.fecha_vencimiento,
+                            }));
+
+                            if (clienteObj.id_cliente) {
+                                setCliente(clienteObj);
+                            }
+
+                            const detalles = venta.productos_ventas || [];
+                            if (detalles.length > 0) {
+                                setProductos(
+                                    detalles.map((d) => {
+                                        // Notas de venta referencian producto_madre; boletas/facturas, producto
+                                        const prod = d.producto || d.producto_madre;
+                                        return {
+                                            id_producto: d.id_producto,
+                                            codigo: d.codigo_producto || prod?.codigo || "",
+                                            descripcion: d.descripcion || prod?.nombre || "",
+                                            cantidad: parseFloat(d.cantidad) || 1,
+                                            precioVenta: parseFloat(d.precio_unitario) || 0,
+                                            precio_mostrado: parseFloat(d.precio_unitario) || 0,
+                                            tipo_precio: "precio",
+                                            moneda: venta.tipo_moneda || "PEN",
+                                            stock: prod?.cantidad ?? 0,
+                                        };
+                                    }),
+                                );
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error cargando venta a clonar:", error);
+                    }
+                };
+                fetchVentaClonar();
             }
 
             if (!tipoParam) {

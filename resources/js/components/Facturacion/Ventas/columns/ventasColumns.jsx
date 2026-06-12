@@ -19,6 +19,7 @@ import {
     PackageCheck,
     Loader2,
     AlertTriangle,
+    Copy,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -410,6 +411,15 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                     >
                                         <WhatsAppIcon className="mr-2 h-4 w-4" />
                                         Enviar por WhatsApp
+                                    </DropdownMenuItem>
+                                )}
+                                {(esBoletaFactura || esNotaVenta) && handlers.handleClonar && (
+                                    <DropdownMenuItem
+                                        onClick={() => handlers.handleClonar(venta)}
+                                        className="text-indigo-600 focus:bg-indigo-50 focus:text-indigo-700"
+                                    >
+                                        <Copy className="mr-2 h-4 w-4" />
+                                        Clonar venta
                                     </DropdownMenuItem>
                                 )}
                                 {conObservaciones && (

@@ -26,6 +26,9 @@ export default function PaymentSchedule({
     // Inicializar cuotas
     useEffect(() => {
         if (isOpen) {
+            // Sincronizar inicial con las props al abrir (puede venir precargada, ej. clonado)
+            setTieneMontoInicial(tieneInicial);
+            setMontoInicio(montoInicial || 0);
             if (cuotasIniciales && cuotasIniciales.length > 0) {
                 setCuotas(cuotasIniciales);
             } else {
@@ -38,7 +41,7 @@ export default function PaymentSchedule({
                 }]);
             }
         }
-    }, [isOpen, cuotasIniciales, total]);
+    }, [isOpen, cuotasIniciales, total, tieneInicial, montoInicial]);
 
     const formatDate = (date) => {
         if (!(date instanceof Date)) {

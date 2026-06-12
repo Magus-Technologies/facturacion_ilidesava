@@ -21,6 +21,7 @@ export default function VentasList() {
         handlePrint,
         handleNuevaVenta,
         handleEditar,
+        handleClonar,
         handleEliminar,
     } = useVentas();
 
@@ -192,6 +193,7 @@ export default function VentasList() {
             handleVerStock,
             handleWhatsApp,
             handleEditar,
+            handleClonar,
             handleEliminar,
         },
         filtroTipo === "6",
