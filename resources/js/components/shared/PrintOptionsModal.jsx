@@ -2,6 +2,7 @@ import { Printer, FileText, Download } from "lucide-react";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { descargarPdfEnSegundoPlano } from "@/lib/pdfDownload";
 
 /**
  * Modal para mostrar preview de PDF y opciones de impresión
@@ -39,18 +40,7 @@ export default function PrintOptionsModal({
     }, []);
 
     const handleDownload = useCallback(() => {
-        const url = getPdfUrl(true);
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        iframe.src = url;
-        document.body.appendChild(iframe);
-        // Dejar tiempo suficiente: si el servidor tarda en generar el PDF y el
-        // iframe se remueve antes de recibir la respuesta, la descarga se cancela
-        setTimeout(() => {
-            if (iframe.parentNode) {
-                document.body.removeChild(iframe);
-            }
-        }, 60000);
+        descargarPdfEnSegundoPlano(getPdfUrl(true));
     }, [getPdfUrl]);
 
     // Descargar automáticamente al abrir el modal (solo una vez)

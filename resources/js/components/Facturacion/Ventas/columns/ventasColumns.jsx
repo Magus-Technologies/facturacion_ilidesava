@@ -42,6 +42,7 @@ import {
     getEstadoBadge,
     getSunatBadge,
 } from "../utils/ventaHelpers";
+import { descargarPdfEnSegundoPlano } from "@/lib/pdfDownload";
 
 /**
  * Componente para mostrar el documento con opciones de impresión
@@ -85,7 +86,9 @@ const DocumentCell = ({ venta }) => {
             formato === "a4"
                 ? `/reporteNV/a4.php?id=${venta.id_venta}`
                 : `/reporteNV/ticket.php?id=${venta.id_venta}`;
+        // Abrir vista previa y descargar automáticamente en segundo plano
         window.open(url, "_blank");
+        descargarPdfEnSegundoPlano(`${url}&download=1`);
         setIsOpen(false);
     };
 
