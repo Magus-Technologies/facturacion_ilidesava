@@ -44,11 +44,13 @@ export default function PrintOptionsModal({
         iframe.style.display = "none";
         iframe.src = url;
         document.body.appendChild(iframe);
+        // Dejar tiempo suficiente: si el servidor tarda en generar el PDF y el
+        // iframe se remueve antes de recibir la respuesta, la descarga se cancela
         setTimeout(() => {
             if (iframe.parentNode) {
                 document.body.removeChild(iframe);
             }
-        }, 5000);
+        }, 60000);
     }, [getPdfUrl]);
 
     // Descargar automáticamente al abrir el modal (solo una vez)

@@ -66,10 +66,13 @@ class VentaPdfController extends Controller
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
 
-            $filename = $venta->tipoDocumento->nombre .
+            // El filename viaja en un header HTTP: debe ser ASCII puro.
+            // Nombres con tildes (ej. "FACTURA ELECTRÓNICA") rompen la descarga en el navegador.
+            $filename = \Illuminate\Support\Str::ascii(
+                ($venta->tipoDocumento->nombre ?? 'VENTA') .
                 "-" . $venta->serie .
-                "-" . str_pad($venta->numero, 6, "0", STR_PAD_LEFT) .
-                ".pdf";
+                "-" . str_pad($venta->numero, 6, "0", STR_PAD_LEFT)
+            ) . ".pdf";
 
             return response($dompdf->output(), 200, [
                 'Content-Type' => 'application/pdf',
