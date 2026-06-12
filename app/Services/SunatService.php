@@ -241,7 +241,20 @@ class SunatService
         }
 
         $tipoPago = $venta->id_tipo_pago ?? '1';
-        $invoice->setFormaPago($tipoPago == '1' ? new FormaPagoContado() : new FormaPagoCredito($impVenta));
+        if ($tipoPago == '1') {
+            $invoice->setFormaPago(new FormaPagoContado());
+        } else {
+            // SUNAT (regla 3319): el monto del crédito es el NETO PENDIENTE de pago,
+            // es decir la suma de las cuotas. Excluye inicial/retención pagada a la emisión.
+            $sumaCuotas = 0.0;
+            if ($venta->cuotas && $venta->cuotas->count() > 0) {
+                foreach ($venta->cuotas as $cuota) {
+                    $sumaCuotas += (float) ($cuota->monto_cuota ?? $cuota->monto ?? 0);
+                }
+            }
+            $montoCredito = $sumaCuotas > 0 ? round($sumaCuotas, 2) : $impVenta;
+            $invoice->setFormaPago(new FormaPagoCredito($montoCredito));
+        }
 
         if ($venta->fecha_vencimiento) {
             $invoice->setFecVencimiento($venta->fecha_vencimiento);
@@ -393,6 +406,32 @@ class SunatService
                 mkdir($cdrDir, 0755, true);
             }
             file_put_contents("{$cdrDir}/R-{$nombreArchivo}.zip", $cdrZip);
+
+            // Greenter marca isSuccess() cuando SUNAT devuelve un CDR, aunque ese CDR
+            // sea de RECHAZO. Hay que evaluar el código: 0 = aceptado,
+            // 2000-3999 = rechazado, otros = error no clasificado (se trata como rechazo).
+            $codigoCdr = (int) $cdr->getCode();
+            if ($codigoCdr !== 0) {
+                Log::error('SUNAT - Comprobante rechazado (CDR con código de error)', [
+                    'venta' => $venta->serie . '-' . $venta->numero,
+                    'codigo' => $cdr->getCode(),
+                    'mensaje' => $cdr->getDescription(),
+                ]);
+
+                $venta->update([
+                    'estado_sunat' => '3',
+                    'cdr_url' => "sunat/cdr/{$ruc}/R-{$nombreArchivo}.zip",
+                    'codigo_sunat' => $cdr->getCode(),
+                    'mensaje_sunat' => $cdr->getDescription(),
+                    'intentos' => ($venta->intentos ?? 0) + 1,
+                ]);
+
+                return [
+                    'success' => false,
+                    'codigo' => $cdr->getCode(),
+                    'message' => $cdr->getDescription(),
+                ];
+            }
 
             // Detectar observaciones en el CDR
             $notas = $cdr->getNotes() ?? [];

@@ -177,6 +177,35 @@ class VentasController extends Controller
                 ], 422);
             }
 
+            // Venta a crédito de boleta/factura: validar cronograma de cuotas.
+            // SUNAT exige cuotas y que inicial + cuotas == total (regla 3319).
+            if (($validated['id_tipo_pago'] ?? 1) == 2 && in_array($validated['id_tido'], [1, 2])) {
+                $cuotasInput = $request->input('cuotas', []);
+                if (empty($cuotasInput)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Una venta a CRÉDITO requiere al menos una cuota en el cronograma de pagos.',
+                    ], 422);
+                }
+
+                $sumaCuotas = round(array_sum(array_map(fn ($c) => (float) ($c['monto'] ?? 0), $cuotasInput)), 2);
+                $montoInicial = round((float) $request->input('monto_inicial', 0), 2);
+                $totalVenta = round((float) $validated['total'], 2);
+
+                if (abs(($sumaCuotas + $montoInicial) - $totalVenta) > 0.10) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => sprintf(
+                            'El cronograma no cuadra: inicial (%.2f) + cuotas (%.2f) = %.2f, pero el total es %.2f. SUNAT rechazará el comprobante (error 3319).',
+                            $montoInicial,
+                            $sumaCuotas,
+                            $montoInicial + $sumaCuotas,
+                            $totalVenta
+                        ),
+                    ], 422);
+                }
+            }
+
             // Reintentar hasta 3 veces en caso de deadlock por concurrencia
             $maxIntentos = 3;
             $intento = 0;
@@ -459,11 +488,14 @@ class VentasController extends Controller
                         $fechaVencimiento = $cuota['fecha'];
                     }
 
-                    // Actualizar fecha_vencimiento y num_cuotas en la venta
+                    // Actualizar fecha_vencimiento, num_cuotas e inicial en la venta
+                    $tieneInicial = filter_var($request->input('tiene_inicial', false), FILTER_VALIDATE_BOOLEAN);
                     $venta->update([
                         'fecha_vencimiento' => $fechaVencimiento ?? $venta->fecha_emision,
                         'num_cuotas' => count($cuotas),
                         'monto_cuota' => count($cuotas) > 0 ? $cuotas[0]['monto'] : 0,
+                        'tiene_inicial' => $tieneInicial,
+                        'monto_inicial' => $tieneInicial ? round((float) $request->input('monto_inicial', 0), 2) : 0,
                     ]);
                 }
 
