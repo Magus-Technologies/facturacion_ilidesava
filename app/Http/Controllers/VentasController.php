@@ -129,6 +129,7 @@ class VentasController extends Controller
                 'productos.*.codigo_producto' => 'nullable|string|max:50',
                 'pagos' => 'nullable|array',
                 'pagos.*.id_tipo_pago' => 'required_with:pagos|integer',
+                'pagos.*.monto' => 'nullable|numeric|min:0',
                 'pagos.*.numero_operacion' => 'nullable|string|max:50',
                 'pagos.*.banco' => 'nullable|string|max:100',
                 'pagos.*.voucher' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -441,7 +442,9 @@ class VentasController extends Controller
                         VentaPago::create([
                             'id_venta' => $venta->id_venta,
                             'id_tipo_pago' => $pagoItem['id_tipo_pago'],
-                            'monto' => $venta->total,
+                            'monto' => isset($pagoItem['monto']) && $pagoItem['monto'] !== ''
+                                ? round((float) $pagoItem['monto'], 2)
+                                : $venta->total,
                             'fecha_pago' => $venta->fecha_emision,
                             'numero_operacion' => $pagoItem['numero_operacion'] ?? null,
                             'banco' => $pagoItem['banco'] ?? null,
@@ -660,6 +663,7 @@ class VentasController extends Controller
                 'productos.*.codigo_producto' => 'nullable|string|max:50',
                 'pagos' => 'nullable|array',
                 'pagos.*.id_tipo_pago' => 'required_with:pagos|integer',
+                'pagos.*.monto' => 'nullable|numeric|min:0',
                 'pagos.*.numero_operacion' => 'nullable|string|max:50',
                 'pagos.*.banco' => 'nullable|string|max:100',
                 'pagos.*.voucher' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -963,7 +967,9 @@ class VentasController extends Controller
                     VentaPago::create([
                         'id_venta' => $venta->id_venta,
                         'id_tipo_pago' => $pagoItem['id_tipo_pago'],
-                        'monto' => $venta->total,
+                        'monto' => isset($pagoItem['monto']) && $pagoItem['monto'] !== ''
+                            ? round((float) $pagoItem['monto'], 2)
+                            : $venta->total,
                         'fecha_pago' => $venta->fecha_emision,
                         'numero_operacion' => $pagoItem['numero_operacion'] ?? null,
                         'banco' => $pagoItem['banco'] ?? null,

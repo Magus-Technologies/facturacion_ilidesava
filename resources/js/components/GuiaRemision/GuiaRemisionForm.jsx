@@ -1105,6 +1105,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                                         </Label>
                                         <Input
                                             value={form.transportista_nombre}
+                                            disabled
                                             onChange={(e) =>
                                                 handleChange(
                                                     "transportista_nombre",

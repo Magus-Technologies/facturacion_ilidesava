@@ -38,6 +38,7 @@ const BANCOS = [
 
 const crearPagoVacio = () => ({
     id_tipo_pago: "1",
+    monto: "",
     numero_operacion: "",
     banco: "",
     voucher_file: null,
@@ -147,6 +148,25 @@ export default function MetodoPago({
                                 >
                                     <Trash2 className="h-3 w-3" />
                                 </button>
+                            </div>
+                        )}
+
+                        {pagos.length > 1 && (
+                            <div>
+                                <Label className="block text-[10px] font-medium mb-0.5">
+                                    Monto
+                                </Label>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    className="h-8 text-xs"
+                                    value={pago.monto || ""}
+                                    onChange={(e) =>
+                                        handleChange(index, "monto", e.target.value)
+                                    }
+                                />
                             </div>
                         )}
 

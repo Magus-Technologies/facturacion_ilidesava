@@ -257,12 +257,20 @@
 
         <!-- Métodos de Pago -->
         @if($todosLosPagos->count() > 0 && $venta->id_tipo_pago == 1)
+        @php
+            $simboloPago = $venta->tipo_moneda === 'USD' ? '$' : 'S/';
+            // Ventas antiguas con varios pagos guardaban el total duplicado en cada fila:
+            // si la suma de pagos excede el total, los montos no son confiables
+            $montosPagoConfiables = $todosLosPagos->count() <= 1
+                || round($todosLosPagos->sum('monto'), 2) <= round((float) $venta->total, 2) + 0.01;
+        @endphp
         <table class="products-table" style="margin-bottom: 8px;">
             <thead>
                 <tr>
-                    <th width="30%" class="text-center">MÉTODO</th>
-                    <th width="35%" class="text-center">N° OPERACIÓN</th>
-                    <th width="35%" class="text-center">BANCO</th>
+                    <th width="25%" class="text-center">MÉTODO</th>
+                    <th width="27%" class="text-center">N° OPERACIÓN</th>
+                    <th width="24%" class="text-center">BANCO</th>
+                    <th width="24%" class="text-center">MONTO</th>
                 </tr>
             </thead>
             <tbody>
@@ -271,6 +279,9 @@
                     <td style="text-align: center;">{{ $metodosPago[$pagoItem->id_tipo_pago] ?? 'OTRO' }}</td>
                     <td style="text-align: center;">{{ $pagoItem->numero_operacion ?? '—' }}</td>
                     <td style="text-align: center;">{{ $pagoItem->banco ?? '—' }}</td>
+                    <td style="text-align: center;">
+                        {{ $montosPagoConfiables && $pagoItem->monto !== null ? $simboloPago . ' ' . number_format($pagoItem->monto, 2) : '—' }}
+                    </td>
                 </tr>
                 @endforeach
             </tbody>

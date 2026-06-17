@@ -457,6 +457,9 @@ export const useVentaForm = (ventaId = null) => {
                 const pagos = Array.isArray(metodoPago) ? metodoPago : [metodoPago];
                 pagos.forEach((pago, i) => {
                     formDataObj.append(`pagos[${i}][id_tipo_pago]`, pago.id_tipo_pago);
+                    if (pago.monto !== undefined && pago.monto !== null && pago.monto !== '') {
+                        formDataObj.append(`pagos[${i}][monto]`, pago.monto);
+                    }
                     if (pago.numero_operacion) {
                         formDataObj.append(`pagos[${i}][numero_operacion]`, pago.numero_operacion);
                     }
