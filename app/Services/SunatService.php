@@ -495,11 +495,31 @@ class SunatService
 
         $error = $result->getError();
 
+        // Error HTTP (servidor de SUNAT caído/inaccesible) o sin error legible:
+        // es un fallo de CONEXIÓN, no un rechazo. Se deja en '0' (pendiente) para
+        // que se reintente, igual que en el caso de excepción. NO se marca '3'.
+        $codigoError = $error ? (string) $error->getCode() : null;
+        if (!$error || $codigoError === 'HTTP') {
+            $msg = $error ? $error->getMessage() : 'Respuesta vacía de SUNAT';
+            Log::error('SUNAT - Fallo de conexión (no es rechazo), queda pendiente', [
+                'venta' => $venta->serie . '-' . $venta->numero,
+                'codigo' => $codigoError ?? 'HTTP',
+                'mensaje' => $msg,
+            ]);
+            $venta->update([
+                'estado_sunat' => '0',
+                'codigo_sunat' => $codigoError ?? 'HTTP',
+                'mensaje_sunat' => 'No se pudo conectar con SUNAT (reintentará): ' . $msg,
+                'intentos' => ($venta->intentos ?? 0) + 1,
+            ]);
+            return ['success' => false, 'codigo' => $codigoError ?? 'HTTP', 'message' => $msg];
+        }
+
         // Código 1033: el comprobante YA fue registrado en SUNAT. Pasa cuando un
         // envío anterior llegó a SUNAT pero la conexión se cortó antes de recibir
         // el CDR. No es un rechazo: el documento está aceptado. Lo marcamos como
         // aceptado para no generar falsos rechazos ni reenvíos en bucle.
-        if ((string) $error->getCode() === '1033') {
+        if ($codigoError === '1033') {
             Log::warning('SUNAT - Comprobante ya registrado (1033), se marca aceptado', [
                 'venta' => $venta->serie . '-' . $venta->numero,
                 'mensaje' => $error->getMessage(),
