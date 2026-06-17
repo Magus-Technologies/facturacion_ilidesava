@@ -42,6 +42,12 @@ class SunatService
 {
     public function getSee(Empresa $empresa, string $tipoDoc = 'facturacion'): See
     {
+        // Limitar cuánto espera la llamada SOAP a SUNAT. Sin esto, si SUNAT está
+        // lento la petición se cuelga hasta agotar max_execution_time y muere con
+        // un error fatal (HTTP 500) que NO se puede atrapar con try/catch.
+        // Con un socket timeout corto, una caída se convierte en SoapFault atrapable.
+        ini_set('default_socket_timeout', '20');
+
         $see = new See();
         $endpoint = $this->getEndpoint($empresa, $tipoDoc);
         $see->setService($endpoint);
@@ -305,6 +311,9 @@ class SunatService
 
     public function enviarComprobante(Venta $venta): array
     {
+        // Dar margen para los reintentos (cada intento corta a 20s por el socket timeout).
+        @set_time_limit(120);
+
         $venta->load(['empresa', 'tipoDocumento']);
         $empresa = $venta->empresa;
         $ruc = $this->getRuc($empresa);
@@ -331,8 +340,10 @@ class SunatService
             'modo' => $empresa->modo,
         ]);
 
-        // Reintentar hasta 3 veces si SUNAT devuelve error HTTP (servidor caído)
-        $maxRetries = 3;
+        // Reintentar si SUNAT devuelve error HTTP (servidor caído). Con el socket
+        // timeout de 20s, 2 intentos acotan el peor caso a ~42s (bajo el timeout
+        // del proxy) y evitan que la petición síncrona se alargue demasiado.
+        $maxRetries = 2;
         $result = null;
         $lastException = null;
 
@@ -388,10 +399,14 @@ class SunatService
                 'ultimo_error' => $lastException->getMessage(),
             ]);
             $codigo = $lastException instanceof \SoapFault ? 'SOAP' : 'ERROR';
+            // IMPORTANTE: esto es un fallo de CONEXIÓN, no un rechazo de SUNAT.
+            // Se deja en estado '0' (pendiente) para que el envío automático o el
+            // manual lo reintenten. NO se marca '3' (rechazado) para no confundir
+            // una caída de red con un rechazo real.
             $venta->update([
-                'estado_sunat' => '3',
+                'estado_sunat' => '0',
                 'codigo_sunat' => $codigo,
-                'mensaje_sunat' => $lastException->getMessage(),
+                'mensaje_sunat' => 'No se pudo conectar con SUNAT (reintentará): ' . $lastException->getMessage(),
                 'intentos' => ($venta->intentos ?? 0) + 1,
             ]);
             return ['success' => false, 'codigo' => $codigo, 'message' => $lastException->getMessage()];
@@ -479,6 +494,29 @@ class SunatService
         }
 
         $error = $result->getError();
+
+        // Código 1033: el comprobante YA fue registrado en SUNAT. Pasa cuando un
+        // envío anterior llegó a SUNAT pero la conexión se cortó antes de recibir
+        // el CDR. No es un rechazo: el documento está aceptado. Lo marcamos como
+        // aceptado para no generar falsos rechazos ni reenvíos en bucle.
+        if ((string) $error->getCode() === '1033') {
+            Log::warning('SUNAT - Comprobante ya registrado (1033), se marca aceptado', [
+                'venta' => $venta->serie . '-' . $venta->numero,
+                'mensaje' => $error->getMessage(),
+            ]);
+            $venta->update([
+                'estado_sunat' => '1',
+                'codigo_sunat' => '0',
+                'mensaje_sunat' => 'Comprobante ya estaba registrado en SUNAT (1033).',
+            ]);
+
+            return [
+                'success' => true,
+                'codigo' => '0',
+                'mensaje' => 'Comprobante ya estaba registrado en SUNAT.',
+            ];
+        }
+
         Log::error('SUNAT - Comprobante rechazado', [
             'venta' => $venta->serie . '-' . $venta->numero,
             'codigo' => $error->getCode(),
