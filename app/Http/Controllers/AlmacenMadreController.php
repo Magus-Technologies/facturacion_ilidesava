@@ -548,7 +548,9 @@ class AlmacenMadreController extends Controller
      */
     public function movimientos(Request $request): JsonResponse
     {
-        $query = MovimientoStock::where('tipo_documento', 'almacen_madre')
+        // Incluye descuentos de ventas ('almacen_madre') y de notas de venta
+        // ('nota_venta_madre'), ambos contra el almacén madre (id_almacen 0).
+        $query = MovimientoStock::whereIn('tipo_documento', ['almacen_madre', 'nota_venta_madre'])
             ->where('id_almacen', 0);
 
         if ($search = $request->get('search')) {
@@ -557,7 +559,8 @@ class AlmacenMadreController extends Controller
                 ->pluck('id_producto');
             $query->where(function ($q) use ($search, $productoIds) {
                 $q->whereIn('id_producto', $productoIds)
-                  ->orWhere('documento_referencia', 'LIKE', "%{$search}%");
+                  ->orWhere('documento_referencia', 'LIKE', "%{$search}%")
+                  ->orWhere('observaciones', 'LIKE', "%{$search}%");
             });
         }
 
@@ -572,13 +575,25 @@ class AlmacenMadreController extends Controller
             ->limit(200)
             ->get()
             ->map(function ($m) {
-                $producto = Producto::find($m->id_producto);
+                $producto = $m->id_producto ? Producto::find($m->id_producto) : null;
+                $nombre = $producto?->nombre;
+                $codigo = $producto?->codigo;
+
+                // Notas de venta: el producto vive en productos_madre y el movimiento
+                // queda con id_producto NULL. Resolvemos el nombre por el código que
+                // se guardó en observaciones ("Producto: CODIGO").
+                if (!$producto && preg_match('/Producto:\s*(.+)$/', (string) $m->observaciones, $mm)) {
+                    $codigo = trim($mm[1]);
+                    $productoMadre = ProductoMadre::where('codigo', $codigo)->first();
+                    $nombre = $productoMadre?->nombre ?? $codigo;
+                }
+
                 $empresa = \App\Models\Empresa::find($m->id_empresa);
                 return [
                     'id' => $m->id_movimiento,
                     'fecha' => $m->fecha_movimiento?->format('Y-m-d H:i'),
-                    'producto' => $producto?->nombre ?? '-',
-                    'codigo' => $producto?->codigo ?? '-',
+                    'producto' => $nombre ?? '-',
+                    'codigo' => $codigo ?? '-',
                     'tipo' => $m->tipo_movimiento,
                     'cantidad' => (float) $m->cantidad,
                     'stock_anterior' => (float) $m->stock_anterior,

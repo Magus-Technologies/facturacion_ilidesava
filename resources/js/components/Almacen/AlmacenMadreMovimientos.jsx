@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
 import { toast } from "@/lib/sweetalert";
 import MainLayout from "../Layout/MainLayout";
 import {
@@ -8,7 +9,6 @@ import {
     PackageMinus,
     Loader2,
     RefreshCw,
-    Search,
     FileSpreadsheet,
     History,
     ArrowDownCircle,
@@ -27,17 +27,100 @@ const apiFetch = async (url) => {
     return res.json();
 };
 
+const columns = [
+    {
+        accessorKey: "fecha",
+        header: "Fecha",
+        cell: ({ row }) => (
+            <span className="text-gray-600 whitespace-nowrap">{row.original.fecha}</span>
+        ),
+    },
+    {
+        accessorKey: "producto",
+        header: "Producto",
+        cell: ({ row }) => (
+            <span className="font-medium text-gray-800">{row.original.producto}</span>
+        ),
+    },
+    {
+        accessorKey: "codigo",
+        header: "Código",
+        cell: ({ row }) => (
+            <span className="font-mono text-xs text-gray-500">{row.original.codigo}</span>
+        ),
+    },
+    {
+        accessorKey: "tipo",
+        header: "Tipo",
+        cell: ({ row }) =>
+            row.original.tipo === "entrada" ? (
+                <span className="inline-flex items-center gap-1 text-green-600 text-xs font-medium">
+                    <ArrowUpCircle className="h-3.5 w-3.5" />
+                    Entrada
+                </span>
+            ) : (
+                <span className="inline-flex items-center gap-1 text-red-600 text-xs font-medium">
+                    <ArrowDownCircle className="h-3.5 w-3.5" />
+                    Salida
+                </span>
+            ),
+    },
+    {
+        accessorKey: "cantidad",
+        header: "Cantidad",
+        cell: ({ row }) => (
+            <span
+                className={`font-bold ${row.original.tipo === "entrada" ? "text-green-600" : "text-red-600"}`}
+            >
+                {row.original.tipo === "entrada" ? "+" : "-"}
+                {row.original.cantidad}
+            </span>
+        ),
+    },
+    {
+        accessorKey: "stock_anterior",
+        header: "Stock Ant.",
+        cell: ({ row }) => <span className="text-gray-500">{row.original.stock_anterior}</span>,
+    },
+    {
+        accessorKey: "stock_nuevo",
+        header: "Stock Nuevo",
+        cell: ({ row }) => <span className="font-medium">{row.original.stock_nuevo}</span>,
+    },
+    {
+        accessorKey: "comprobante",
+        header: "Comprobante",
+        cell: ({ row }) => (
+            <span className="font-mono text-xs">{row.original.comprobante}</span>
+        ),
+    },
+    {
+        accessorKey: "empresa",
+        header: "Empresa",
+        cell: ({ row }) => (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                {row.original.empresa}
+            </span>
+        ),
+    },
+    {
+        accessorKey: "motivo",
+        header: "Motivo",
+        cell: ({ row }) => (
+            <span className="text-xs text-gray-500">{row.original.motivo}</span>
+        ),
+    },
+];
+
 export default function AlmacenMadreMovimientos() {
     const [movimientos, setMovimientos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState("");
     const [desde, setDesde] = useState("");
     const [hasta, setHasta] = useState("");
     const [exporting, setExporting] = useState(false);
 
     const buildParams = () => {
         const params = new URLSearchParams();
-        if (search) params.set("search", search);
         if (desde) params.set("desde", desde);
         if (hasta) params.set("hasta", hasta);
         return params.toString();
@@ -75,6 +158,11 @@ export default function AlmacenMadreMovimientos() {
         }
         setExporting(false);
     };
+
+    const totalNeto = movimientos.reduce(
+        (sum, m) => sum + (m.tipo === "entrada" ? -m.cantidad : m.cantidad),
+        0,
+    );
 
     return (
         <MainLayout>
@@ -116,18 +204,8 @@ export default function AlmacenMadreMovimientos() {
                     <NavLink href="/almacen-madre/movimientos" active label="Movimientos" icon={History} />
                 </div>
 
-                {/* Filtros */}
+                {/* Filtros de fecha */}
                 <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative flex-1 min-w-[200px] max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar producto o comprobante..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                        />
-                    </div>
                     <div className="flex items-center gap-2">
                         <label className="text-sm text-gray-500">Desde</label>
                         <input
@@ -160,7 +238,7 @@ export default function AlmacenMadreMovimientos() {
                     </div>
                     <div className="bg-orange-50 rounded-lg px-4 py-2 text-sm">
                         <span className="text-orange-700 font-medium">
-                            Total descontado: {movimientos.reduce((sum, m) => sum + m.cantidad, 0).toFixed(0)} unidades
+                            Total descontado (neto): {totalNeto.toFixed(0)} unidades
                         </span>
                     </div>
                 </div>
@@ -170,67 +248,15 @@ export default function AlmacenMadreMovimientos() {
                     <div className="flex items-center justify-center h-32">
                         <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
                     </div>
-                ) : movimientos.length === 0 ? (
-                    <div className="text-center py-12 bg-gray-50 rounded-lg">
-                        <History className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 font-medium">No hay movimientos registrados</p>
-                        <p className="text-sm text-gray-400 mt-1">
-                            Los movimientos se registran al descontar ventas del almacen madre
-                        </p>
-                    </div>
                 ) : (
-                    <div className="bg-white rounded-lg overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-3 py-2.5 text-left font-medium text-gray-600">Fecha</th>
-                                        <th className="px-3 py-2.5 text-left font-medium text-gray-600">Producto</th>
-                                        <th className="px-3 py-2.5 text-left font-medium text-gray-600">Codigo</th>
-                                        <th className="px-3 py-2.5 text-center font-medium text-gray-600">Tipo</th>
-                                        <th className="px-3 py-2.5 text-right font-medium text-gray-600">Cantidad</th>
-                                        <th className="px-3 py-2.5 text-right font-medium text-gray-600">Stock Ant.</th>
-                                        <th className="px-3 py-2.5 text-right font-medium text-gray-600">Stock Nuevo</th>
-                                        <th className="px-3 py-2.5 text-left font-medium text-gray-600">Comprobante</th>
-                                        <th className="px-3 py-2.5 text-left font-medium text-gray-600">Empresa</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {movimientos.map((m) => (
-                                        <tr key={m.id} className="hover:bg-gray-50">
-                                            <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{m.fecha}</td>
-                                            <td className="px-3 py-2 font-medium text-gray-800">{m.producto}</td>
-                                            <td className="px-3 py-2 font-mono text-xs text-gray-500">{m.codigo}</td>
-                                            <td className="px-3 py-2 text-center">
-                                                {m.tipo === "salida" ? (
-                                                    <span className="inline-flex items-center gap-1 text-red-600 text-xs font-medium">
-                                                        <ArrowDownCircle className="h-3.5 w-3.5" />
-                                                        Salida
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 text-green-600 text-xs font-medium">
-                                                        <ArrowUpCircle className="h-3.5 w-3.5" />
-                                                        Entrada
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-3 py-2 text-right font-bold text-red-600">
-                                                -{m.cantidad}
-                                            </td>
-                                            <td className="px-3 py-2 text-right text-gray-500">{m.stock_anterior}</td>
-                                            <td className="px-3 py-2 text-right font-medium">{m.stock_nuevo}</td>
-                                            <td className="px-3 py-2 font-mono text-xs">{m.comprobante}</td>
-                                            <td className="px-3 py-2">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                                                    {m.empresa}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <DataTable
+                        columns={columns}
+                        data={movimientos}
+                        searchable
+                        searchPlaceholder="Buscar producto o comprobante..."
+                        pagination
+                        pageSize={15}
+                    />
                 )}
             </div>
         </MainLayout>
