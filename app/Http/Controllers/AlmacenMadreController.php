@@ -57,6 +57,7 @@ class AlmacenMadreController extends Controller
             $ventasPendientes = \App\Models\Venta::where('stock_real_descontado', false)
                 ->where('estado', '1')
                 ->where('id_empresa', $user->id_empresa)
+                ->where('id_tido', '!=', 6)
                 ->count();
 
             $pendientesPorEmpresa = collect();
@@ -70,6 +71,7 @@ class AlmacenMadreController extends Controller
             $ventasPendientes = \App\Models\Venta::where('stock_real_descontado', false)
                 ->where('estado', '1')
                 ->whereNotIn('id_empresa', $empresasAlmacenPropio)
+                ->where('id_tido', '!=', 6)
                 ->count();
 
             $valorTotal = ProductoMadre::where('estado', '1')
@@ -96,6 +98,7 @@ class AlmacenMadreController extends Controller
             $pendientesPorEmpresa = \App\Models\Venta::where('stock_real_descontado', false)
                 ->where('ventas.estado', '1')
                 ->whereNotIn('ventas.id_empresa', $empresasAlmacenPropio)
+                ->where('ventas.id_tido', '!=', 6)
                 ->join('empresas', 'ventas.id_empresa', '=', 'empresas.id_empresa')
                 ->selectRaw('COALESCE(empresas.comercial, empresas.razon_social) as empresa, COUNT(*) as total, SUM(ventas.total) as monto')
                 ->groupBy('empresas.comercial', 'empresas.razon_social')
@@ -395,7 +398,8 @@ class AlmacenMadreController extends Controller
 
         $query = \App\Models\Venta::with(['cliente', 'empresa', 'productosVentas.producto'])
             ->where('stock_real_descontado', false)
-            ->where('estado', '1');
+            ->where('estado', '1')
+            ->where('id_tido', '!=', 6);
 
         if ($usaPropio) {
             $query->where('id_empresa', $user->id_empresa);
