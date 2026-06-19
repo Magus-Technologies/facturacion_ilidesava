@@ -785,4 +785,164 @@ class VentaExportController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Reporte detallado de Notas de Venta (id_tido=6) en Excel.
+     * Parámetros: desde, hasta (fechas), detalle ('producto' | 'resumen'),
+     * estado ('todas' | 'activas' | 'anuladas').
+     */
+    public function reporteNotasVenta(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                abort(401, 'Sesión expirada');
+            }
+
+            $desde = $request->input('desde');
+            $hasta = $request->input('hasta');
+            $detalle = $request->input('detalle', 'producto'); // producto | resumen
+            $estadoFiltro = $request->input('estado', 'todas');  // todas | activas | anuladas
+
+            $query = Venta::with(['cliente', 'usuario', 'productosVentas.producto'])
+                ->where('id_empresa', $user->id_empresa)
+                ->where('id_tido', 6);
+
+            if ($desde) $query->whereDate('fecha_emision', '>=', $desde);
+            if ($hasta) $query->whereDate('fecha_emision', '<=', $hasta);
+            if ($estadoFiltro === 'activas') $query->whereNotIn('estado', ['2', 'A']);
+            if ($estadoFiltro === 'anuladas') $query->whereIn('estado', ['2', 'A']);
+
+            $notas = $query->orderBy('fecha_emision')->orderBy('serie')->orderBy('numero')->get();
+
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Notas de Venta');
+
+            $esDetalle = $detalle === 'producto';
+            $lastCol = $esDetalle ? 'L' : 'I';
+
+            // Título
+            $sheet->setCellValue('A1', 'REPORTE DE NOTAS DE VENTA');
+            $sheet->mergeCells("A1:{$lastCol}1");
+            $sheet->getStyle('A1')->applyFromArray([
+                'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2563EB']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+
+            $periodo = 'Todas las fechas';
+            if ($desde && $hasta) $periodo = "Periodo: {$desde} al {$hasta}";
+            elseif ($desde) $periodo = "Desde: {$desde}";
+            elseif ($hasta) $periodo = "Hasta: {$hasta}";
+            $sheet->setCellValue('A2', $periodo . ' | Generado: ' . now()->format('d/m/Y H:i'));
+            $sheet->mergeCells("A2:{$lastCol}2");
+
+            if ($esDetalle) {
+                $headers = ['Fecha', 'Documento', 'Doc. Cliente', 'Cliente', 'Producto', 'Código', 'Cantidad', 'P. Unit.', 'Subtotal', 'IGV', 'Total', 'Estado'];
+            } else {
+                $headers = ['Fecha', 'Documento', 'Doc. Cliente', 'Cliente', 'Subtotal', 'IGV', 'Total', 'Stock descontado', 'Estado'];
+            }
+            $col = 'A';
+            foreach ($headers as $h) {
+                $sheet->setCellValue($col . '3', $h);
+                $col++;
+            }
+            $sheet->getStyle("A3:{$lastCol}3")->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4B5563']],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+
+            $row = 4;
+            $totSub = 0; $totIgv = 0; $totTotal = 0;
+
+            foreach ($notas as $nota) {
+                $doc = $nota->serie . '-' . str_pad($nota->numero, 6, '0', STR_PAD_LEFT);
+                $fecha = $nota->fecha_emision ? \Illuminate\Support\Carbon::parse($nota->fecha_emision)->format('Y-m-d') : '-';
+                $cliDoc = $nota->cliente?->documento ?? '-';
+                $cliNom = $nota->cliente?->datos ?? 'Sin cliente';
+                $anulada = in_array($nota->estado, ['2', 'A']);
+                $estadoTxt = $anulada ? 'Anulada' : 'Activa';
+
+                if ($esDetalle) {
+                    foreach ($nota->productosVentas as $d) {
+                        $sheet->setCellValue("A{$row}", $fecha);
+                        $sheet->setCellValue("B{$row}", $doc);
+                        $sheet->setCellValue("C{$row}", $cliDoc);
+                        $sheet->setCellValue("D{$row}", $cliNom);
+                        $sheet->setCellValue("E{$row}", $d->producto?->nombre ?? $d->descripcion ?? '-');
+                        $sheet->setCellValue("F{$row}", $d->producto?->codigo ?? $d->codigo_producto ?? '-');
+                        $sheet->setCellValue("G{$row}", (float) $d->cantidad);
+                        $sheet->setCellValue("H{$row}", (float) $d->precio_unitario);
+                        $sheet->setCellValue("I{$row}", (float) $d->subtotal);
+                        $sheet->setCellValue("J{$row}", (float) $d->igv);
+                        $sheet->setCellValue("K{$row}", (float) $d->total);
+                        $sheet->setCellValue("L{$row}", $estadoTxt);
+                        if ($anulada) {
+                            $sheet->getStyle("L{$row}")->getFont()->getColor()->setRGB('EF4444');
+                        }
+                        $totSub += (float) $d->subtotal;
+                        $totIgv += (float) $d->igv;
+                        $totTotal += (float) $d->total;
+                        $row++;
+                    }
+                } else {
+                    $sheet->setCellValue("A{$row}", $fecha);
+                    $sheet->setCellValue("B{$row}", $doc);
+                    $sheet->setCellValue("C{$row}", $cliDoc);
+                    $sheet->setCellValue("D{$row}", $cliNom);
+                    $sheet->setCellValue("E{$row}", (float) $nota->subtotal);
+                    $sheet->setCellValue("F{$row}", (float) $nota->igv);
+                    $sheet->setCellValue("G{$row}", (float) $nota->total);
+                    $sheet->setCellValue("H{$row}", $nota->stock_real_descontado ? 'Sí' : 'No');
+                    $sheet->setCellValue("I{$row}", $estadoTxt);
+                    if ($anulada) {
+                        $sheet->getStyle("I{$row}")->getFont()->getColor()->setRGB('EF4444');
+                    }
+                    $totSub += (float) $nota->subtotal;
+                    $totIgv += (float) $nota->igv;
+                    $totTotal += (float) $nota->total;
+                    $row++;
+                }
+            }
+
+            // Fila de totales
+            if ($esDetalle) {
+                $sheet->setCellValue("A{$row}", 'TOTAL NOTAS: ' . $notas->count());
+                $sheet->setCellValue("I{$row}", $totSub);
+                $sheet->setCellValue("J{$row}", $totIgv);
+                $sheet->setCellValue("K{$row}", $totTotal);
+            } else {
+                $sheet->setCellValue("A{$row}", 'TOTAL NOTAS: ' . $notas->count());
+                $sheet->setCellValue("E{$row}", $totSub);
+                $sheet->setCellValue("F{$row}", $totIgv);
+                $sheet->setCellValue("G{$row}", $totTotal);
+            }
+            $sheet->getStyle("A{$row}:{$lastCol}{$row}")->applyFromArray([
+                'font' => ['bold' => true],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+
+            // Anchos
+            $widths = $esDetalle
+                ? ['A' => 12, 'B' => 14, 'C' => 14, 'D' => 28, 'E' => 32, 'F' => 14, 'G' => 10, 'H' => 12, 'I' => 12, 'J' => 12, 'K' => 12, 'L' => 10]
+                : ['A' => 12, 'B' => 14, 'C' => 14, 'D' => 32, 'E' => 14, 'F' => 14, 'G' => 14, 'H' => 16, 'I' => 10];
+            foreach ($widths as $c => $w) {
+                $sheet->getColumnDimension($c)->setWidth($w);
+            }
+
+            $writer = new Xlsx($spreadsheet);
+            $filename = 'notas-venta-' . now()->format('Y-m-d') . '.xlsx';
+            $temp = tempnam(sys_get_temp_dir(), 'xlsx');
+            $writer->save($temp);
+
+            return response()->download($temp, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
 }

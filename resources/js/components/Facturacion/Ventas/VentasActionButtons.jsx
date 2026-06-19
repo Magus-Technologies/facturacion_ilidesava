@@ -89,6 +89,14 @@ export default function VentasActionButtons({ onNuevaVenta }) {
     const [anio, setAnio] = useState(String(new Date().getFullYear()));
     const [exportando, setExportando] = useState(false);
 
+    // Reporte de Notas de Venta
+    const [showNotasModal, setShowNotasModal] = useState(false);
+    const [notasDesde, setNotasDesde] = useState("");
+    const [notasHasta, setNotasHasta] = useState("");
+    const [notasDetalle, setNotasDetalle] = useState("producto");
+    const [notasEstado, setNotasEstado] = useState("todas");
+    const [notasExportando, setNotasExportando] = useState(false);
+
     const anios = Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - i));
 
     useEffect(() => {
@@ -175,6 +183,30 @@ export default function VentasActionButtons({ onNuevaVenta }) {
         }
     }, [modalExport, mes, anio]);
 
+    const handleExportNotas = async () => {
+        setNotasExportando(true);
+        try {
+            loading.show("Generando reporte de notas de venta...");
+            const params = new URLSearchParams();
+            if (notasDesde) params.set("desde", notasDesde);
+            if (notasHasta) params.set("hasta", notasHasta);
+            params.set("detalle", notasDetalle);
+            params.set("estado", notasEstado);
+            await descargarArchivo(
+                `/api/ventas/reporte-notas-venta?${params.toString()}`,
+                "notas-venta.xlsx",
+            );
+            loading.close();
+            toast.success("Reporte descargado correctamente");
+            setShowNotasModal(false);
+        } catch (err) {
+            loading.close();
+            toast.error(err.message || "Error al exportar");
+        } finally {
+            setNotasExportando(false);
+        }
+    };
+
     const handleReporteNotaElectronica = () => toast.info("Función en desarrollo");
     const handleNuevaVenta = () => { window.location.href = getUrlNueva(); };
 
@@ -210,6 +242,15 @@ export default function VentasActionButtons({ onNuevaVenta }) {
                         <Button variant="outline" size="sm" className="gap-2" onClick={handleReporteNotaElectronica}>
                             <FileCheck className="h-4 w-4" />
                             <span className="hidden sm:inline">Nota Electronica</span>
+                        </Button>
+                    </div>
+                )}
+
+                {filtroTipo === '3' && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowNotasModal(true)}>
+                            <FileSpreadsheet className="h-4 w-4" />
+                            <span className="hidden sm:inline">Reporte Notas de Venta (Excel)</span>
                         </Button>
                     </div>
                 )}
@@ -272,6 +313,75 @@ export default function VentasActionButtons({ onNuevaVenta }) {
                             </SelectContent>
                         </Select>
                     </ModalField>
+                </div>
+            </Modal>
+
+            {/* Modal de configuración: Reporte de Notas de Venta */}
+            <Modal
+                isOpen={showNotasModal}
+                onClose={() => setShowNotasModal(false)}
+                title="Reporte de Notas de Venta"
+                size="md"
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setShowNotasModal(false)}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleExportNotas} className="gap-2" disabled={notasExportando}>
+                            <Download className="h-4 w-4" />
+                            Descargar Excel
+                        </Button>
+                    </>
+                }
+            >
+                <p className="text-sm text-gray-500 mb-4">
+                    Configura el rango de fechas y el nivel de detalle del reporte.
+                </p>
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <ModalField label="Desde">
+                            <input
+                                type="date"
+                                value={notasDesde}
+                                onChange={(e) => setNotasDesde(e.target.value)}
+                                className="w-full px-3 py-2 text-sm rounded-lg bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            />
+                        </ModalField>
+                        <ModalField label="Hasta">
+                            <input
+                                type="date"
+                                value={notasHasta}
+                                onChange={(e) => setNotasHasta(e.target.value)}
+                                className="w-full px-3 py-2 text-sm rounded-lg bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300"
+                            />
+                        </ModalField>
+                    </div>
+                    <ModalField label="Nivel de detalle">
+                        <Select value={notasDetalle} onValueChange={setNotasDetalle}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="producto">Detallado por producto</SelectItem>
+                                <SelectItem value="resumen">Resumen por nota</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </ModalField>
+                    <ModalField label="Estado">
+                        <Select value={notasEstado} onValueChange={setNotasEstado}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="todas">Todas</SelectItem>
+                                <SelectItem value="activas">Solo activas</SelectItem>
+                                <SelectItem value="anuladas">Solo anuladas</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </ModalField>
+                    <p className="text-xs text-gray-400">
+                        Si no eliges fechas, se incluyen todas las notas de venta.
+                    </p>
                 </div>
             </Modal>
         </>
