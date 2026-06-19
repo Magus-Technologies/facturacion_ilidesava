@@ -213,6 +213,22 @@ class AlmacenMadreController extends Controller
                         'codsunat' => $data['codsunat'] ?? '51121703',
                         'fecha_registro' => now(),
                     ]);
+
+                    // Registrar ingreso de stock inicial (si se creó con cantidad)
+                    MovimientoStock::registrarAjuste(
+                        $producto,
+                        0,
+                        (float) ($producto->cantidad ?? 0),
+                        'ingreso_inicial',
+                        'Stock inicial al crear producto',
+                        [
+                            'id_almacen' => 2,
+                            'id_empresa' => $user->id_empresa,
+                            'id_usuario' => $user->id,
+                            'documento_referencia' => 'CREACION',
+                        ]
+                    );
+
                     $producto->load(['categoria', 'unidad']);
 
                     return response()->json([
@@ -239,6 +255,21 @@ class AlmacenMadreController extends Controller
 
                 $data['fecha_registro'] = now();
                 $productoMadre = ProductoMadre::create($data);
+
+                // Registrar ingreso de stock inicial (si se creó con cantidad)
+                MovimientoStock::registrarAjuste(
+                    $productoMadre,
+                    0,
+                    (float) ($productoMadre->cantidad ?? 0),
+                    'ingreso_inicial',
+                    'Stock inicial al crear producto',
+                    [
+                        'id_almacen' => 0,
+                        'id_empresa' => $user->id_empresa,
+                        'id_usuario' => $user->id,
+                        'documento_referencia' => 'CREACION',
+                    ]
+                );
 
                 $replicados = 0;
                 $replicar = filter_var($request->input('replicar_empresas', false), FILTER_VALIDATE_BOOLEAN);
@@ -341,7 +372,26 @@ class AlmacenMadreController extends Controller
                 $data['imagen'] = $request->file('imagen')->store('productos', 'public');
             }
 
+            $stockAnterior = (float) $producto->cantidad;
             $producto->update($data);
+
+            // Registrar ajuste si cambió la cantidad al editar el producto
+            if (array_key_exists('cantidad', $data)) {
+                MovimientoStock::registrarAjuste(
+                    $producto,
+                    $stockAnterior,
+                    (float) $producto->cantidad,
+                    'ajuste_madre',
+                    'Ajuste de stock por edición de producto',
+                    [
+                        'id_almacen' => ($empresa && $empresa->usa_almacen_propio) ? 2 : 0,
+                        'id_empresa' => $user->id_empresa,
+                        'id_usuario' => $user->id,
+                        'documento_referencia' => 'AJUSTE',
+                    ]
+                );
+            }
+
             $producto->load(['categoria', 'unidad']);
 
             return response()->json([
@@ -373,8 +423,23 @@ class AlmacenMadreController extends Controller
                 $producto = ProductoMadre::findOrFail($id);
             }
 
-            $stockAnterior = $producto->cantidad;
+            $stockAnterior = (float) $producto->cantidad;
             $producto->update(['cantidad' => $request->cantidad]);
+
+            // Registrar el ajuste (entrada o salida según la diferencia)
+            MovimientoStock::registrarAjuste(
+                $producto,
+                $stockAnterior,
+                (float) $request->cantidad,
+                'ajuste_madre',
+                'Ajuste manual de stock',
+                [
+                    'id_almacen' => ($empresa && $empresa->usa_almacen_propio) ? 2 : 0,
+                    'id_empresa' => $user->id_empresa,
+                    'id_usuario' => $user->id,
+                    'documento_referencia' => 'AJUSTE',
+                ]
+            );
 
             return response()->json([
                 'success' => true,
@@ -548,10 +613,14 @@ class AlmacenMadreController extends Controller
      */
     public function movimientos(Request $request): JsonResponse
     {
-        // Incluye descuentos de ventas ('almacen_madre') y de notas de venta
-        // ('nota_venta_madre'), ambos contra el almacén madre (id_almacen 0).
-        $query = MovimientoStock::whereIn('tipo_documento', ['almacen_madre', 'nota_venta_madre'])
-            ->where('id_almacen', 0);
+        $user = $request->user();
+        $empresa = Empresa::find($user->id_empresa);
+
+        // Mostrar TODO lo que afecta el almacén correspondiente: 0 = almacén madre,
+        // 2 = almacén propio. Filtrar por almacén (no por lista de tipos) hace que
+        // cualquier concepto nuevo aparezca automáticamente.
+        $idAlmacen = ($empresa && $empresa->usa_almacen_propio) ? 2 : 0;
+        $query = MovimientoStock::where('id_almacen', $idAlmacen);
 
         if ($search = $request->get('search')) {
             $productoIds = Producto::where('nombre', 'LIKE', "%{$search}%")
@@ -574,37 +643,92 @@ class AlmacenMadreController extends Controller
         $movimientos = $query->orderBy('fecha_movimiento', 'desc')
             ->limit(200)
             ->get()
-            ->map(function ($m) {
-                $producto = $m->id_producto ? Producto::find($m->id_producto) : null;
-                $nombre = $producto?->nombre;
-                $codigo = $producto?->codigo;
-
-                // Notas de venta: el producto vive en productos_madre y el movimiento
-                // queda con id_producto NULL. Resolvemos el nombre por el código que
-                // se guardó en observaciones ("Producto: CODIGO").
-                if (!$producto && preg_match('/Producto:\s*(.+)$/', (string) $m->observaciones, $mm)) {
-                    $codigo = trim($mm[1]);
-                    $productoMadre = ProductoMadre::where('codigo', $codigo)->first();
-                    $nombre = $productoMadre?->nombre ?? $codigo;
-                }
-
-                $empresa = \App\Models\Empresa::find($m->id_empresa);
-                return [
-                    'id' => $m->id_movimiento,
-                    'fecha' => $m->fecha_movimiento?->format('Y-m-d H:i'),
-                    'producto' => $nombre ?? '-',
-                    'codigo' => $codigo ?? '-',
-                    'tipo' => $m->tipo_movimiento,
-                    'cantidad' => (float) $m->cantidad,
-                    'stock_anterior' => (float) $m->stock_anterior,
-                    'stock_nuevo' => (float) $m->stock_nuevo,
-                    'comprobante' => $m->documento_referencia,
-                    'empresa' => $empresa?->comercial ?? $empresa?->razon_social ?? '-',
-                    'motivo' => $m->motivo,
-                ];
-            });
+            ->map(fn ($m) => $this->formatearMovimiento($m));
 
         return response()->json(['success' => true, 'data' => $movimientos]);
+    }
+
+    /**
+     * Historial de movimientos de un producto puntual (con filtro de fecha).
+     */
+    public function movimientosProducto(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        $empresa = Empresa::find($user->id_empresa);
+        $usaPropio = $empresa && $empresa->usa_almacen_propio;
+
+        $producto = $usaPropio
+            ? Producto::where('id_empresa', $user->id_empresa)->where('almacen', '2')->find($id)
+            : ProductoMadre::find($id);
+
+        if (!$producto) {
+            return response()->json(['success' => false, 'message' => 'Producto no encontrado'], 404);
+        }
+
+        $codigo = $producto->codigo;
+        $idAlmacen = $usaPropio ? 2 : 0;
+
+        $query = MovimientoStock::where('id_almacen', $idAlmacen)
+            ->where(function ($q) use ($id, $codigo) {
+                // El movimiento puede referenciar el producto por id_producto (FK a
+                // `productos`) o, si solo vive en productos_madre, por el código en observaciones.
+                $q->where('id_producto', $id);
+                if ($codigo) {
+                    $q->orWhere('observaciones', 'Producto: ' . $codigo);
+                }
+            });
+
+        if ($desde = $request->get('desde')) {
+            $query->whereDate('fecha_movimiento', '>=', $desde);
+        }
+        if ($hasta = $request->get('hasta')) {
+            $query->whereDate('fecha_movimiento', '<=', $hasta);
+        }
+
+        $movimientos = $query->orderBy('fecha_movimiento', 'desc')
+            ->limit(300)
+            ->get()
+            ->map(fn ($m) => $this->formatearMovimiento($m));
+
+        return response()->json([
+            'success' => true,
+            'producto' => ['nombre' => $producto->nombre, 'codigo' => $codigo],
+            'data' => $movimientos,
+        ]);
+    }
+
+    /**
+     * Da formato uniforme a una fila de movimiento de stock para el frontend.
+     */
+    private function formatearMovimiento(MovimientoStock $m): array
+    {
+        $producto = $m->id_producto ? Producto::find($m->id_producto) : null;
+        $nombre = $producto?->nombre;
+        $codigo = $producto?->codigo;
+
+        // Si el movimiento no tiene producto en `productos` (vive en productos_madre),
+        // resolvemos por el código guardado en observaciones ("Producto: CODIGO").
+        if (!$producto && preg_match('/Producto:\s*(.+)$/', (string) $m->observaciones, $mm)) {
+            $codigo = trim($mm[1]);
+            $productoMadre = ProductoMadre::where('codigo', $codigo)->first();
+            $nombre = $productoMadre?->nombre ?? $codigo;
+        }
+
+        $empresaMov = Empresa::find($m->id_empresa);
+        return [
+            'id' => $m->id_movimiento,
+            'fecha' => $m->fecha_movimiento?->format('Y-m-d H:i'),
+            'producto' => $nombre ?? '-',
+            'codigo' => $codigo ?? '-',
+            'tipo' => $m->tipo_movimiento,
+            'concepto' => MovimientoStock::conceptoDe($m->tipo_documento),
+            'cantidad' => (float) $m->cantidad,
+            'stock_anterior' => (float) $m->stock_anterior,
+            'stock_nuevo' => (float) $m->stock_nuevo,
+            'comprobante' => $m->documento_referencia,
+            'empresa' => $empresaMov?->comercial ?? $empresaMov?->razon_social ?? '-',
+            'motivo' => $m->motivo,
+        ];
     }
 
     /**

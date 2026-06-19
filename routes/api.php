@@ -148,6 +148,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::get('almacen-madre/ventas-pendientes', [\App\Http\Controllers\AlmacenMadreController::class, 'ventasPendientes']);
     Route::post('almacen-madre/descontar-masivo', [\App\Http\Controllers\AlmacenMadreController::class, 'descontarMasivo']);
     Route::get('almacen-madre/movimientos', [\App\Http\Controllers\AlmacenMadreController::class, 'movimientos']);
+    Route::get('almacen-madre/productos/{id}/movimientos', [\App\Http\Controllers\AlmacenMadreController::class, 'movimientosProducto']);
     Route::get('almacen-madre/exportar-excel', [\App\Http\Controllers\Exports\AlmacenMadreExportController::class, 'descargarExcel']);
     Route::get('almacen-madre/exportar-dashboard', [\App\Http\Controllers\Exports\AlmacenMadreExportController::class, 'descargarDashboard']);
     Route::get('almacen-madre/exportar-movimientos', [\App\Http\Controllers\Exports\AlmacenMadreExportController::class, 'descargarMovimientos']);

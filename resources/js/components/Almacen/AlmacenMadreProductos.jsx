@@ -31,6 +31,68 @@ import {
 
 const getToken = () => localStorage.getItem("auth_token");
 
+const CONCEPTO_STYLES = {
+    Venta: "bg-blue-100 text-blue-700",
+    "Nota de venta": "bg-indigo-100 text-indigo-700",
+    Ajuste: "bg-amber-100 text-amber-700",
+    Edición: "bg-cyan-100 text-cyan-700",
+    "Stock inicial": "bg-teal-100 text-teal-700",
+    "Guía de remisión": "bg-slate-100 text-slate-700",
+    Compra: "bg-emerald-100 text-emerald-700",
+};
+
+const historialColumns = [
+    {
+        accessorKey: "fecha",
+        header: "Fecha",
+        cell: ({ row }) => (
+            <span className="text-gray-600 whitespace-nowrap">{row.original.fecha}</span>
+        ),
+    },
+    {
+        accessorKey: "concepto",
+        header: "Concepto",
+        cell: ({ row }) => (
+            <span
+                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    CONCEPTO_STYLES[row.original.concepto] || "bg-gray-100 text-gray-700"
+                }`}
+            >
+                {row.original.concepto}
+            </span>
+        ),
+    },
+    {
+        accessorKey: "cantidad",
+        header: "Cantidad",
+        cell: ({ row }) => (
+            <span
+                className={`font-bold ${row.original.tipo === "entrada" ? "text-green-600" : "text-red-600"}`}
+            >
+                {row.original.tipo === "entrada" ? "+" : "-"}
+                {row.original.cantidad}
+            </span>
+        ),
+    },
+    {
+        accessorKey: "stock_anterior",
+        header: "Stock Ant.",
+        cell: ({ row }) => <span className="text-gray-500">{row.original.stock_anterior}</span>,
+    },
+    {
+        accessorKey: "stock_nuevo",
+        header: "Stock Nuevo",
+        cell: ({ row }) => <span className="font-medium">{row.original.stock_nuevo}</span>,
+    },
+    {
+        accessorKey: "comprobante",
+        header: "Comprobante",
+        cell: ({ row }) => (
+            <span className="font-mono text-xs">{row.original.comprobante}</span>
+        ),
+    },
+];
+
 const apiFetch = async (url, options = {}) => {
     const res = await fetch(url, {
         ...options,
@@ -52,6 +114,7 @@ export default function AlmacenMadreProductos() {
     const [showCrear, setShowCrear] = useState(false);
     const [editProduct, setEditProduct] = useState(null);
     const [stockProduct, setStockProduct] = useState(null);
+    const [historialProduct, setHistorialProduct] = useState(null);
 
     // Filtros
     const [search, setSearch] = useState("");
@@ -204,6 +267,13 @@ export default function AlmacenMadreProductos() {
                     >
                         <PackagePlus className="h-4 w-4" />
                     </button>
+                    <button
+                        onClick={() => setHistorialProduct(row.original)}
+                        className="p-1.5 rounded-md hover:bg-blue-100 text-gray-500 hover:text-blue-700 transition-colors"
+                        title="Ver historial de movimientos"
+                    >
+                        <History className="h-4 w-4" />
+                    </button>
                 </div>
             ),
         },
@@ -326,6 +396,11 @@ export default function AlmacenMadreProductos() {
                     producto={stockProduct}
                     onClose={() => setStockProduct(null)}
                     onSuccess={fetchProductos}
+                />
+
+                <HistorialMovimientosModal
+                    producto={historialProduct}
+                    onClose={() => setHistorialProduct(null)}
                 />
 
                 <ImportarExcelModal
@@ -529,6 +604,103 @@ function AjustarStockModal({ producto, onClose, onSuccess }) {
                     <div className={`text-center text-sm font-medium ${diferencia > 0 ? "text-green-600" : "text-red-600"}`}>
                         {diferencia > 0 ? `+${diferencia} unidades` : `${diferencia} unidades`}
                     </div>
+                )}
+            </div>
+        </Modal>
+    );
+}
+
+function HistorialMovimientosModal({ producto, onClose }) {
+    const [movimientos, setMovimientos] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [desde, setDesde] = useState("");
+    const [hasta, setHasta] = useState("");
+
+    const cargar = async (id, d = desde, h = hasta) => {
+        setLoading(true);
+        const params = new URLSearchParams();
+        if (d) params.set("desde", d);
+        if (h) params.set("hasta", h);
+        const data = await apiFetch(
+            `/api/almacen-madre/productos/${id}/movimientos?${params.toString()}`,
+        );
+        if (data.success) setMovimientos(data.data);
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        if (producto) {
+            setDesde("");
+            setHasta("");
+            cargar(producto.id_producto, "", "");
+        } else {
+            setMovimientos([]);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [producto]);
+
+    return (
+        <Modal
+            isOpen={!!producto}
+            onClose={onClose}
+            title={`Historial de movimientos - ${producto?.nombre || ""}`}
+            size="xl"
+        >
+            <div className="space-y-4">
+                {/* Filtros de fecha */}
+                <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-500 mb-1">Desde</label>
+                        <input
+                            type="date"
+                            value={desde}
+                            onChange={(e) => setDesde(e.target.value)}
+                            className="px-3 py-2 text-sm rounded-lg bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-500 mb-1">Hasta</label>
+                        <input
+                            type="date"
+                            value={hasta}
+                            onChange={(e) => setHasta(e.target.value)}
+                            className="px-3 py-2 text-sm rounded-lg bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        />
+                    </div>
+                    <Button size="sm" onClick={() => cargar(producto.id_producto)}>
+                        Filtrar
+                    </Button>
+                    {(desde || hasta) && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                setDesde("");
+                                setHasta("");
+                                cargar(producto.id_producto, "", "");
+                            }}
+                        >
+                            Limpiar
+                        </Button>
+                    )}
+                </div>
+
+                {loading ? (
+                    <div className="flex items-center justify-center h-32">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
+                    </div>
+                ) : movimientos.length === 0 ? (
+                    <div className="text-center py-10 bg-gray-50 rounded-lg">
+                        <History className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm">Sin movimientos para este producto</p>
+                    </div>
+                ) : (
+                    <DataTable
+                        columns={historialColumns}
+                        data={movimientos}
+                        pagination
+                        pageSize={10}
+                    />
                 )}
             </div>
         </Modal>

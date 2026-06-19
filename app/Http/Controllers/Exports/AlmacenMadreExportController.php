@@ -493,8 +493,12 @@ class AlmacenMadreExportController extends Controller
     public function descargarMovimientos(Request $request)
     {
         try {
-            $query = \App\Models\MovimientoStock::where('tipo_documento', 'almacen_madre')
-                ->where('id_almacen', 0);
+            $user = $request->user();
+            $empresaActual = \App\Models\Empresa::find($user->id_empresa);
+            $idAlmacen = ($empresaActual && $empresaActual->usa_almacen_propio) ? 2 : 0;
+
+            // Mismo criterio que la pantalla: todo lo que afecta el almacén.
+            $query = \App\Models\MovimientoStock::where('id_almacen', $idAlmacen);
 
             if ($desde = $request->get('desde')) {
                 $query->whereDate('fecha_movimiento', '>=', $desde);
@@ -502,13 +506,30 @@ class AlmacenMadreExportController extends Controller
             if ($hasta = $request->get('hasta')) {
                 $query->whereDate('fecha_movimiento', '<=', $hasta);
             }
+
+            // Filtro por uno o varios productos (por código)
+            $codigos = array_values(array_filter((array) $request->get('codigos', [])));
+            if (!empty($codigos)) {
+                $obs = array_map(fn ($c) => 'Producto: ' . $c, $codigos);
+                $idsProductos = \App\Models\Producto::whereIn('codigo', $codigos)->pluck('id_producto')
+                    ->merge(\App\Models\ProductoMadre::whereIn('codigo', $codigos)->pluck('id_producto'))
+                    ->unique()->values();
+                $query->where(function ($q) use ($obs, $idsProductos) {
+                    $q->whereIn('observaciones', $obs);
+                    if ($idsProductos->isNotEmpty()) {
+                        $q->orWhereIn('id_producto', $idsProductos);
+                    }
+                });
+            }
+
             if ($search = $request->get('search')) {
                 $productoIds = \App\Models\Producto::where('nombre', 'LIKE', "%{$search}%")
                     ->orWhere('codigo', 'LIKE', "%{$search}%")
                     ->pluck('id_producto');
                 $query->where(function ($q) use ($search, $productoIds) {
                     $q->whereIn('id_producto', $productoIds)
-                      ->orWhere('documento_referencia', 'LIKE', "%{$search}%");
+                      ->orWhere('documento_referencia', 'LIKE', "%{$search}%")
+                      ->orWhere('observaciones', 'LIKE', "%{$search}%");
                 });
             }
 
@@ -520,7 +541,7 @@ class AlmacenMadreExportController extends Controller
 
             // Título
             $sheet->setCellValue('A1', 'HISTORIAL DE MOVIMIENTOS - ALMACÉN MADRE');
-            $sheet->mergeCells('A1:H1');
+            $sheet->mergeCells('A1:J1');
             $sheet->getStyle('A1')->applyFromArray([
                 'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F97316']],
@@ -532,52 +553,58 @@ class AlmacenMadreExportController extends Controller
             elseif ($desde) $periodo = "Desde: {$desde}";
             elseif ($hasta) $periodo = "Hasta: {$hasta}";
             else $periodo = 'Todos los movimientos';
+            if (!empty($codigos)) {
+                $periodo .= ' | Productos: ' . implode(', ', $codigos);
+            }
 
-            $sheet->setCellValue('A2', $periodo . ' | Fecha: ' . now()->format('d/m/Y H:i'));
-            $sheet->mergeCells('A2:H2');
+            $sheet->setCellValue('A2', $periodo . ' | Generado: ' . now()->format('d/m/Y H:i'));
+            $sheet->mergeCells('A2:J2');
 
             // Headers
-            $headers = ['Fecha', 'Producto', 'Código', 'Tipo', 'Cantidad', 'Stock Anterior', 'Stock Nuevo', 'Comprobante', 'Empresa'];
+            $headers = ['Fecha', 'Producto', 'Código', 'Concepto', 'Tipo', 'Cantidad', 'Stock Anterior', 'Stock Nuevo', 'Comprobante', 'Empresa'];
             $col = 'A';
             foreach ($headers as $header) {
                 $sheet->setCellValue($col . '3', $header);
                 $col++;
             }
-            $sheet->getStyle('A3:I3')->applyFromArray([
+            $sheet->getStyle('A3:J3')->applyFromArray([
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4B5563']],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
 
             $row = 4;
-            $totalDescontado = 0;
+            $totalNeto = 0;
             foreach ($movimientos as $m) {
-                $producto = \App\Models\Producto::find($m->id_producto);
+                $producto = $m->id_producto ? \App\Models\Producto::find($m->id_producto) : null;
+                $nombre = $producto?->nombre;
+                $codigo = $producto?->codigo;
+                if (!$producto && preg_match('/Producto:\s*(.+)$/', (string) $m->observaciones, $mm)) {
+                    $codigo = trim($mm[1]);
+                    $nombre = \App\Models\ProductoMadre::where('codigo', $codigo)->value('nombre') ?? $codigo;
+                }
                 $empresa = \App\Models\Empresa::find($m->id_empresa);
 
                 $sheet->setCellValue("A{$row}", $m->fecha_movimiento?->format('Y-m-d H:i'));
-                $sheet->setCellValue("B{$row}", $producto?->nombre ?? '-');
-                $sheet->setCellValue("C{$row}", $producto?->codigo ?? '-');
-                $sheet->setCellValue("D{$row}", ucfirst($m->tipo_movimiento));
-                $sheet->setCellValue("E{$row}", (float) $m->cantidad);
-                $sheet->setCellValue("F{$row}", (float) $m->stock_anterior);
-                $sheet->setCellValue("G{$row}", (float) $m->stock_nuevo);
-                $sheet->setCellValue("H{$row}", $m->documento_referencia ?? '-');
-                $sheet->setCellValue("I{$row}", $empresa?->comercial ?? $empresa?->razon_social ?? '-');
+                $sheet->setCellValue("B{$row}", $nombre ?? '-');
+                $sheet->setCellValue("C{$row}", $codigo ?? '-');
+                $sheet->setCellValue("D{$row}", \App\Models\MovimientoStock::conceptoDe($m->tipo_documento));
+                $sheet->setCellValue("E{$row}", ucfirst($m->tipo_movimiento));
+                $sheet->setCellValue("F{$row}", (float) $m->cantidad);
+                $sheet->setCellValue("G{$row}", (float) $m->stock_anterior);
+                $sheet->setCellValue("H{$row}", (float) $m->stock_nuevo);
+                $sheet->setCellValue("I{$row}", $m->documento_referencia ?? '-');
+                $sheet->setCellValue("J{$row}", $empresa?->comercial ?? $empresa?->razon_social ?? '-');
 
-                $totalDescontado += (float) $m->cantidad;
+                $totalNeto += ($m->tipo_movimiento === 'entrada' ? -1 : 1) * (float) $m->cantidad;
 
                 // Color por tipo
-                if ($m->tipo_movimiento === 'salida') {
-                    $sheet->getStyle("D{$row}")->getFont()->getColor()->setRGB('EF4444');
-                    $sheet->getStyle("E{$row}")->getFont()->getColor()->setRGB('EF4444');
-                } else {
-                    $sheet->getStyle("D{$row}")->getFont()->getColor()->setRGB('10B981');
-                    $sheet->getStyle("E{$row}")->getFont()->getColor()->setRGB('10B981');
-                }
+                $colorTipo = $m->tipo_movimiento === 'salida' ? 'EF4444' : '10B981';
+                $sheet->getStyle("E{$row}")->getFont()->getColor()->setRGB($colorTipo);
+                $sheet->getStyle("F{$row}")->getFont()->getColor()->setRGB($colorTipo);
 
                 if ($row % 2 === 0) {
-                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray([
+                    $sheet->getStyle("A{$row}:J{$row}")->applyFromArray([
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F9FAFB']],
                     ]);
                 }
@@ -587,15 +614,16 @@ class AlmacenMadreExportController extends Controller
 
             // Totales
             $sheet->setCellValue("A{$row}", 'TOTAL MOVIMIENTOS: ' . $movimientos->count());
-            $sheet->setCellValue("E{$row}", $totalDescontado);
-            $sheet->getStyle("A{$row}:I{$row}")->applyFromArray([
+            $sheet->setCellValue("E{$row}", 'Neto:');
+            $sheet->setCellValue("F{$row}", $totalNeto);
+            $sheet->getStyle("A{$row}:J{$row}")->applyFromArray([
                 'font' => ['bold' => true],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FED7AA']],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
 
             // Anchos
-            foreach (['A' => 18, 'B' => 30, 'C' => 15, 'D' => 10, 'E' => 12, 'F' => 14, 'G' => 14, 'H' => 20, 'I' => 22] as $c => $w) {
+            foreach (['A' => 18, 'B' => 30, 'C' => 15, 'D' => 14, 'E' => 10, 'F' => 12, 'G' => 14, 'H' => 14, 'I' => 20, 'J' => 22] as $c => $w) {
                 $sheet->getColumnDimension($c)->setWidth($w);
             }
 
