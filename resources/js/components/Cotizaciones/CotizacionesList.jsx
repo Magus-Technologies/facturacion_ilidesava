@@ -121,6 +121,8 @@ export default function CotizacionesList() {
                     ventaId={printCotizacion.id}
                     numeroCompleto={`COT-${String(printCotizacion.numero).padStart(6, "0")}`}
                     tipo="cotizacion"
+                    clienteNombre={printCotizacion.cliente?.datos || printCotizacion.cliente_nombre || ""}
+                    clienteTelefono={printCotizacion.cliente?.telefono || ""}
                 />
             )}
 

@@ -162,6 +162,24 @@ export default function AlmacenMadrePendientes() {
                     <NavLink href="/almacen-madre/movimientos" label="Movimientos" icon={History} />
                 </div>
 
+                {/* Aviso de sección obsoleta */}
+                <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <span className="mt-0.5 text-lg leading-none">⚠️</span>
+                    <div>
+                        <p className="font-semibold">Esta sección ya no se utiliza.</p>
+                        <p className="mt-0.5 text-amber-700">
+                            El descuento de stock ahora se realiza directamente desde{" "}
+                            <a href="/ventas?tipo=nota" className="underline font-medium hover:text-amber-900">
+                                Ventas → Notas de Venta
+                            </a>{" "}
+                            usando el botón de descuento por nota. Los movimientos quedan registrados en{" "}
+                            <a href="/almacen-madre/movimientos" className="underline font-medium hover:text-amber-900">
+                                Almacén Madre → Movimientos
+                            </a>.
+                        </p>
+                    </div>
+                </div>
+
                 {/* Filtros */}
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="relative flex-1 min-w-48 max-w-sm">

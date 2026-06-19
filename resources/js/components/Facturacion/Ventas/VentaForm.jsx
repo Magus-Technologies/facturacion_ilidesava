@@ -532,6 +532,8 @@ export default function VentaForm({ ventaId = null }) {
                 onClose={handleClosePrintModal}
                 ventaId={ventaGuardada?.id_venta}
                 numeroCompleto={ventaGuardada?.numero_completo}
+                clienteNombre={cliente?.datos || formData.nom_cli || ""}
+                clienteTelefono={cliente?.telefono || ""}
             />
 
             <PaymentSchedule

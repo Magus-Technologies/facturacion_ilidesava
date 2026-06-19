@@ -212,6 +212,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::get('ventas/reporte-ganancias', [\App\Http\Controllers\Exports\VentaExportController::class, 'reporteGanancias'])->middleware('permission:ventas.view');
     Route::get('ventas/exportar-pdf', [\App\Http\Controllers\Exports\VentaExportController::class, 'exportarPdf'])->middleware('permission:ventas.view');
     Route::get('ventas/reporte-notas-venta', [\App\Http\Controllers\Exports\VentaExportController::class, 'reporteNotasVenta'])->middleware('permission:ventas.view');
+    Route::get('ventas/reporte-notas-por-producto', [\App\Http\Controllers\Exports\VentaExportController::class, 'reporteNotasPorProducto'])->middleware('permission:ventas.view');
 
     // Ventas
     Route::get('ventas/proximo-numero', [\App\Http\Controllers\VentasController::class, 'proximoNumero']);

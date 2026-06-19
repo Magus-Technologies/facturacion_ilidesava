@@ -626,10 +626,20 @@ class AlmacenMadreController extends Controller
             $productoIds = Producto::where('nombre', 'LIKE', "%{$search}%")
                 ->orWhere('codigo', 'LIKE', "%{$search}%")
                 ->pluck('id_producto');
-            $query->where(function ($q) use ($search, $productoIds) {
+
+            // Códigos de productos_madre que coincidan (movimientos de notas tienen id_producto NULL)
+            $codigosMadre = ProductoMadre::where('nombre', 'LIKE', "%{$search}%")
+                ->orWhere('codigo', 'LIKE', "%{$search}%")
+                ->pluck('codigo')
+                ->map(fn ($c) => "Producto: {$c}")
+                ->toArray();
+
+            $query->where(function ($q) use ($search, $productoIds, $codigosMadre) {
                 $q->whereIn('id_producto', $productoIds)
-                  ->orWhere('documento_referencia', 'LIKE', "%{$search}%")
-                  ->orWhere('observaciones', 'LIKE', "%{$search}%");
+                  ->orWhere('documento_referencia', 'LIKE', "%{$search}%");
+                foreach ($codigosMadre as $obs) {
+                    $q->orWhere('observaciones', 'LIKE', "%{$obs}%");
+                }
             });
         }
 

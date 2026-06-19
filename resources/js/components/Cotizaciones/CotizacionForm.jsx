@@ -295,6 +295,8 @@ export default function CotizacionForm({ cotizacionId = null }) {
                     ventaId={cotizacionId}
                     numeroCompleto={`COT-${String(cotizacionId).padStart(6, "0")}`}
                     tipo="cotizacion"
+                    clienteNombre={cliente?.datos || formData.nom_cli || ""}
+                    clienteTelefono={cliente?.telefono || ""}
                 />
             )}
         </MainLayout>

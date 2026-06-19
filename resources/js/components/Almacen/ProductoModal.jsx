@@ -183,8 +183,14 @@ export default function ProductoModal({
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
         setErrors({});
+
+        if (esMadre && !isEditing && (parseFloat(formData.cantidad) <= 0 || formData.cantidad === "")) {
+            setErrors({ cantidad: ["El stock inicial es obligatorio y debe ser mayor a 0."] });
+            return;
+        }
+
+        setLoading(true);
 
         try {
             const token = localStorage.getItem("auth_token");
@@ -553,6 +559,7 @@ export default function ProductoModal({
                                     placeholder="0.00"
                                     required
                                 />
+                                <p className="text-[10px] text-amber-600 mt-0.5">Ingrese el precio con IGV incluido.</p>
                             </ModalField>
 
                             <ModalField
