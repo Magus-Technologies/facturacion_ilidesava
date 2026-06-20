@@ -669,6 +669,10 @@ class VentasController extends Controller
                 'pagos.*.voucher' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             ]);
 
+            // Snapshot antes de modificar
+            $venta->load('productosVentas', 'cliente');
+            \App\Models\VentaHistorial::registrar($venta, $user, $request->ip());
+
             return DB::transaction(function () use ($venta, $validated, $request, $user) {
                 // Manejar cliente
                 $docCliente = trim($validated['cliente_documento'] ?? '');
@@ -1598,6 +1602,29 @@ class VentasController extends Controller
                 'success' => false,
                 'message' => 'Error al obtener próximo número',
             ], 500);
+        }
+    }
+
+    public function historialEdicion(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            Venta::where('id_empresa', $user->id_empresa)->findOrFail($id);
+
+            $historial = \App\Models\VentaHistorial::where('id_venta', $id)
+                ->with('usuario')
+                ->orderBy('fecha_edicion', 'desc')
+                ->get()
+                ->map(fn ($h) => [
+                    'id_historial'     => $h->id_historial,
+                    'fecha_edicion'    => $h->fecha_edicion,
+                    'usuario'          => $h->usuario?->name ?? 'Sistema',
+                    'datos_anteriores' => $h->datos_anteriores,
+                ]);
+
+            return response()->json(['success' => true, 'historial' => $historial]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }

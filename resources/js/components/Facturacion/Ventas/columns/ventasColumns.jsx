@@ -328,6 +328,30 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                   },
               ]
             : []),
+        ...(ocultarSunat
+            ? [
+                  {
+                      accessorKey: "stock_real_descontado",
+                      header: "Almacén",
+                      cell: ({ row }) => {
+                          const descontado = row.original.stock_real_descontado;
+                          const anulada = row.original.estado === "2" || row.original.estado === "A";
+                          if (anulada) return <span className="text-gray-300 text-xs">—</span>;
+                          return descontado ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                  <PackageCheck className="h-3 w-3" />
+                                  Descontado
+                              </span>
+                          ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                  <PackageMinus className="h-3 w-3" />
+                                  Pendiente
+                              </span>
+                          );
+                      },
+                  },
+              ]
+            : []),
         {
             accessorKey: "estado",
             header: "Estado",
