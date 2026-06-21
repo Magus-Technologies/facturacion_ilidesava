@@ -52,6 +52,17 @@
     100% { width: 100%; }
 }
 
+/* Radix Select traba el scroll del <body> al abrirse (react-remove-scroll),
+   lo que hace desaparecer la barra de scroll de la pagina en filtros inline.
+   Se neutraliza SOLO para Select (role="listbox"), no para Dialog (modales),
+   que conservan su scroll-lock normal. */
+body:has([data-radix-popper-content-wrapper] [role="listbox"][data-state="open"]) {
+    overflow: visible !important;
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+    pointer-events: auto !important;
+}
+
 /* Scrollbar fino global */
 .custom-scrollbar {
     scrollbar-width: thin;

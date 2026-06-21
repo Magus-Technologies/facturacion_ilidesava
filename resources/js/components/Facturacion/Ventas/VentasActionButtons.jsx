@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { toast, loading } from "@/lib/sweetalert";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
     Plus,
     FileSpreadsheet,
@@ -11,9 +11,12 @@ import {
     ShoppingBag,
     FileDown,
     TrendingUp,
+    Search,
+    Loader2,
 } from "lucide-react";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { Modal, ModalField } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
 import {
     Select,
     SelectTrigger,
@@ -85,6 +88,7 @@ const EXPORT_CONFIG = {
 export default function VentasActionButtons({ onNuevaVenta }) {
     const [filtroTipo, setFiltroTipo] = useState(null);
     const [modalExport, setModalExport] = useState(null); // null | 'txt' | 'excel' | 'rvta'
+    const [exportTipo, setExportTipo] = useState(null); // null | 'nota' — contexto del reporte
     const [mes, setMes] = useState(String(new Date().getMonth() + 1));
     const [anio, setAnio] = useState(String(new Date().getFullYear()));
     const [exportando, setExportando] = useState(false);
@@ -96,6 +100,22 @@ export default function VentasActionButtons({ onNuevaVenta }) {
     const [notasDetalle, setNotasDetalle] = useState("producto");
     const [notasEstado, setNotasEstado] = useState("todas");
     const [notasExportando, setNotasExportando] = useState(false);
+
+    // Reporte de Notas por Producto (búsqueda de producto del almacén madre)
+    const [showProductoModal, setShowProductoModal] = useState(false);
+    const [productoSearch, setProductoSearch] = useState("");
+    const [productoResultados, setProductoResultados] = useState([]);
+    const [productoBuscando, setProductoBuscando] = useState(false);
+    const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+    const [productoExportando, setProductoExportando] = useState(false);
+    const productoDropdownRef = useRef(null);
+
+    // Filtros de fecha para el reporte por producto
+    const [prodModoFecha, setProdModoFecha] = useState("todos"); // todos | mes | rango
+    const [prodMes, setProdMes] = useState(String(new Date().getMonth() + 1));
+    const [prodAnio, setProdAnio] = useState(String(new Date().getFullYear()));
+    const [prodDesde, setProdDesde] = useState("");
+    const [prodHasta, setProdHasta] = useState("");
 
     const anios = Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - i));
 
@@ -154,9 +174,10 @@ export default function VentasActionButtons({ onNuevaVenta }) {
         URL.revokeObjectURL(link.href);
     };
 
-    const abrirModalExport = (tipo) => {
+    const abrirModalExport = (tipo, contexto = null) => {
         setMes(String(new Date().getMonth() + 1));
         setAnio(String(new Date().getFullYear()));
+        setExportTipo(contexto);
         setModalExport(tipo);
     };
 
@@ -169,10 +190,9 @@ export default function VentasActionButtons({ onNuevaVenta }) {
 
         try {
             loading.show(config.mensajeLoading);
-            await descargarArchivo(
-                `${config.endpoint}?mes=${mes}&anio=${anio}`,
-                config.nombreArchivo(mes, anio)
-            );
+            let url = `${config.endpoint}?mes=${mes}&anio=${anio}`;
+            if (exportTipo === 'nota') url += '&tipo=nota';
+            await descargarArchivo(url, config.nombreArchivo(mes, anio));
             loading.close();
             toast.success(config.mensajeExito);
         } catch (err) {
@@ -180,8 +200,9 @@ export default function VentasActionButtons({ onNuevaVenta }) {
             toast.error(err.message || "Error al exportar");
         } finally {
             setExportando(false);
+            setExportTipo(null);
         }
-    }, [modalExport, mes, anio]);
+    }, [modalExport, mes, anio, exportTipo]);
 
     const handleExportNotas = async () => {
         setNotasExportando(true);
@@ -209,6 +230,99 @@ export default function VentasActionButtons({ onNuevaVenta }) {
 
     const handleReporteNotaElectronica = () => toast.info("Función en desarrollo");
     const handleNuevaVenta = () => { window.location.href = getUrlNueva(); };
+
+    // Búsqueda de productos del almacén madre con debounce
+    useEffect(() => {
+        if (!showProductoModal) return;
+        if (productoSeleccionado && productoSearch === productoSeleccionado.nombre) return;
+        if (productoSearch.trim().length < 2) {
+            setProductoResultados([]);
+            return;
+        }
+        const delay = setTimeout(() => buscarProductosMadre(productoSearch), 300);
+        return () => clearTimeout(delay);
+    }, [productoSearch, showProductoModal]);
+
+    const buscarProductosMadre = async (term) => {
+        setProductoBuscando(true);
+        try {
+            const token = localStorage.getItem("auth_token");
+            const res = await fetch(`/api/almacen-madre/productos?search=${encodeURIComponent(term)}`, {
+                headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+            });
+            const data = await res.json();
+            if (data.success) {
+                setProductoResultados(data.data);
+            } else {
+                setProductoResultados([]);
+            }
+        } catch {
+            setProductoResultados([]);
+        } finally {
+            setProductoBuscando(false);
+        }
+    };
+
+    // Cerrar dropdown al hacer clic fuera
+    useEffect(() => {
+        if (!showProductoModal) return;
+        const handleClickOutside = (e) => {
+            if (productoDropdownRef.current && !productoDropdownRef.current.contains(e.target)) {
+                // no cerrar si es el input本身
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showProductoModal]);
+
+    const handleSeleccionarProducto = (producto) => {
+        setProductoSeleccionado(producto);
+        setProductoSearch(producto.nombre);
+        setProductoResultados([]);
+    };
+
+    const handleExportarPorProducto = async () => {
+        if (!productoSeleccionado) {
+            toast.warning("Seleccione un producto primero");
+            return;
+        }
+        setProductoExportando(true);
+        try {
+            loading.show("Generando reporte de notas por producto...");
+            const params = new URLSearchParams();
+            params.set("id_producto", productoSeleccionado.id_producto);
+            params.set("modo_fecha", prodModoFecha);
+            if (prodModoFecha === "mes") {
+                params.set("mes", prodMes);
+                params.set("anio", prodAnio);
+            } else if (prodModoFecha === "rango") {
+                if (prodDesde) params.set("desde", prodDesde);
+                if (prodHasta) params.set("hasta", prodHasta);
+            }
+            await descargarArchivo(
+                `/api/ventas/reporte-notas-por-producto?${params.toString()}`,
+                `notas-por-producto-${productoSeleccionado.codigo || productoSeleccionado.id_producto}.xlsx`,
+            );
+            loading.close();
+            toast.success("Reporte descargado correctamente");
+            setShowProductoModal(false);
+        } catch (err) {
+            loading.close();
+            toast.error(err.message || "Error al exportar");
+        } finally {
+            setProductoExportando(false);
+        }
+    };
+
+    const resetProductoModal = () => {
+        setShowProductoModal(false);
+        setProductoSearch("");
+        setProductoResultados([]);
+        setProductoSeleccionado(null);
+        setProdModoFecha("todos");
+        setProdDesde("");
+        setProdHasta("");
+    };
 
     return (
         <>
@@ -248,6 +362,10 @@ export default function VentasActionButtons({ onNuevaVenta }) {
 
                 {filtroTipo === '3' && (
                     <div className="flex items-center gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowProductoModal(true)}>
+                            <ShoppingBag className="h-4 w-4" />
+                            <span className="hidden sm:inline">Reporte Ventas Producto</span>
+                        </Button>
                         <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowNotasModal(true)}>
                             <FileSpreadsheet className="h-4 w-4" />
                             <span className="hidden sm:inline">Reporte Notas de Venta (Excel)</span>
@@ -266,7 +384,7 @@ export default function VentasActionButtons({ onNuevaVenta }) {
             {/* Modal selector de periodo */}
             <Modal
                 isOpen={!!modalExport}
-                onClose={() => setModalExport(null)}
+                onClose={() => { setModalExport(null); setExportTipo(null); }}
                 title={modalExport ? EXPORT_CONFIG[modalExport].titulo : "Exportar"}
                 size="sm"
                 footer={
@@ -382,6 +500,163 @@ export default function VentasActionButtons({ onNuevaVenta }) {
                     <p className="text-xs text-gray-400">
                         Si no eliges fechas, se incluyen todas las notas de venta.
                     </p>
+                </div>
+            </Modal>
+
+            {/* Modal: Reporte de Notas de Venta por Producto */}
+            <Modal
+                isOpen={showProductoModal}
+                onClose={resetProductoModal}
+                title="Reporte Ventas por Producto"
+                size="md"
+                footer={
+                    <>
+                        <Button variant="outline" onClick={resetProductoModal}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleExportarPorProducto} className="gap-2" disabled={productoExportando || !productoSeleccionado}>
+                            <Download className="h-4 w-4" />
+                            Descargar Excel
+                        </Button>
+                    </>
+                }
+            >
+                <p className="text-sm text-gray-500 mb-3">
+                    Busca un producto del almacén madre y filtra por fecha. El reporte mostrará todas las notas de venta que lo contienen.
+                </p>
+
+                {/* Buscador de producto */}
+                <div className="relative" ref={productoDropdownRef}>
+                    <div className="relative">
+                        <Input
+                            type="text"
+                            value={productoSearch}
+                            onChange={(e) => {
+                                setProductoSearch(e.target.value);
+                                setProductoSeleccionado(null);
+                            }}
+                            placeholder="Buscar producto por nombre o código..."
+                            autoComplete="off"
+                        />
+                        {productoBuscando && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
+                        )}
+                        {!productoBuscando && productoSeleccionado && (
+                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                        )}
+                    </div>
+
+                    {productoResultados.length > 0 && !productoSeleccionado && (
+                        <div className="absolute z-[100] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-y-auto custom-scrollbar" style={{ maxHeight: '300px' }}>
+                            {productoResultados.map((p) => (
+                                <div
+                                    key={p.id_producto}
+                                    onClick={() => handleSeleccionarProducto(p)}
+                                    className="flex items-start gap-3 p-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                                >
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm text-gray-900 truncate">{p.nombre}</p>
+                                        <p className="text-xs text-gray-500">Código: {p.codigo || 'N/A'}  |  Stock: {p.cantidad ?? 0}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {productoSearch.trim().length >= 2 && !productoBuscando && productoResultados.length === 0 && !productoSeleccionado && (
+                        <div className="absolute z-[100] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl p-4 text-center">
+                            <p className="text-gray-500 text-sm">No se encontraron productos para "{productoSearch}"</p>
+                        </div>
+                    )}
+                </div>
+
+                {productoSeleccionado && (
+                    <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+                        <ShoppingBag className="h-4 w-4 text-green-600 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-green-900 truncate">{productoSeleccionado.nombre}</p>
+                            <p className="text-xs text-green-600">Código: {productoSeleccionado.codigo || 'N/A'}</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Filtros de fecha */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-xs font-semibold text-gray-600 mb-2">Filtrar por fecha</p>
+                    <div className="flex gap-1 mb-3">
+                        {[
+                            { value: "todos", label: "Todas" },
+                            { value: "mes", label: "Por mes" },
+                            { value: "rango", label: "Por rango" },
+                        ].map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setProdModoFecha(opt.value)}
+                                className={`px-3 py-1 text-xs font-medium rounded border transition-colors ${
+                                    prodModoFecha === opt.value
+                                        ? "bg-primary-600 text-white border-primary-600"
+                                        : "bg-white text-gray-600 border-gray-300 hover:border-primary-400"
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {prodModoFecha === "mes" && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <ModalField label="Mes">
+                                <Select value={prodMes} onValueChange={setProdMes}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Mes" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {MESES.map((m) => (
+                                            <SelectItem key={m.value} value={m.value}>
+                                                {m.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </ModalField>
+                            <ModalField label="Año">
+                                <Select value={prodAnio} onValueChange={setProdAnio}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Año" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {anios.map((a) => (
+                                            <SelectItem key={a} value={a}>
+                                                {a}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </ModalField>
+                        </div>
+                    )}
+
+                    {prodModoFecha === "rango" && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <ModalField label="Desde">
+                                <input
+                                    type="date"
+                                    value={prodDesde}
+                                    onChange={(e) => setProdDesde(e.target.value)}
+                                    className="w-full px-3 py-2 text-sm rounded-lg bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300"
+                                />
+                            </ModalField>
+                            <ModalField label="Hasta">
+                                <input
+                                    type="date"
+                                    value={prodHasta}
+                                    onChange={(e) => setProdHasta(e.target.value)}
+                                    className="w-full px-3 py-2 text-sm rounded-lg bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-300"
+                                />
+                            </ModalField>
+                        </div>
+                    )}
                 </div>
             </Modal>
         </>

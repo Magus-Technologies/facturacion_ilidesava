@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Exports;
 
 use App\Http\Controllers\Controller;
-use App\Models\Venta;
+use App\Models\ProductoMadre;
 use App\Models\ProductoVenta;
+use App\Models\Venta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use Mpdf\Mpdf;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class VentaExportController extends Controller
 {
@@ -23,7 +23,7 @@ class VentaExportController extends Controller
     private function getVentasPeriodo(Request $request)
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Sesión expirada');
         }
 
@@ -49,7 +49,7 @@ class VentaExportController extends Controller
     private function getTodasVentasPeriodo(Request $request)
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Sesión expirada');
         }
 
@@ -74,9 +74,16 @@ class VentaExportController extends Controller
     private function getTipoDocIdentidad($documento)
     {
         $len = strlen($documento ?? '');
-        if ($len === 11) return '6'; // RUC
-        if ($len === 8) return '1';  // DNI
-        if ($len > 0) return '0';    // Otros
+        if ($len === 11) {
+            return '6';
+        } // RUC
+        if ($len === 8) {
+            return '1';
+        }  // DNI
+        if ($len > 0) {
+            return '0';
+        }    // Otros
+
         return '-';
     }
 
@@ -90,7 +97,7 @@ class VentaExportController extends Controller
 
             $empresa = $user->empresaActiva ?? $user->empresa;
             $ruc = $empresa->ruc ?? '00000000000';
-            $periodo = $anio . str_pad($mes, 2, '0', STR_PAD_LEFT) . '00';
+            $periodo = $anio.str_pad($mes, 2, '0', STR_PAD_LEFT).'00';
 
             $lines = [];
             $correlativo = 1;
@@ -99,9 +106,11 @@ class VentaExportController extends Controller
                 $codSunat = $venta->tipoDocumento->cod_sunat ?? '00';
 
                 // Saltar documentos sin código SUNAT válido
-                if ($codSunat === '00') continue;
+                if ($codSunat === '00') {
+                    continue;
+                }
 
-                $cuo = 'M' . str_pad($correlativo, 9, '0', STR_PAD_LEFT);
+                $cuo = 'M'.str_pad($correlativo, 9, '0', STR_PAD_LEFT);
                 $fechaEmision = $venta->fecha_emision->format('d/m/Y');
                 $fechaVencimiento = $venta->fecha_vencimiento ? $venta->fecha_vencimiento->format('d/m/Y') : '';
 
@@ -163,7 +172,7 @@ class VentaExportController extends Controller
                     $anulada ? '2' : '1', // 35. Estado
                 ];
 
-                $lines[] = implode('|', $campos) . '|';
+                $lines[] = implode('|', $campos).'|';
                 $correlativo++;
             }
 
@@ -174,7 +183,7 @@ class VentaExportController extends Controller
 
             return response($contenido, 200, [
                 'Content-Type' => 'text/plain; charset=utf-8',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -189,13 +198,13 @@ class VentaExportController extends Controller
         try {
             [$user, $ventas, $mes, $anio] = $this->getVentasPeriodo($request);
 
-            $spreadsheet = new Spreadsheet();
+            $spreadsheet = new Spreadsheet;
             $sheet = $spreadsheet->getActiveSheet();
 
             $meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
             // Título
-            $sheet->setCellValue('A1', "REGISTRO DE VENTAS - {$meses[(int)$mes]} {$anio}");
+            $sheet->setCellValue('A1', "REGISTRO DE VENTAS - {$meses[(int) $mes]} {$anio}");
             $sheet->mergeCells('A1:J1');
             $sheet->getStyle('A1')->applyFromArray([
                 'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1F2937']],
@@ -204,7 +213,7 @@ class VentaExportController extends Controller
             ]);
             $sheet->getRowDimension(1)->setRowHeight(32);
 
-            $sheet->setCellValue('A2', 'Generado: ' . date('d/m/Y H:i:s'));
+            $sheet->setCellValue('A2', 'Generado: '.date('d/m/Y H:i:s'));
             $sheet->mergeCells('A2:J2');
             $sheet->getStyle('A2')->applyFromArray([
                 'font' => ['italic' => true, 'size' => 9, 'color' => ['rgb' => '6B7280']],
@@ -215,7 +224,7 @@ class VentaExportController extends Controller
             $headers = ['Documento', 'Fecha', 'Cliente', 'RUC/DNI', 'Subtotal', 'IGV', 'Total', 'Moneda', 'Estado', 'SUNAT'];
             $col = 'A';
             foreach ($headers as $header) {
-                $sheet->setCellValue($col . '4', $header);
+                $sheet->setCellValue($col.'4', $header);
                 $col++;
             }
 
@@ -234,7 +243,7 @@ class VentaExportController extends Controller
             $totalGeneral = 0;
             foreach ($ventas as $v) {
                 $tipoAbrev = $v->tipoDocumento->abreviatura ?? '';
-                $numCompleto = $v->serie . '-' . str_pad($v->numero, 8, '0', STR_PAD_LEFT);
+                $numCompleto = $v->serie.'-'.str_pad($v->numero, 8, '0', STR_PAD_LEFT);
                 $estado = match ($v->estado) {
                     '1' => 'ACTIVA',
                     '2', 'A' => 'ANULADA',
@@ -248,16 +257,16 @@ class VentaExportController extends Controller
                     default => $v->estado_sunat,
                 };
 
-                $sheet->setCellValue('A' . $row, "{$tipoAbrev} {$numCompleto}");
-                $sheet->setCellValue('B' . $row, $v->fecha_emision->format('d/m/Y'));
-                $sheet->setCellValue('C' . $row, $v->cliente->datos ?? 'N/A');
-                $sheet->setCellValue('D' . $row, $v->cliente->documento ?? '');
-                $sheet->setCellValue('E' . $row, $v->subtotal);
-                $sheet->setCellValue('F' . $row, $v->igv);
-                $sheet->setCellValue('G' . $row, $v->total);
-                $sheet->setCellValue('H' . $row, $v->tipo_moneda);
-                $sheet->setCellValue('I' . $row, $estado);
-                $sheet->setCellValue('J' . $row, $sunat);
+                $sheet->setCellValue('A'.$row, "{$tipoAbrev} {$numCompleto}");
+                $sheet->setCellValue('B'.$row, $v->fecha_emision->format('d/m/Y'));
+                $sheet->setCellValue('C'.$row, $v->cliente->datos ?? 'N/A');
+                $sheet->setCellValue('D'.$row, $v->cliente->documento ?? '');
+                $sheet->setCellValue('E'.$row, $v->subtotal);
+                $sheet->setCellValue('F'.$row, $v->igv);
+                $sheet->setCellValue('G'.$row, $v->total);
+                $sheet->setCellValue('H'.$row, $v->tipo_moneda);
+                $sheet->setCellValue('I'.$row, $estado);
+                $sheet->setCellValue('J'.$row, $sunat);
 
                 $sheet->getStyle("A{$row}:J{$row}")->applyFromArray([
                     'font' => ['size' => 10],
@@ -266,7 +275,7 @@ class VentaExportController extends Controller
                     ],
                 ]);
 
-                if (!in_array($v->estado, ['2', 'A'])) {
+                if (! in_array($v->estado, ['2', 'A'])) {
                     $totalGeneral += $v->total;
                 }
 
@@ -280,8 +289,8 @@ class VentaExportController extends Controller
             }
 
             // Total
-            $sheet->setCellValue('F' . $row, 'TOTAL:');
-            $sheet->setCellValue('G' . $row, $totalGeneral);
+            $sheet->setCellValue('F'.$row, 'TOTAL:');
+            $sheet->setCellValue('G'.$row, $totalGeneral);
             $sheet->getStyle("F{$row}:G{$row}")->applyFromArray([
                 'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '92400E']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
@@ -296,13 +305,13 @@ class VentaExportController extends Controller
             }
 
             // Formato numérico
-            $sheet->getStyle('E5:G' . ($row - 1))->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('E5:G'.($row - 1))->getNumberFormat()->setFormatCode('#,##0.00');
 
             $writer = new Xlsx($spreadsheet);
             $filename = "ventas-{$anio}-{$mes}.xlsx";
 
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Content-Disposition: attachment;filename="'.$filename.'"');
             header('Cache-Control: max-age=0');
             $writer->save('php://output');
             exit;
@@ -322,16 +331,16 @@ class VentaExportController extends Controller
             $empresa = $user->empresaActiva ?? $user->empresa;
             $ruc = $empresa->ruc ?? '';
             $razonSocial = $empresa->razon_social ?? '';
-            $periodo = $anio . str_pad($mes, 2, '0', STR_PAD_LEFT);
+            $periodo = $anio.str_pad($mes, 2, '0', STR_PAD_LEFT);
 
             $meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-            $spreadsheet = new Spreadsheet();
+            $spreadsheet = new Spreadsheet;
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('RVTA');
 
             // Título
-            $sheet->setCellValue('A1', "REGISTRO DE VENTAS E INGRESOS");
+            $sheet->setCellValue('A1', 'REGISTRO DE VENTAS E INGRESOS');
             $sheet->mergeCells('A1:R1');
             $sheet->getStyle('A1')->applyFromArray([
                 'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1F2937']],
@@ -340,7 +349,7 @@ class VentaExportController extends Controller
             ]);
             $sheet->getRowDimension(1)->setRowHeight(32);
 
-            $sheet->setCellValue('A2', "PERIODO: {$meses[(int)$mes]} {$anio}  |  RUC: {$ruc}  |  {$razonSocial}");
+            $sheet->setCellValue('A2', "PERIODO: {$meses[(int) $mes]} {$anio}  |  RUC: {$ruc}  |  {$razonSocial}");
             $sheet->mergeCells('A2:R2');
             $sheet->getStyle('A2')->applyFromArray([
                 'font' => ['italic' => true, 'size' => 9, 'color' => ['rgb' => '6B7280']],
@@ -357,7 +366,7 @@ class VentaExportController extends Controller
 
             $col = 'A';
             foreach ($headers as $header) {
-                $sheet->setCellValue($col . '4', $header);
+                $sheet->setCellValue($col.'4', $header);
                 $col++;
             }
 
@@ -379,7 +388,9 @@ class VentaExportController extends Controller
 
             foreach ($ventas as $v) {
                 $codSunat = $v->tipoDocumento->cod_sunat ?? '00';
-                if ($codSunat === '00') continue;
+                if ($codSunat === '00') {
+                    continue;
+                }
 
                 $anulada = in_array($v->estado, ['2', 'A']);
                 $docCliente = $v->cliente->documento ?? '';
@@ -391,26 +402,26 @@ class VentaExportController extends Controller
                 $inafecto = $anulada ? 0 : ($v->mon_inafecto ?? 0);
                 $total = $anulada ? 0 : ($v->total ?? 0);
 
-                $cuo = 'M' . str_pad($correlativo, 9, '0', STR_PAD_LEFT);
+                $cuo = 'M'.str_pad($correlativo, 9, '0', STR_PAD_LEFT);
 
-                $sheet->setCellValue('A' . $row, $cuo);
-                $sheet->setCellValue('B' . $row, $v->fecha_emision->format('d/m/Y'));
-                $sheet->setCellValue('C' . $row, $codSunat);
-                $sheet->setCellValue('D' . $row, $v->serie);
-                $sheet->setCellValue('E' . $row, str_pad($v->numero, 8, '0', STR_PAD_LEFT));
-                $sheet->setCellValue('F' . $row, $tipoDocId);
-                $sheet->setCellValue('G' . $row, $docCliente);
-                $sheet->setCellValue('H' . $row, $v->cliente->datos ?? '');
-                $sheet->setCellValue('I' . $row, $base);
-                $sheet->setCellValue('J' . $row, $igv);
-                $sheet->setCellValue('K' . $row, $exonerado);
-                $sheet->setCellValue('L' . $row, $inafecto);
-                $sheet->setCellValue('M' . $row, 0);
-                $sheet->setCellValue('N' . $row, 0);
-                $sheet->setCellValue('O' . $row, 0);
-                $sheet->setCellValue('P' . $row, $total);
-                $sheet->setCellValue('Q' . $row, $v->tipo_moneda);
-                $sheet->setCellValue('R' . $row, $anulada ? 'ANULADO' : 'VIGENTE');
+                $sheet->setCellValue('A'.$row, $cuo);
+                $sheet->setCellValue('B'.$row, $v->fecha_emision->format('d/m/Y'));
+                $sheet->setCellValue('C'.$row, $codSunat);
+                $sheet->setCellValue('D'.$row, $v->serie);
+                $sheet->setCellValue('E'.$row, str_pad($v->numero, 8, '0', STR_PAD_LEFT));
+                $sheet->setCellValue('F'.$row, $tipoDocId);
+                $sheet->setCellValue('G'.$row, $docCliente);
+                $sheet->setCellValue('H'.$row, $v->cliente->datos ?? '');
+                $sheet->setCellValue('I'.$row, $base);
+                $sheet->setCellValue('J'.$row, $igv);
+                $sheet->setCellValue('K'.$row, $exonerado);
+                $sheet->setCellValue('L'.$row, $inafecto);
+                $sheet->setCellValue('M'.$row, 0);
+                $sheet->setCellValue('N'.$row, 0);
+                $sheet->setCellValue('O'.$row, 0);
+                $sheet->setCellValue('P'.$row, $total);
+                $sheet->setCellValue('Q'.$row, $v->tipo_moneda);
+                $sheet->setCellValue('R'.$row, $anulada ? 'ANULADO' : 'VIGENTE');
 
                 $sheet->getStyle("A{$row}:R{$row}")->applyFromArray([
                     'font' => ['size' => 9],
@@ -425,7 +436,7 @@ class VentaExportController extends Controller
                     ]);
                 }
 
-                if (!$anulada) {
+                if (! $anulada) {
                     $totalBase += $base;
                     $totalIgv += $igv;
                     $totalGeneral += $total;
@@ -436,10 +447,10 @@ class VentaExportController extends Controller
             }
 
             // Totales
-            $sheet->setCellValue('H' . $row, 'TOTALES:');
-            $sheet->setCellValue('I' . $row, $totalBase);
-            $sheet->setCellValue('J' . $row, $totalIgv);
-            $sheet->setCellValue('P' . $row, $totalGeneral);
+            $sheet->setCellValue('H'.$row, 'TOTALES:');
+            $sheet->setCellValue('I'.$row, $totalBase);
+            $sheet->setCellValue('J'.$row, $totalIgv);
+            $sheet->setCellValue('P'.$row, $totalGeneral);
             $sheet->getStyle("H{$row}:R{$row}")->applyFromArray([
                 'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '92400E']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
@@ -450,7 +461,7 @@ class VentaExportController extends Controller
             ]);
 
             // Formato numérico
-            $sheet->getStyle('I5:P' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('I5:P'.$row)->getNumberFormat()->setFormatCode('#,##0.00');
 
             // Anchos de columna
             $widths = ['A' => 14, 'B' => 12, 'C' => 8, 'D' => 8, 'E' => 12, 'F' => 6, 'G' => 14, 'H' => 35, 'I' => 14, 'J' => 12, 'K' => 12, 'L' => 12, 'M' => 10, 'N' => 10, 'O' => 10, 'P' => 14, 'Q' => 8, 'R' => 10];
@@ -462,7 +473,7 @@ class VentaExportController extends Controller
             $filename = "RVTA-{$periodo}.xlsx";
 
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Content-Disposition: attachment;filename="'.$filename.'"');
             header('Cache-Control: max-age=0');
             $writer->save('php://output');
             exit;
@@ -473,26 +484,60 @@ class VentaExportController extends Controller
 
     /**
      * Reporte de Ventas por Producto (Excel)
+     * Parámetro opcional tipo=nota: filtra solo Notas de Venta (id_tido=6)
+     * y usa productos del almacén madre (productoMadre) en lugar de productos de empresa.
      */
     public function reporteVentasProducto(Request $request)
     {
         try {
-            [$user, $ventas, $mes, $anio] = $this->getTodasVentasPeriodo($request);
+            $esNota = $request->input('tipo') === 'nota';
+            $user = Auth::user();
+            if (! $user) {
+                abort(401, 'Sesión expirada');
+            }
+
+            $mes = $request->input('mes', date('m'));
+            $anio = $request->input('anio', date('Y'));
+
+            $withRelations = $esNota
+                ? ['cliente', 'tipoDocumento', 'productosVentas.productoMadre']
+                : ['cliente', 'tipoDocumento', 'productosVentas.producto'];
+
+            $query = Venta::with($withRelations)
+                ->where('id_empresa', $user->id_empresa)
+                ->whereYear('fecha_emision', $anio)
+                ->whereMonth('fecha_emision', $mes);
+
+            if ($esNota) {
+                $query->where('id_tido', 6);
+            }
+
+            $ventas = $query->orderBy('fecha_emision')
+                ->orderBy('serie')
+                ->orderBy('numero')
+                ->get();
 
             $meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
             // Agrupar productos vendidos
             $productos = [];
             foreach ($ventas as $v) {
-                if (in_array($v->estado, ['2', 'A'])) continue;
+                if (in_array($v->estado, ['2', 'A'])) {
+                    continue;
+                }
 
                 foreach ($v->productosVentas as $pv) {
                     $key = $pv->id_producto ?? $pv->codigo_producto;
-                    if (!isset($productos[$key])) {
+                    if (! isset($productos[$key])) {
+                        if ($esNota) {
+                            $prodRel = $pv->productoMadre;
+                        } else {
+                            $prodRel = $pv->producto;
+                        }
                         $productos[$key] = [
-                            'codigo' => $pv->codigo_producto ?? ($pv->producto->codigo ?? ''),
-                            'nombre' => $pv->descripcion ?? ($pv->producto->nombre ?? 'N/A'),
-                            'unidad' => $pv->unidad_medida ?? ($pv->producto->unidad->abreviatura ?? 'UND'),
+                            'codigo' => $pv->codigo_producto ?? ($prodRel->codigo ?? ''),
+                            'nombre' => $pv->descripcion ?? ($prodRel->nombre ?? 'N/A'),
+                            'unidad' => $pv->unidad_medida ?? ($prodRel->unidad->abreviatura ?? 'UND'),
                             'cantidad' => 0,
                             'subtotal' => 0,
                             'igv' => 0,
@@ -509,14 +554,17 @@ class VentaExportController extends Controller
             }
 
             // Ordenar por total descendente
-            usort($productos, fn($a, $b) => $b['total'] <=> $a['total']);
+            usort($productos, fn ($a, $b) => $b['total'] <=> $a['total']);
 
-            $spreadsheet = new Spreadsheet();
+            $spreadsheet = new Spreadsheet;
             $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Ventas x Producto');
+            $sheet->setTitle($esNota ? 'Notas Venta x Producto' : 'Ventas x Producto');
 
             // Título
-            $sheet->setCellValue('A1', "REPORTE DE VENTAS POR PRODUCTO - {$meses[(int)$mes]} {$anio}");
+            $tituloReporte = $esNota
+                ? "REPORTE DE NOTAS DE VENTA POR PRODUCTO - {$meses[(int) $mes]} {$anio}"
+                : "REPORTE DE VENTAS POR PRODUCTO - {$meses[(int) $mes]} {$anio}";
+            $sheet->setCellValue('A1', $tituloReporte);
             $sheet->mergeCells('A1:H1');
             $sheet->getStyle('A1')->applyFromArray([
                 'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1F2937']],
@@ -525,7 +573,7 @@ class VentaExportController extends Controller
             ]);
             $sheet->getRowDimension(1)->setRowHeight(32);
 
-            $sheet->setCellValue('A2', 'Generado: ' . date('d/m/Y H:i:s') . ' | Solo ventas activas');
+            $sheet->setCellValue('A2', 'Generado: '.date('d/m/Y H:i:s').' | Solo ventas activas');
             $sheet->mergeCells('A2:H2');
             $sheet->getStyle('A2')->applyFromArray([
                 'font' => ['italic' => true, 'size' => 9, 'color' => ['rgb' => '6B7280']],
@@ -536,7 +584,7 @@ class VentaExportController extends Controller
             $headers = ['Código', 'Producto', 'Unidad', 'Cant. Vendida', 'Nro Ventas', 'Subtotal', 'IGV', 'Total'];
             $col = 'A';
             foreach ($headers as $h) {
-                $sheet->setCellValue($col . '4', $h);
+                $sheet->setCellValue($col.'4', $h);
                 $col++;
             }
             $sheet->getStyle('A4:H4')->applyFromArray([
@@ -552,14 +600,14 @@ class VentaExportController extends Controller
             $totalCantidad = 0;
 
             foreach ($productos as $p) {
-                $sheet->setCellValue('A' . $row, $p['codigo']);
-                $sheet->setCellValue('B' . $row, $p['nombre']);
-                $sheet->setCellValue('C' . $row, $p['unidad']);
-                $sheet->setCellValue('D' . $row, $p['cantidad']);
-                $sheet->setCellValue('E' . $row, $p['ventas_count']);
-                $sheet->setCellValue('F' . $row, $p['subtotal']);
-                $sheet->setCellValue('G' . $row, $p['igv']);
-                $sheet->setCellValue('H' . $row, $p['total']);
+                $sheet->setCellValue('A'.$row, $p['codigo']);
+                $sheet->setCellValue('B'.$row, $p['nombre']);
+                $sheet->setCellValue('C'.$row, $p['unidad']);
+                $sheet->setCellValue('D'.$row, $p['cantidad']);
+                $sheet->setCellValue('E'.$row, $p['ventas_count']);
+                $sheet->setCellValue('F'.$row, $p['subtotal']);
+                $sheet->setCellValue('G'.$row, $p['igv']);
+                $sheet->setCellValue('H'.$row, $p['total']);
 
                 $sheet->getStyle("A{$row}:H{$row}")->applyFromArray([
                     'font' => ['size' => 10],
@@ -578,9 +626,9 @@ class VentaExportController extends Controller
             }
 
             // Totales
-            $sheet->setCellValue('C' . $row, 'TOTALES:');
-            $sheet->setCellValue('D' . $row, $totalCantidad);
-            $sheet->setCellValue('H' . $row, $totalGeneral);
+            $sheet->setCellValue('C'.$row, 'TOTALES:');
+            $sheet->setCellValue('D'.$row, $totalCantidad);
+            $sheet->setCellValue('H'.$row, $totalGeneral);
             $sheet->getStyle("C{$row}:H{$row}")->applyFromArray([
                 'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '92400E']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
@@ -590,18 +638,20 @@ class VentaExportController extends Controller
                 ],
             ]);
 
-            $sheet->getStyle('F5:H' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
-            $sheet->getStyle('D5:E' . $row)->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle('F5:H'.$row)->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('D5:E'.$row)->getNumberFormat()->setFormatCode('#,##0');
 
             foreach (range('A', 'H') as $col) {
                 $sheet->getColumnDimension($col)->setAutoSize(true);
             }
 
             $writer = new Xlsx($spreadsheet);
-            $filename = "ventas-producto-{$anio}-{$mes}.xlsx";
+            $filename = $esNota
+                ? "notas-venta-producto-{$anio}-{$mes}.xlsx"
+                : "ventas-producto-{$anio}-{$mes}.xlsx";
 
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Content-Disposition: attachment;filename="'.$filename.'"');
             header('Cache-Control: max-age=0');
             $writer->save('php://output');
             exit;
@@ -620,12 +670,12 @@ class VentaExportController extends Controller
 
             $meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-            $spreadsheet = new Spreadsheet();
+            $spreadsheet = new Spreadsheet;
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('Ganancias');
 
             // Título
-            $sheet->setCellValue('A1', "REPORTE DE GANANCIAS - {$meses[(int)$mes]} {$anio}");
+            $sheet->setCellValue('A1', "REPORTE DE GANANCIAS - {$meses[(int) $mes]} {$anio}");
             $sheet->mergeCells('A1:I1');
             $sheet->getStyle('A1')->applyFromArray([
                 'font' => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1F2937']],
@@ -634,7 +684,7 @@ class VentaExportController extends Controller
             ]);
             $sheet->getRowDimension(1)->setRowHeight(32);
 
-            $sheet->setCellValue('A2', 'Generado: ' . date('d/m/Y H:i:s') . ' | Ganancia = Precio Venta - Costo');
+            $sheet->setCellValue('A2', 'Generado: '.date('d/m/Y H:i:s').' | Ganancia = Precio Venta - Costo');
             $sheet->mergeCells('A2:I2');
             $sheet->getStyle('A2')->applyFromArray([
                 'font' => ['italic' => true, 'size' => 9, 'color' => ['rgb' => '6B7280']],
@@ -645,7 +695,7 @@ class VentaExportController extends Controller
             $headers = ['Documento', 'Fecha', 'Cliente', 'Producto', 'Cant.', 'P. Venta', 'Costo', 'Total Venta', 'Ganancia'];
             $col = 'A';
             foreach ($headers as $h) {
-                $sheet->setCellValue($col . '4', $h);
+                $sheet->setCellValue($col.'4', $h);
                 $col++;
             }
             $sheet->getStyle('A4:I4')->applyFromArray([
@@ -662,25 +712,27 @@ class VentaExportController extends Controller
             $totalGanancia = 0;
 
             foreach ($ventas as $v) {
-                if (in_array($v->estado, ['2', 'A'])) continue;
+                if (in_array($v->estado, ['2', 'A'])) {
+                    continue;
+                }
 
                 $tipoAbrev = $v->tipoDocumento->abreviatura ?? '';
-                $numCompleto = $v->serie . '-' . str_pad($v->numero, 8, '0', STR_PAD_LEFT);
+                $numCompleto = $v->serie.'-'.str_pad($v->numero, 8, '0', STR_PAD_LEFT);
 
                 foreach ($v->productosVentas as $pv) {
                     $costo = $pv->producto->costo ?? 0;
                     $costoTotal = $costo * $pv->cantidad;
                     $ganancia = $pv->total - $costoTotal;
 
-                    $sheet->setCellValue('A' . $row, "{$tipoAbrev} {$numCompleto}");
-                    $sheet->setCellValue('B' . $row, $v->fecha_emision->format('d/m/Y'));
-                    $sheet->setCellValue('C' . $row, $v->cliente->datos ?? 'N/A');
-                    $sheet->setCellValue('D' . $row, $pv->descripcion ?? ($pv->producto->nombre ?? 'N/A'));
-                    $sheet->setCellValue('E' . $row, $pv->cantidad);
-                    $sheet->setCellValue('F' . $row, $pv->precio_unitario);
-                    $sheet->setCellValue('G' . $row, $costo);
-                    $sheet->setCellValue('H' . $row, $pv->total);
-                    $sheet->setCellValue('I' . $row, $ganancia);
+                    $sheet->setCellValue('A'.$row, "{$tipoAbrev} {$numCompleto}");
+                    $sheet->setCellValue('B'.$row, $v->fecha_emision->format('d/m/Y'));
+                    $sheet->setCellValue('C'.$row, $v->cliente->datos ?? 'N/A');
+                    $sheet->setCellValue('D'.$row, $pv->descripcion ?? ($pv->producto->nombre ?? 'N/A'));
+                    $sheet->setCellValue('E'.$row, $pv->cantidad);
+                    $sheet->setCellValue('F'.$row, $pv->precio_unitario);
+                    $sheet->setCellValue('G'.$row, $costo);
+                    $sheet->setCellValue('H'.$row, $pv->total);
+                    $sheet->setCellValue('I'.$row, $ganancia);
 
                     // Color de ganancia
                     $colorGanancia = $ganancia >= 0 ? '059669' : 'DC2626';
@@ -707,9 +759,9 @@ class VentaExportController extends Controller
             }
 
             // Totales
-            $sheet->setCellValue('G' . $row, 'TOTALES:');
-            $sheet->setCellValue('H' . $row, $totalVenta);
-            $sheet->setCellValue('I' . $row, $totalGanancia);
+            $sheet->setCellValue('G'.$row, 'TOTALES:');
+            $sheet->setCellValue('H'.$row, $totalVenta);
+            $sheet->setCellValue('I'.$row, $totalGanancia);
             $sheet->getStyle("G{$row}:I{$row}")->applyFromArray([
                 'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '92400E']],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
@@ -721,18 +773,18 @@ class VentaExportController extends Controller
 
             // Fila resumen
             $row++;
-            $sheet->setCellValue('G' . $row, 'Costo Total:');
-            $sheet->setCellValue('H' . $row, $totalCosto);
-            $sheet->setCellValue('I' . $row, '% Margen:');
+            $sheet->setCellValue('G'.$row, 'Costo Total:');
+            $sheet->setCellValue('H'.$row, $totalCosto);
+            $sheet->setCellValue('I'.$row, '% Margen:');
             $sheet->getStyle("G{$row}:I{$row}")->applyFromArray([
                 'font' => ['size' => 9, 'color' => ['rgb' => '6B7280']],
             ]);
             if ($totalVenta > 0) {
                 $margen = ($totalGanancia / $totalVenta) * 100;
-                $sheet->setCellValue('I' . $row, number_format($margen, 1) . '%');
+                $sheet->setCellValue('I'.$row, number_format($margen, 1).'%');
             }
 
-            $sheet->getStyle('F5:I' . ($row - 1))->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('F5:I'.($row - 1))->getNumberFormat()->setFormatCode('#,##0.00');
 
             foreach (range('A', 'I') as $col) {
                 $sheet->getColumnDimension($col)->setAutoSize(true);
@@ -742,7 +794,7 @@ class VentaExportController extends Controller
             $filename = "ganancias-{$anio}-{$mes}.xlsx";
 
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Content-Disposition: attachment;filename="'.$filename.'"');
             header('Cache-Control: max-age=0');
             $writer->save('php://output');
             exit;
@@ -774,7 +826,7 @@ class VentaExportController extends Controller
                 'margin_bottom' => 15,
             ]);
 
-            $mpdf->SetTitle("Reporte de Ventas - {$meses[(int)$mes]} {$anio}");
+            $mpdf->SetTitle("Reporte de Ventas - {$meses[(int) $mes]} {$anio}");
             $mpdf->WriteHTML($html);
 
             return response($mpdf->Output('', 'S'), 200, [
@@ -795,7 +847,7 @@ class VentaExportController extends Controller
     {
         try {
             $user = Auth::user();
-            if (!$user) {
+            if (! $user) {
                 abort(401, 'Sesión expirada');
             }
 
@@ -808,14 +860,22 @@ class VentaExportController extends Controller
                 ->where('id_empresa', $user->id_empresa)
                 ->where('id_tido', 6);
 
-            if ($desde) $query->whereDate('fecha_emision', '>=', $desde);
-            if ($hasta) $query->whereDate('fecha_emision', '<=', $hasta);
-            if ($estadoFiltro === 'activas') $query->whereNotIn('estado', ['2', 'A']);
-            if ($estadoFiltro === 'anuladas') $query->whereIn('estado', ['2', 'A']);
+            if ($desde) {
+                $query->whereDate('fecha_emision', '>=', $desde);
+            }
+            if ($hasta) {
+                $query->whereDate('fecha_emision', '<=', $hasta);
+            }
+            if ($estadoFiltro === 'activas') {
+                $query->whereNotIn('estado', ['2', 'A']);
+            }
+            if ($estadoFiltro === 'anuladas') {
+                $query->whereIn('estado', ['2', 'A']);
+            }
 
             $notas = $query->orderBy('fecha_emision')->orderBy('serie')->orderBy('numero')->get();
 
-            $spreadsheet = new Spreadsheet();
+            $spreadsheet = new Spreadsheet;
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('Notas de Venta');
 
@@ -832,10 +892,14 @@ class VentaExportController extends Controller
             ]);
 
             $periodo = 'Todas las fechas';
-            if ($desde && $hasta) $periodo = "Periodo: {$desde} al {$hasta}";
-            elseif ($desde) $periodo = "Desde: {$desde}";
-            elseif ($hasta) $periodo = "Hasta: {$hasta}";
-            $sheet->setCellValue('A2', $periodo . ' | Generado: ' . now()->format('d/m/Y H:i'));
+            if ($desde && $hasta) {
+                $periodo = "Periodo: {$desde} al {$hasta}";
+            } elseif ($desde) {
+                $periodo = "Desde: {$desde}";
+            } elseif ($hasta) {
+                $periodo = "Hasta: {$hasta}";
+            }
+            $sheet->setCellValue('A2', $periodo.' | Generado: '.now()->format('d/m/Y H:i'));
             $sheet->mergeCells("A2:{$lastCol}2");
 
             if ($esDetalle) {
@@ -845,7 +909,7 @@ class VentaExportController extends Controller
             }
             $col = 'A';
             foreach ($headers as $h) {
-                $sheet->setCellValue($col . '3', $h);
+                $sheet->setCellValue($col.'3', $h);
                 $col++;
             }
             $sheet->getStyle("A3:{$lastCol}3")->applyFromArray([
@@ -855,10 +919,12 @@ class VentaExportController extends Controller
             ]);
 
             $row = 4;
-            $totSub = 0; $totIgv = 0; $totTotal = 0;
+            $totSub = 0;
+            $totIgv = 0;
+            $totTotal = 0;
 
             foreach ($notas as $nota) {
-                $doc = $nota->serie . '-' . str_pad($nota->numero, 6, '0', STR_PAD_LEFT);
+                $doc = $nota->serie.'-'.str_pad($nota->numero, 6, '0', STR_PAD_LEFT);
                 $fecha = $nota->fecha_emision ? \Illuminate\Support\Carbon::parse($nota->fecha_emision)->format('Y-m-d') : '-';
                 $cliDoc = $nota->cliente?->documento ?? '-';
                 $cliNom = $nota->cliente?->datos ?? 'Sin cliente';
@@ -909,12 +975,12 @@ class VentaExportController extends Controller
 
             // Fila de totales
             if ($esDetalle) {
-                $sheet->setCellValue("A{$row}", 'TOTAL NOTAS: ' . $notas->count());
+                $sheet->setCellValue("A{$row}", 'TOTAL NOTAS: '.$notas->count());
                 $sheet->setCellValue("I{$row}", $totSub);
                 $sheet->setCellValue("J{$row}", $totIgv);
                 $sheet->setCellValue("K{$row}", $totTotal);
             } else {
-                $sheet->setCellValue("A{$row}", 'TOTAL NOTAS: ' . $notas->count());
+                $sheet->setCellValue("A{$row}", 'TOTAL NOTAS: '.$notas->count());
                 $sheet->setCellValue("E{$row}", $totSub);
                 $sheet->setCellValue("F{$row}", $totIgv);
                 $sheet->setCellValue("G{$row}", $totTotal);
@@ -934,7 +1000,196 @@ class VentaExportController extends Controller
             }
 
             $writer = new Xlsx($spreadsheet);
-            $filename = 'notas-venta-' . now()->format('Y-m-d') . '.xlsx';
+            $filename = 'notas-venta-'.now()->format('Y-m-d').'.xlsx';
+            $temp = tempnam(sys_get_temp_dir(), 'xlsx');
+            $writer->save($temp);
+
+            return response()->download($temp, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Reporte de Notas de Venta filtradas por un producto del almacén madre.
+     * Recibe id_producto, busca todas las notas de venta (id_tido=6) que lo contienen,
+     * y exporta TODOS los productos de cada nota con datos del cliente.
+     */
+    public function reporteNotasPorProducto(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            if (! $user) {
+                abort(401, 'Sesión expirada');
+            }
+
+            $idProducto = $request->input('id_producto');
+            if (! $idProducto) {
+                return response()->json(['success' => false, 'message' => 'Debe especificar un producto'], 400);
+            }
+
+            // Filtros de fecha: modo (todos|mes|rango)
+            $modoFecha = $request->input('modo_fecha', 'todos');
+            $mes = $request->input('mes');
+            $anio = $request->input('anio');
+            $desde = $request->input('desde');
+            $hasta = $request->input('hasta');
+
+            // Buscar IDs de notas de venta que contienen el producto buscado
+            $notaIds = ProductoVenta::where('id_producto', $idProducto)
+                ->pluck('id_venta')
+                ->unique();
+
+            $query = Venta::with(['cliente', 'productosVentas.productoMadre'])
+                ->where('id_empresa', $user->id_empresa)
+                ->where('id_tido', 6)
+                ->whereIn('id_venta', $notaIds);
+
+            if ($modoFecha === 'mes' && $mes && $anio) {
+                $query->whereYear('fecha_emision', $anio)
+                    ->whereMonth('fecha_emision', $mes);
+            } elseif ($modoFecha === 'rango') {
+                if ($desde) {
+                    $query->whereDate('fecha_emision', '>=', $desde);
+                }
+                if ($hasta) {
+                    $query->whereDate('fecha_emision', '<=', $hasta);
+                }
+            }
+
+            $notas = $query->orderBy('fecha_emision', 'desc')
+                ->orderBy('serie')
+                ->orderBy('numero', 'desc')
+                ->get();
+
+            // Nombre del producto para el título
+            $productoBuscado = ProductoMadre::find($idProducto);
+            $nombreProducto = $productoBuscado?->nombre ?? 'Producto #'.$idProducto;
+
+            $spreadsheet = new Spreadsheet;
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Notas por Producto');
+
+            // Título
+            $sheet->setCellValue('A1', 'REPORTE DE NOTAS DE VENTA POR PRODUCTO');
+            $sheet->mergeCells('A1:L1');
+            $sheet->getStyle('A1')->applyFromArray([
+                'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2563EB']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+
+            $meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            $periodoTxt = 'Todas las fechas';
+            if ($modoFecha === 'mes' && $mes && $anio) {
+                $periodoTxt = "Periodo: {$meses[(int) $mes]} {$anio}";
+            } elseif ($modoFecha === 'rango') {
+                if ($desde && $hasta) {
+                    $periodoTxt = "Periodo: {$desde} al {$hasta}";
+                } elseif ($desde) {
+                    $periodoTxt = "Desde: {$desde}";
+                } elseif ($hasta) {
+                    $periodoTxt = "Hasta: {$hasta}";
+                }
+            }
+
+            $sheet->setCellValue('A2', "Producto: {$nombreProducto}  |  {$periodoTxt}  |  Notas: {$notas->count()}  |  ".now()->format('d/m/Y H:i'));
+            $sheet->mergeCells('A2:L2');
+            $sheet->getStyle('A2')->applyFromArray([
+                'font' => ['italic' => true, 'size' => 9, 'color' => ['rgb' => '6B7280']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+
+            // Encabezados
+            $headers = ['Fecha', 'Nota de Venta', 'Doc. Cliente', 'Cliente', 'Producto', 'Código', 'Cantidad', 'P. Unit.', 'Subtotal', 'IGV', 'Total', 'Estado'];
+            $col = 'A';
+            foreach ($headers as $h) {
+                $sheet->setCellValue($col.'3', $h);
+                $col++;
+            }
+            $sheet->getStyle('A3:L3')->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4B5563']],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+
+            $row = 4;
+            $totSub = 0;
+            $totIgv = 0;
+            $totTotal = 0;
+
+            foreach ($notas as $nota) {
+                $doc = $nota->serie.'-'.str_pad($nota->numero, 6, '0', STR_PAD_LEFT);
+                $fecha = $nota->fecha_emision ? \Illuminate\Support\Carbon::parse($nota->fecha_emision)->format('Y-m-d') : '-';
+                $cliDoc = $nota->cliente?->documento ?? '-';
+                $cliNom = $nota->cliente?->datos ?? 'Sin cliente';
+                $anulada = in_array($nota->estado, ['2', 'A']);
+                $estadoTxt = $anulada ? 'Anulada' : 'Activa';
+
+                foreach ($nota->productosVentas as $d) {
+                    $esProductoBuscado = (string) $d->id_producto === (string) $idProducto;
+
+                    $sheet->setCellValue("A{$row}", $fecha);
+                    $sheet->setCellValue("B{$row}", $doc);
+                    $sheet->setCellValue("C{$row}", $cliDoc);
+                    $sheet->setCellValue("D{$row}", $cliNom);
+                    $sheet->setCellValue("E{$row}", $d->productoMadre?->nombre ?? $d->descripcion ?? '-');
+                    $sheet->setCellValue("F{$row}", $d->productoMadre?->codigo ?? $d->codigo_producto ?? '-');
+                    $sheet->setCellValue("G{$row}", (float) $d->cantidad);
+                    $sheet->setCellValue("H{$row}", (float) $d->precio_unitario);
+                    $sheet->setCellValue("I{$row}", (float) $d->subtotal);
+                    $sheet->setCellValue("J{$row}", (float) $d->igv);
+                    $sheet->setCellValue("K{$row}", (float) $d->total);
+                    $sheet->setCellValue("L{$row}", $estadoTxt);
+
+                    // Resaltar la fila del producto buscado
+                    if ($esProductoBuscado) {
+                        $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+                            'font' => ['bold' => true],
+                        ]);
+                    }
+
+                    if ($anulada) {
+                        $sheet->getStyle("L{$row}")->getFont()->getColor()->setRGB('EF4444');
+                    }
+
+                    $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                        'borders' => ['bottom' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E5E7EB']]],
+                    ]);
+
+                    if (! $anulada) {
+                        $totSub += (float) $d->subtotal;
+                        $totIgv += (float) $d->igv;
+                        $totTotal += (float) $d->total;
+                    }
+                    $row++;
+                }
+            }
+
+            // Totales
+            $sheet->setCellValue("A{$row}", "TOTAL ({$notas->count()} notas):");
+            $sheet->setCellValue("I{$row}", $totSub);
+            $sheet->setCellValue("J{$row}", $totIgv);
+            $sheet->setCellValue("K{$row}", $totTotal);
+            $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                'font' => ['bold' => true],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+
+            // Anchos
+            $widths = ['A' => 12, 'B' => 14, 'C' => 14, 'D' => 28, 'E' => 32, 'F' => 14, 'G' => 10, 'H' => 12, 'I' => 12, 'J' => 12, 'K' => 12, 'L' => 10];
+            foreach ($widths as $c => $w) {
+                $sheet->getColumnDimension($c)->setWidth($w);
+            }
+
+            $sheet->getStyle('G4:K'.$row)->getNumberFormat()->setFormatCode('#,##0.00');
+
+            $writer = new Xlsx($spreadsheet);
+            $filename = 'notas-por-producto-'.now()->format('Y-m-d').'.xlsx';
             $temp = tempnam(sys_get_temp_dir(), 'xlsx');
             $writer->save($temp);
 

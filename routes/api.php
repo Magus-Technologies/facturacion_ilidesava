@@ -212,6 +212,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::get('ventas/reporte-ganancias', [\App\Http\Controllers\Exports\VentaExportController::class, 'reporteGanancias'])->middleware('permission:ventas.view');
     Route::get('ventas/exportar-pdf', [\App\Http\Controllers\Exports\VentaExportController::class, 'exportarPdf'])->middleware('permission:ventas.view');
     Route::get('ventas/reporte-notas-venta', [\App\Http\Controllers\Exports\VentaExportController::class, 'reporteNotasVenta'])->middleware('permission:ventas.view');
+    Route::get('ventas/reporte-notas-por-producto', [\App\Http\Controllers\Exports\VentaExportController::class, 'reporteNotasPorProducto'])->middleware('permission:ventas.view');
 
     // Ventas
     Route::get('ventas/proximo-numero', [\App\Http\Controllers\VentasController::class, 'proximoNumero']);
@@ -224,6 +225,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::get('ventas/{id}/preview-descontar-stock', [\App\Http\Controllers\VentasController::class, 'previewDescontarStock'])->middleware('permission:ventas.edit');
     Route::post('ventas/{id}/descontar-stock', [\App\Http\Controllers\VentasController::class, 'descontarStock'])->middleware('permission:ventas.edit');
     Route::get('ventas/{id}/historial-stock', [\App\Http\Controllers\VentasController::class, 'historialStock'])->middleware('permission:ventas.view');
+    Route::get('ventas/{id}/historial-edicion', [\App\Http\Controllers\VentasController::class, 'historialEdicion'])->middleware('permission:ventas.view');
 
     // Compras
     Route::get('compras', [\App\Http\Controllers\CompraController::class, 'index'])->middleware('permission:compras.view');

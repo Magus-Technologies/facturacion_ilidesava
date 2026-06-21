@@ -48,6 +48,7 @@ export default function ClienteAutocomplete({
     const inputRef = useRef(null);
     const dropdownRef = useRef(null);
     const isExternalUpdate = useRef(false);
+    const isSelecting = useRef(false); // Evita que buscarClientes se dispare al seleccionar un cliente
     const lastSelectedDoc = useRef(null); // Track last selected client's document
 
     // Sincronizar tipo con el comprobante o initialTipoDoc cuando cambia
@@ -70,6 +71,10 @@ export default function ClienteAutocomplete({
 
     // Búsqueda de clientes
     useEffect(() => {
+        if (isSelecting.current) {
+            isSelecting.current = false;
+            return;
+        }
         if (isExternalUpdate.current) {
             isExternalUpdate.current = false;
             return;
@@ -111,6 +116,7 @@ export default function ClienteAutocomplete({
     };
 
     const handleSelectCliente = (cliente) => {
+        isSelecting.current = true;
         onClienteSelect(cliente);
         lastSelectedDoc.current = cliente.documento || "";
         setSearchTerm(cliente.documento || "");

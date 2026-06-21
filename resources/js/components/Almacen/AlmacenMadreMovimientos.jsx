@@ -395,6 +395,7 @@ function ExportarExcelModal({ isOpen, onClose, desdeInicial, hastaInicial }) {
                             placeholder="Buscar producto por nombre o código..."
                             value={busqueda}
                             onChange={(e) => setBusqueda(e.target.value)}
+                            onBlur={() => setTimeout(() => setBusqueda(""), 150)}
                             className="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-white shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-300"
                         />
                         {coincidencias.length > 0 && (

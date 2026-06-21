@@ -179,6 +179,8 @@ export default function CompraForm({ compraId = null }) {
                     ventaId={compraGuardada.id}
                     numeroCompleto={compraGuardada.numero_completo}
                     tipo="compra"
+                    clienteNombre={proveedor?.razon_social || proveedor?.nombre || ""}
+                    clienteTelefono={proveedor?.telefono || proveedor?.celular || ""}
                 />
             )}
         </MainLayout>
