@@ -27,6 +27,7 @@ import {
     TableRow,
 } from "../ui/table";
 import { Badge } from "../ui/badge";
+import SelectUbigeo from "../ui/SelectUbigeo";
 import {
     Loader2,
     ArrowLeft,
@@ -511,6 +512,9 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
         if (!destinatario.direccion?.trim()) {
             newErrors.direccion = "La dirección de llegada es requerida";
         }
+        if (!destinatario.ubigeo?.trim()) {
+            newErrors.ubigeo = "Seleccione el departamento, provincia y distrito de llegada";
+        }
         if (!form.peso_total || parseFloat(form.peso_total) <= 0) {
             newErrors.peso_total = "Ingrese el peso total";
         }
@@ -954,6 +958,37 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                                         />
                                         {errors.direccion && (
                                             <p className="text-xs text-red-600 mt-1">{errors.direccion}</p>
+                                        )}
+                                    </div>
+                                    <div className="md:col-span-3">
+                                        <Label className="text-xs text-gray-500 flex items-center gap-1 mb-2">
+                                            <MapPin className="h-3 w-3 text-red-500" />
+                                            Ubicación de llegada <span className="text-red-500">*</span>
+                                        </Label>
+                                        <SelectUbigeo
+                                            value={{ ubigeo: destinatario.ubigeo }}
+                                            onChange={(ubigeoData) => {
+                                                setDestinatario((prev) => ({
+                                                    ...prev,
+                                                    ubigeo: ubigeoData.ubigeo,
+                                                }));
+                                                if (errors.ubigeo) {
+                                                    setErrors((prev) => ({
+                                                        ...prev,
+                                                        ubigeo: undefined,
+                                                    }));
+                                                }
+                                            }}
+                                            errors={{
+                                                departamento: errors.ubigeo,
+                                                provincia: errors.ubigeo,
+                                                distrito: errors.ubigeo,
+                                            }}
+                                        />
+                                        {destinatario.ubigeo && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Ubigeo de llegada: {destinatario.ubigeo}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
