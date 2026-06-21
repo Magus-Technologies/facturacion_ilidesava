@@ -226,14 +226,29 @@ class GuiaRemisionController extends Controller
         $guia = GuiaRemision::where('id_empresa', $request->user()->id_empresa)
             ->findOrFail($id);
 
-        if (!$guia->nombre_xml) {
+        if ($guia->estado === 'aceptado') {
             return response()->json([
                 'success' => false,
-                'message' => 'La guía no tiene XML generado.',
+                'message' => 'La guía ya fue aceptada por SUNAT.',
             ], 400);
         }
 
         try {
+            if (!$guia->fecha_emision || !$guia->fecha_emision->isToday()) {
+                $guia->update([
+                    'fecha_emision' => now()->toDateString(),
+                    'estado' => 'pendiente',
+                    'cdr_url' => null,
+                    'ticket_sunat' => null,
+                    'codigo_sunat' => null,
+                    'mensaje_sunat' => null,
+                ]);
+            }
+
+            $guia->refresh();
+            $this->sunatService->generarGuiaRemisionXml($guia);
+            $guia->refresh();
+
             $resultado = $this->sunatService->enviarGuiaRemision($guia);
 
             return response()->json($resultado);
@@ -484,6 +499,7 @@ class GuiaRemisionController extends Controller
                     'destinatario_nombre' => $request->destinatario_nombre,
                     'destinatario_direccion' => $request->destinatario_direccion,
                     'destinatario_ubigeo' => $request->destinatario_ubigeo ?: '150101',
+                    'fecha_emision' => now()->toDateString(),
                     'motivo_traslado' => $request->motivo_traslado,
                     'descripcion_motivo' => $request->descripcion_motivo,
                     'mod_transporte' => $request->mod_transporte,
