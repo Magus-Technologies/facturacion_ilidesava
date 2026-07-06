@@ -12,7 +12,7 @@ class EnviarBoletasPendientes extends Command
 {
     protected $signature = 'sunat:enviar-boletas-pendientes {--empresa= : RUC de la empresa a procesar (opcional, procesa todas si se omite)} {--dry-run : Simula el proceso sin enviar nada a SUNAT}';
 
-    protected $description = 'Enviar automáticamente boletas pendientes a SUNAT via Resumen Diario';
+    protected $description = 'Enviar automáticamente boletas pendientes a SUNAT (envío individual, igual que el flujo manual)';
 
     public function handle(SunatService $sunatService): int
     {
@@ -55,74 +55,53 @@ class EnviarBoletasPendientes extends Command
 
             $this->info("Empresa {$empresa->ruc}: {$boletas->count()} boleta(s) pendiente(s).");
 
-            // Generar el XML individual de cada boleta que aún no lo tenga o cuyo archivo fue eliminado
+            // Envío INDIVIDUAL de cada boleta (billService), idéntico al flujo manual.
+            // enviarComprobante() ya genera/usa el XML, procesa el CDR y actualiza estado_sunat.
             foreach ($boletas as $boleta) {
-                $xmlPath = $boleta->xml_url ? storage_path("app/{$boleta->xml_url}") : null;
-                if ((!empty($boleta->xml_url) || !empty($boleta->nombre_xml)) && $xmlPath && file_exists($xmlPath)) {
-                    if ($dryRun) {
-                        $this->line("  [OK] Boleta {$boleta->serie}-{$boleta->numero} ya tiene XML.");
-                    }
-                    continue;
-                }
-                if ($dryRun) {
-                    $this->line("  [DRY-RUN] Generaría XML para boleta {$boleta->serie}-{$boleta->numero}.");
-                    continue;
-                }
                 try {
-                    $this->line("Generando XML boleta {$boleta->serie}-{$boleta->numero}...");
-                    $xml = $sunatService->generarXml($boleta);
-                    if (!empty($xml['success'])) {
-                        $boleta->update([
-                            'hash_cpe' => $xml['hash'],
-                            'xml_url' => $xml['xml_url'],
-                            'nombre_xml' => $xml['nombre_archivo'],
-                        ]);
+                    // Generar el XML si no existe en BD o si el archivo físico fue eliminado
+                    $xmlPath = $boleta->xml_url ? storage_path("app/{$boleta->xml_url}") : null;
+                    if (empty($boleta->xml_url) || empty($boleta->nombre_xml) || !$xmlPath || !file_exists($xmlPath)) {
+                        if ($dryRun) {
+                            $this->line("  [DRY-RUN] Generaría XML para boleta {$boleta->serie}-{$boleta->numero}.");
+                        } else {
+                            $this->line("Generando XML boleta {$boleta->serie}-{$boleta->numero}...");
+                            $xml = $sunatService->generarXml($boleta);
+                            if (empty($xml['success'])) {
+                                $this->error("  → No se pudo generar XML: " . ($xml['message'] ?? 'Sin detalle'));
+                                continue;
+                            }
+                            $boleta->update([
+                                'hash_cpe' => $xml['hash'],
+                                'xml_url' => $xml['xml_url'],
+                                'nombre_xml' => $xml['nombre_archivo'],
+                            ]);
+                            $boleta->refresh();
+                        }
                     } else {
-                        $this->error("  → No se pudo generar XML boleta {$boleta->serie}-{$boleta->numero}: " . ($xml['message'] ?? 'Sin detalle'));
+                        if ($dryRun) {
+                            $this->line("  [OK] Ya tiene XML: {$boleta->nombre_xml}");
+                        }
+                    }
+
+                    if ($dryRun) {
+                        $this->info("  [DRY-RUN] Enviaría boleta {$boleta->serie}-{$boleta->numero} a SUNAT.");
+                        continue;
+                    }
+
+                    $this->line("Enviando boleta {$boleta->serie}-{$boleta->numero}...");
+                    $resultado = $sunatService->enviarComprobante($boleta);
+                    if (!empty($resultado['success'])) {
+                        $this->info("  → Aceptada: {$boleta->numero_completo}");
+                    } else {
+                        $this->error("  → Falló: " . ($resultado['message'] ?? 'Sin detalle'));
                     }
                 } catch (\Exception $e) {
-                    Log::error('SUNAT - Error al generar XML de boleta en task programada', [
+                    Log::error('SUNAT - Error al enviar boleta en task programada', [
                         'boleta_id' => $boleta->id_venta,
                         'error' => $e->getMessage(),
                     ]);
-                    $this->error("  → Error generando XML boleta {$boleta->serie}-{$boleta->numero}: " . $e->getMessage());
-                }
-            }
-
-            // Agrupar por fecha de emisión: el Resumen Diario de SUNAT exige boletas de la misma fecha
-            $boletasPorFecha = $boletas->groupBy(function ($b) {
-                return \Illuminate\Support\Carbon::parse($b->fecha_emision)->format('Y-m-d');
-            });
-
-            foreach ($boletasPorFecha as $fechaEmision => $boletasFecha) {
-                if ($dryRun) {
-                    $this->info("  [DRY-RUN] Enviaría Resumen Diario de {$fechaEmision} con {$boletasFecha->count()} boleta(s): " .
-                        $boletasFecha->map(fn ($b) => "{$b->serie}-{$b->numero}")->implode(', '));
-                    continue;
-                }
-                try {
-                    $this->line("Enviando resumen para {$fechaEmision} con {$boletasFecha->count()} boleta(s)...");
-                    $resultado = $sunatService->resumenDiario($empresa, $boletasFecha->all(), $fechaEmision);
-
-                    if (!empty($resultado['success'])) {
-                        // Marcar las boletas como enviadas (en proceso) para no reenviarlas en la próxima corrida
-                        foreach ($boletasFecha as $b) {
-                            $b->update([
-                                'estado_sunat' => '3',
-                                'mensaje_sunat' => 'Resumen diario enviado. Ticket: ' . ($resultado['ticket'] ?? ''),
-                            ]);
-                        }
-                        $this->info("  → Resumen enviado ({$fechaEmision}). Ticket: {$resultado['ticket']}");
-                    } else {
-                        $this->error("  → Falló el resumen ({$fechaEmision}): " . ($resultado['message'] ?? 'Sin detalle'));
-                    }
-                } catch (\Exception $e) {
-                    Log::error('SUNAT - Error al enviar boletas en task programada', [
-                        'empresa_id' => $empresa->id_empresa,
-                        'fecha' => $fechaEmision,
-                        'error' => $e->getMessage(),
-                    ]);
-                    $this->error("  → Error ({$fechaEmision}): " . $e->getMessage());
+                    $this->error("  → Error: " . $e->getMessage());
                 }
             }
         }

@@ -53,7 +53,7 @@ class GuiaRemisionController extends Controller
             'destinatario_documento' => 'required|string|max:15',
             'destinatario_nombre' => 'required|string|max:255',
             'destinatario_direccion' => 'required|string|max:500',
-            'destinatario_ubigeo' => 'nullable|string|max:6',
+            'destinatario_ubigeo' => 'required|string|size:6',
             'motivo_traslado' => 'required|string|max:2',
             'descripcion_motivo' => 'nullable|string|max:255',
             'mod_transporte' => 'required|in:01,02',
@@ -145,7 +145,7 @@ class GuiaRemisionController extends Controller
                 $dirPartida = $request->dir_partida ?: ($empresa->direccion ?: '');
 
                 // Llegada = dirección del destinatario
-                $ubigeoLlegada = $request->destinatario_ubigeo ?: '150101';
+                $ubigeoLlegada = $request->destinatario_ubigeo;
                 $dirLlegada = $request->destinatario_direccion ?: '';
 
                 $guia = GuiaRemision::create([
@@ -201,6 +201,7 @@ class GuiaRemisionController extends Controller
 
                 $resultado = $this->sunatService->generarGuiaRemisionXml($guia);
 
+                $guia->refresh();
                 $guia->load(['detalles']);
 
                 return response()->json([
@@ -226,14 +227,29 @@ class GuiaRemisionController extends Controller
         $guia = GuiaRemision::where('id_empresa', $request->user()->id_empresa)
             ->findOrFail($id);
 
-        if (!$guia->nombre_xml) {
+        if ($guia->estado === 'aceptado') {
             return response()->json([
                 'success' => false,
-                'message' => 'La guía no tiene XML generado.',
+                'message' => 'La guía ya fue aceptada por SUNAT.',
             ], 400);
         }
 
         try {
+            if (!$guia->fecha_emision || !$guia->fecha_emision->isToday()) {
+                $guia->update([
+                    'fecha_emision' => now()->toDateString(),
+                    'estado' => 'pendiente',
+                    'cdr_url' => null,
+                    'ticket_sunat' => null,
+                    'codigo_sunat' => null,
+                    'mensaje_sunat' => null,
+                ]);
+            }
+
+            $guia->refresh();
+            $this->sunatService->generarGuiaRemisionXml($guia);
+            $guia->refresh();
+
             $resultado = $this->sunatService->enviarGuiaRemision($guia);
 
             return response()->json($resultado);
@@ -437,7 +453,7 @@ class GuiaRemisionController extends Controller
                     'destinatario_documento' => 'required|string|max:15',
                     'destinatario_nombre' => 'required|string|max:255',
                     'destinatario_direccion' => 'required|string|max:500',
-                    'destinatario_ubigeo' => 'nullable|string|max:6',
+                    'destinatario_ubigeo' => 'required|string|size:6',
                     'motivo_traslado' => 'required|string|max:2',
                     'descripcion_motivo' => 'nullable|string|max:255',
                     'mod_transporte' => 'required|in:01,02',
@@ -483,7 +499,8 @@ class GuiaRemisionController extends Controller
                     'destinatario_documento' => $request->destinatario_documento,
                     'destinatario_nombre' => $request->destinatario_nombre,
                     'destinatario_direccion' => $request->destinatario_direccion,
-                    'destinatario_ubigeo' => $request->destinatario_ubigeo ?: '150101',
+                    'destinatario_ubigeo' => $request->destinatario_ubigeo,
+                    'fecha_emision' => now()->toDateString(),
                     'motivo_traslado' => $request->motivo_traslado,
                     'descripcion_motivo' => $request->descripcion_motivo,
                     'mod_transporte' => $request->mod_transporte,
@@ -493,7 +510,7 @@ class GuiaRemisionController extends Controller
                     'und_peso_total' => $request->und_peso_total ?? 'KGM',
                     'dir_partida' => $request->dir_partida ?: ($empresa->direccion ?: ''),
                     'ubigeo_partida' => $request->ubigeo_partida ?: ($empresa->ubigeo ?: '150101'),
-                    'ubigeo_llegada' => $request->destinatario_ubigeo ?: '150101',
+                    'ubigeo_llegada' => $request->destinatario_ubigeo,
                     'dir_llegada' => $request->destinatario_direccion,
                     'transportista_tipo_doc' => $request->transportista_tipo_doc,
                     'transportista_documento' => $request->transportista_documento,
@@ -512,6 +529,8 @@ class GuiaRemisionController extends Controller
                     'xml_url' => null,
                     'cdr_url' => null,
                     'ticket_sunat' => null,
+                    'codigo_sunat' => null,
+                    'mensaje_sunat' => null,
                 ]);
 
                 $detallesOriginales = $guia->detalles()->get()->keyBy('id_producto')->toArray();
@@ -570,6 +589,7 @@ class GuiaRemisionController extends Controller
 
                 $resultado = $this->sunatService->generarGuiaRemisionXml($guia);
 
+                $guia->refresh();
                 $guia->load(['detalles']);
 
                 return response()->json([
