@@ -204,7 +204,7 @@ export const prepararDatosVenta = (cliente, formData, productos, totales) => {
 
             return {
                 id_producto: p.id_producto || null,
-                descripcion_libre: p.es_libre ? p.descripcion : undefined,
+                descripcion_libre: (p.es_libre || !p.id_producto) ? (p.descripcion || p.nom_prod || null) : undefined,
                 descripcion: p.descripcion || null,
                 codigo_producto: p.codigo || null,
                 cantidad,

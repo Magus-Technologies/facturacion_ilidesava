@@ -335,6 +335,12 @@ class VentasController extends Controller
                     // Flag para saber si es producto libre (no desconta stock)
                     $esProductoLibre = !empty($producto['descripcion_libre']);
 
+                    // Fallback: si llega sin id_producto y sin descripcion_libre pero CON descripcion
+                    if (!$idProducto && !$esProductoLibre && !empty($descripcionFinal)) {
+                        $producto['descripcion_libre'] = $descripcionFinal;
+                        $esProductoLibre = true;
+                    }
+
                     // Producto libre (sin id_producto): buscar o crear en catálogo
                     if (!$idProducto && $esProductoLibre) {
                         $nombreLibre = trim($producto['descripcion_libre']);
