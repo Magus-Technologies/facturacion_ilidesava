@@ -82,6 +82,42 @@ class EmpresaController extends Controller
     }
 
     /**
+     * Cambiar el modo de almacén de la empresa (madre global vs propio)
+     */
+    public function updateAlmacen(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            if ($user->rol_id !== 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo el administrador puede cambiar el modo de almacén',
+                ], 403);
+            }
+
+            $validated = $request->validate([
+                'usa_almacen_propio' => 'required|boolean',
+            ]);
+
+            $empresa = Empresa::findOrFail($id);
+            $empresa->update(['usa_almacen_propio' => $validated['usa_almacen_propio']]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $validated['usa_almacen_propio']
+                    ? 'La empresa ahora usa su almacén propio (almacén 2)'
+                    : 'La empresa ahora usa el almacén madre global',
+                'data' => $empresa->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cambiar modo de almacén: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Mostrar una empresa específica
      */
     public function show($id)

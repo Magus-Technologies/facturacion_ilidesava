@@ -201,7 +201,7 @@ export default function AlmacenMadreDashboard() {
                     />
                     <NavLink
                         href="/almacen-madre/pendientes"
-                        label="Ventas Pendientes"
+                        label="Notas Pendientes"
                         icon={PackageMinus}
                         badge={stats.ventas_pendientes}
                     />

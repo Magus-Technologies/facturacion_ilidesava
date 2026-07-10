@@ -629,6 +629,14 @@ class GuiaRemisionController extends Controller
 
     private function descontarStockGuia(GuiaRemision $guia, $user): void
     {
+        // Guías vinculadas a una venta NO descuentan stock:
+        // la venta ya descontó su almacén al emitirse (boletas/facturas),
+        // o la nota de venta se descuenta manualmente desde Ventas.
+        // Descontar aquí duplicaba la salida.
+        if ($guia->id_venta) {
+            return;
+        }
+
         $empresa = Empresa::find($user->id_empresa);
         $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
         $docRef = $guia->serie . '-' . str_pad($guia->numero, 6, '0', STR_PAD_LEFT);
@@ -654,18 +662,13 @@ class GuiaRemisionController extends Controller
                     $idAlmacen = '2';
                 }
             } else {
-                $productoReal = \App\Models\ProductoMadre::where('codigo', $codigoProducto)
-                    ->where('estado', '1')
+                // El almacén madre solo se descuenta manualmente (desde notas de venta).
+                // Las guías sueltas descuentan únicamente el stock propio de la empresa.
+                $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                    ->where('codigo', $codigoProducto)
                     ->first();
                 if ($productoReal) {
-                    $idAlmacen = '0';
-                } else {
-                    $productoReal = \App\Models\Producto::where('id_empresa', $user->id_empresa)
-                        ->where('codigo', $codigoProducto)
-                        ->first();
-                    if ($productoReal) {
-                        $idAlmacen = $productoReal->almacen;
-                    }
+                    $idAlmacen = $productoReal->almacen;
                 }
             }
 

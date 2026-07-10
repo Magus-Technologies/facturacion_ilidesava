@@ -201,7 +201,7 @@ export default function AlmacenMadreMovimientos() {
                 <div className="flex gap-2">
                     <NavLink href="/almacen-madre" label="Dashboard" icon={Warehouse} />
                     <NavLink href="/almacen-madre/productos" label="Productos" icon={Package} />
-                    <NavLink href="/almacen-madre/pendientes" label="Ventas Pendientes" icon={PackageMinus} />
+                    <NavLink href="/almacen-madre/pendientes" label="Notas Pendientes" icon={PackageMinus} />
                     <NavLink href="/almacen-madre/movimientos" active label="Movimientos" icon={History} />
                 </div>
 

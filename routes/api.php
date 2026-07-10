@@ -56,6 +56,7 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::post('empresas', [\App\Http\Controllers\EmpresaController::class, 'store']);
     Route::get('empresas/{id}', [\App\Http\Controllers\EmpresaController::class, 'show']);
     Route::post('empresas/{id}', [\App\Http\Controllers\EmpresaController::class, 'update']); // POST para FormData con logo
+    Route::put('empresas/{id}/almacen', [\App\Http\Controllers\EmpresaController::class, 'updateAlmacen']);
     Route::delete('empresas/{id}/logo', [\App\Http\Controllers\EmpresaController::class, 'deleteLogo']);
 
     // Notificaciones de comprobantes para envío automático

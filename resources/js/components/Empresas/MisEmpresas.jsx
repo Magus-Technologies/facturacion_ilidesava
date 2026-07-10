@@ -14,6 +14,8 @@ import {
     Shield,
     Percent,
     Plus,
+    Warehouse,
+    Home,
 } from "lucide-react";
 import MainLayout from "../Layout/MainLayout";
 
@@ -72,6 +74,38 @@ export default function MisEmpresas() {
 
     const handleModalSuccess = () => {
         fetchEmpresas();
+    };
+
+    const handleToggleAlmacen = async (empresa) => {
+        const nuevoValor = !empresa.usa_almacen_propio;
+        const confirmado = window.confirm(
+            nuevoValor
+                ? `¿Cambiar "${empresa.comercial || empresa.razon_social}" a ALMACÉN PROPIO?\n\nDejará de usar el almacén madre global y manejará su propio stock (almacén 2).`
+                : `¿Cambiar "${empresa.comercial || empresa.razon_social}" al ALMACÉN MADRE GLOBAL?\n\nDejará de usar su almacén propio y compartirá el stock global con las demás empresas.`
+        );
+        if (!confirmado) return;
+
+        try {
+            const token = localStorage.getItem("auth_token");
+            const res = await fetch(`/api/empresas/${empresa.id_empresa}/almacen`, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ usa_almacen_propio: nuevoValor }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success(data.message);
+                fetchEmpresas();
+            } else {
+                toast.error(data.message || "No se pudo cambiar el modo de almacén");
+            }
+        } catch {
+            toast.error("Error de conexión al cambiar el modo de almacén");
+        }
     };
 
     const columns = [
@@ -196,6 +230,40 @@ export default function MisEmpresas() {
                             {(igv * 100).toFixed(0)}%
                         </span>
                     </div>
+                );
+            },
+        },
+        {
+            accessorKey: "usa_almacen_propio",
+            header: "Almacén",
+            cell: ({ row }) => {
+                const empresa = row.original;
+                const propio = !!empresa.usa_almacen_propio;
+                return (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleAlmacen(empresa);
+                        }}
+                        title="Clic para cambiar el modo de almacén"
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                            propio
+                                ? "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100"
+                                : "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                        }`}
+                    >
+                        {propio ? (
+                            <>
+                                <Home className="h-3 w-3" />
+                                Propio
+                            </>
+                        ) : (
+                            <>
+                                <Warehouse className="h-3 w-3" />
+                                Madre global
+                            </>
+                        )}
+                    </button>
                 );
             },
         },

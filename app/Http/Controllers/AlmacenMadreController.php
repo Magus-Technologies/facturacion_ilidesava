@@ -453,25 +453,19 @@ class AlmacenMadreController extends Controller
     }
 
     /**
-     * Ventas pendientes de descontar del almacén madre (todas las empresas)
+     * Notas de venta pendientes de descontar del almacén madre.
+     * El descuento por nota se hace desde Ventas → Notas de Venta;
+     * esta vista solo lista lo que falta descontar en la empresa activa.
      */
     public function ventasPendientes(Request $request): JsonResponse
     {
         $user = $request->user();
-        $empresa = Empresa::find($user->id_empresa);
-        $usaPropio = $empresa && $empresa->usa_almacen_propio;
 
         $query = \App\Models\Venta::with(['cliente', 'empresa', 'productosVentas.producto'])
             ->where('stock_real_descontado', false)
             ->where('estado', '1')
-            ->where('id_tido', '!=', 6);
-
-        if ($usaPropio) {
-            $query->where('id_empresa', $user->id_empresa);
-        } else {
-            $empresasAlmacenPropio = Empresa::where('usa_almacen_propio', true)->pluck('id_empresa');
-            $query->whereNotIn('id_empresa', $empresasAlmacenPropio);
-        }
+            ->where('id_tido', 6)
+            ->where('id_empresa', $user->id_empresa);
 
         $ventas = $query->orderBy('fecha_emision', 'desc')
             ->get()
@@ -485,8 +479,8 @@ class AlmacenMadreController extends Controller
                     'total' => $v->total,
                     'productos' => $v->productosVentas->map(function ($d) {
                         return [
-                            'nombre' => $d->producto?->nombre ?? $d->descripcion ?? '-',
-                            'codigo' => $d->producto?->codigo ?? '-',
+                            'nombre' => $d->descripcion ?? $d->producto?->nombre ?? '-',
+                            'codigo' => $d->codigo_producto ?? $d->producto?->codigo ?? '-',
                             'cantidad' => $d->cantidad,
                         ];
                     }),
@@ -651,7 +645,7 @@ class AlmacenMadreController extends Controller
         }
 
         $movimientos = $query->orderBy('fecha_movimiento', 'desc')
-            ->limit(200)
+            ->limit(500)
             ->get()
             ->map(fn ($m) => $this->formatearMovimiento($m));
 

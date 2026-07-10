@@ -1461,6 +1461,9 @@ class VentasController extends Controller
 
                 $esNotaVenta = $venta->id_tido == 6;
 
+                $descontados = 0;
+                $noEncontrados = [];
+
                 foreach ($venta->productosVentas as $detalle) {
                     // Nota de Venta: buscar código en productos_madre, fallback a productos (notas antiguas)
                     if ($esNotaVenta) {
@@ -1470,7 +1473,10 @@ class VentasController extends Controller
                         $codigoProducto = DB::table('productos')->where('id_producto', $detalle->id_producto)->value('codigo');
                     }
 
-                    if (!$codigoProducto) continue;
+                    if (!$codigoProducto) {
+                        $noEncontrados[] = $detalle->descripcion ?? "Producto ID {$detalle->id_producto}";
+                        continue;
+                    }
 
                     $productoReal = null;
 
@@ -1539,16 +1545,36 @@ class VentasController extends Controller
                             'id_usuario' => $user?->id,
                             'fecha_movimiento' => now(),
                         ]);
+
+                        $descontados++;
+                    } else {
+                        $noEncontrados[] = $detalle->descripcion ?? $codigoProducto;
                     }
+                }
+
+                // Solo marcar como descontada si al menos un producto se descontó realmente
+                if ($descontados === 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No se descontó ningún producto: no se encontraron en el almacén. Productos: ' . implode(', ', $noEncontrados),
+                        'no_encontrados' => $noEncontrados,
+                    ], 422);
                 }
 
                 $venta->update(['stock_real_descontado' => true]);
 
+                $mensaje = $usaAlmacenPropio
+                    ? 'Stock descontado del almacén 2 exitosamente'
+                    : 'Stock descontado del almacén madre exitosamente';
+                if (!empty($noEncontrados)) {
+                    $mensaje .= '. Atención: ' . count($noEncontrados) . ' producto(s) no se encontraron en el almacén: ' . implode(', ', $noEncontrados);
+                }
+
                 return response()->json([
                     'success' => true,
-                    'message' => $usaAlmacenPropio
-                        ? 'Stock descontado del almacén 2 exitosamente'
-                        : 'Stock descontado del almacén madre exitosamente',
+                    'message' => $mensaje,
+                    'descontados' => $descontados,
+                    'no_encontrados' => $noEncontrados,
                 ]);
             });
         } catch (\Exception $e) {
