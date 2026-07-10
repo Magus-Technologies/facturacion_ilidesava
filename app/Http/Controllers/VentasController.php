@@ -752,7 +752,10 @@ class VentasController extends Controller
                 // Ajustar stock SOLO por la DIFERENCIA si la venta ya fue descontada.
                 // Ej: una nota de venta con 1 que se edita a 10 => descuenta 9 (un solo
                 // movimiento de salida). Si baja de 10 a 4 => devuelve 6 (entrada).
-                if ($venta->stock_real_descontado) {
+                // Solo aplica a notas de venta: son las únicas que descuentan el
+                // almacén madre/propio (boletas antiguas marcadas por el descuento
+                // masivo legacy no deben ajustar el madre al editarse).
+                if ($venta->stock_real_descontado && $venta->id_tido == 6) {
                     $empresa = \App\Models\Empresa::find($user->id_empresa);
                     $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;
                     $docRef = $venta->serie . '-' . str_pad($venta->numero, 6, '0', STR_PAD_LEFT);
@@ -1453,6 +1456,16 @@ class VentasController extends Controller
                     ->where('estado', '1')
                     ->where('stock_real_descontado', false)
                     ->findOrFail($id);
+
+                // Regla de negocio: el almacén madre (o el almacén propio) solo se
+                // descuenta manualmente desde NOTAS DE VENTA. Las boletas y facturas
+                // tienen su propio stock (almacén 1) que se descuenta al emitirse.
+                if ($venta->id_tido != 6) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Solo las notas de venta descuentan del almacén madre. Las boletas y facturas descuentan su propio stock al emitirse.',
+                    ], 422);
+                }
 
                 $empresa = \App\Models\Empresa::find($user->id_empresa);
                 $usaAlmacenPropio = $empresa && $empresa->usa_almacen_propio;

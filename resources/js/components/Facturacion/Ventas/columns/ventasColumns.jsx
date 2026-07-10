@@ -453,7 +453,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         </span>
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && !ocultarStock && venta.stock_real_descontado && (
+                                {!estaAnulada && !ocultarStock && String(venta.id_tido) === "6" && venta.stock_real_descontado && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleVerStock && handlers.handleVerStock(venta)}
                                         className="text-green-600 focus:bg-green-50 focus:text-green-700"
@@ -462,7 +462,7 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                         Ver stock descontado
                                     </DropdownMenuItem>
                                 )}
-                                {!estaAnulada && !ocultarStock && !venta.stock_real_descontado && handlers.handleDescontarStock && (
+                                {!estaAnulada && !ocultarStock && String(venta.id_tido) === "6" && !venta.stock_real_descontado && handlers.handleDescontarStock && (
                                     <DropdownMenuItem
                                         onClick={() => handlers.handleDescontarStock(venta)}
                                         className="text-amber-600 focus:bg-amber-50 focus:text-amber-700"

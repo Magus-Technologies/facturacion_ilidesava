@@ -495,9 +495,19 @@ class AlmacenMadreController extends Controller
 
     /**
      * Descontar masivamente del almacén madre
+     *
+     * DESHABILITADO por regla de negocio: el almacén madre solo se descuenta
+     * manualmente desde las notas de venta (Ventas → Notas de Venta →
+     * "Descontar Almacén Madre"). Las boletas y facturas tienen su propio
+     * stock y nunca tocan el madre.
      */
     public function descontarMasivo(Request $request): JsonResponse
     {
+        return response()->json([
+            'success' => false,
+            'message' => 'El descuento masivo está deshabilitado. El almacén madre solo se descuenta desde Ventas → Notas de Venta, nota por nota.',
+        ], 410);
+
         $request->validate([
             'venta_ids' => 'required|array|min:1',
             'venta_ids.*' => 'exists:ventas,id_venta',
