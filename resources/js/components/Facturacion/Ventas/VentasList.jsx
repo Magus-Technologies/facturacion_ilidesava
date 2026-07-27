@@ -28,6 +28,8 @@ export default function VentasList() {
     const { handleGenerarXml: _handleGenerarXml, handleEnviarSunat: _handleEnviarSunat } = useSunat(fetchVentas);
 
     const [filtroTipo, setFiltroTipo] = useState(null);
+    const [filtroDesde, setFiltroDesde] = useState("");
+    const [filtroHasta, setFiltroHasta] = useState("");
     const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [sunatLoadingId, setSunatLoadingId] = useState(null);
@@ -64,10 +66,13 @@ export default function VentasList() {
         }
     }, [window.location.search]);
 
-    // Filtrar ventas según el tipo
-    const ventasFiltradas = filtroTipo
-        ? ventas.filter((venta) => String(venta.id_tido) === filtroTipo)
-        : ventas;
+    // Filtrar ventas según el tipo y rango de fechas
+    const ventasFiltradas = ventas.filter((venta) => {
+        if (filtroTipo && String(venta.id_tido) !== filtroTipo) return false;
+        if (filtroDesde && venta.fecha_emision < filtroDesde) return false;
+        if (filtroHasta && venta.fecha_emision > filtroHasta) return false;
+        return true;
+    });
 
     // Obtener título según el filtro
     const getTitulo = () => {
@@ -216,6 +221,35 @@ export default function VentasList() {
                 </div>
 
                 <VentasActionButtons onNuevaVenta={handleNuevaVenta} />
+
+                <div className="flex items-center gap-2 flex-wrap">
+                    <label className="text-sm text-gray-500">Desde</label>
+                    <input
+                        type="date"
+                        value={filtroDesde}
+                        onChange={(e) => setFiltroDesde(e.target.value)}
+                        className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    <label className="text-sm text-gray-500">Hasta</label>
+                    <input
+                        type="date"
+                        value={filtroHasta}
+                        onChange={(e) => setFiltroHasta(e.target.value)}
+                        className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    {(filtroDesde || filtroHasta) && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                setFiltroDesde("");
+                                setFiltroHasta("");
+                            }}
+                        >
+                            Limpiar
+                        </Button>
+                    )}
+                </div>
 
                 {loading ? (
                     <div className="flex items-center justify-center h-64">

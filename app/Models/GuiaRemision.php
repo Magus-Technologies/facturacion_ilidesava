@@ -81,6 +81,11 @@ class GuiaRemision extends Model
         return $this->hasMany(GuiaRemisionDetalle::class, 'id_guia', 'id');
     }
 
+    public function motivoTraslado(): BelongsTo
+    {
+        return $this->belongsTo(MotivoTraslado::class, 'motivo_traslado', 'codigo');
+    }
+
     public function getNumeroCompletoAttribute(): string
     {
         return $this->serie . '-' . str_pad($this->numero, 6, '0', STR_PAD_LEFT);

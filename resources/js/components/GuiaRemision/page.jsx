@@ -26,6 +26,16 @@ export default function GuiaRemisionPage() {
     const [enviandoId, setEnviandoId] = useState(null);
     const [guiaSeleccionada, setGuiaSeleccionada] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [desde, setDesde] = useState("");
+    const [hasta, setHasta] = useState("");
+
+    const handleFiltrar = () => fetchGuias({ desde, hasta });
+
+    const handleLimpiarFiltro = () => {
+        setDesde("");
+        setHasta("");
+        fetchGuias();
+    };
 
     const handleVerXml = (guia) => {
         if (!guia.nombre_xml) return;
@@ -176,7 +186,7 @@ export default function GuiaRemisionPage() {
                 </div>
 
                 <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <Button
                             variant="outline"
                             size="sm"
@@ -186,6 +196,30 @@ export default function GuiaRemisionPage() {
                             <FileSpreadsheet className="h-4 w-4" />
                             <span className="hidden sm:inline">Exportar</span>
                         </Button>
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm text-gray-500">Desde</label>
+                            <input
+                                type="date"
+                                value={desde}
+                                onChange={(e) => setDesde(e.target.value)}
+                                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+                            />
+                            <label className="text-sm text-gray-500">Hasta</label>
+                            <input
+                                type="date"
+                                value={hasta}
+                                onChange={(e) => setHasta(e.target.value)}
+                                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+                            />
+                            <Button size="sm" onClick={handleFiltrar}>
+                                Filtrar
+                            </Button>
+                            {(desde || hasta) && (
+                                <Button variant="ghost" size="sm" onClick={handleLimpiarFiltro}>
+                                    Limpiar
+                                </Button>
+                            )}
+                        </div>
                     </div>
                     <Button
                         onClick={() =>

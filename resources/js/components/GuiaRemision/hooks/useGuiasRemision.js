@@ -21,11 +21,15 @@ export const useGuiasRemision = () => {
         fetchMotivos();
     }, []);
 
-    const fetchGuias = async () => {
+    const fetchGuias = async (filtros = {}) => {
         try {
             setLoading(true);
             setError(null);
-            const res = await fetch('/api/guias-remision', {
+            const params = new URLSearchParams();
+            if (filtros.desde) params.set('desde', filtros.desde);
+            if (filtros.hasta) params.set('hasta', filtros.hasta);
+            const qs = params.toString();
+            const res = await fetch(`/api/guias-remision${qs ? `?${qs}` : ''}`, {
                 headers: getAuthHeaders(),
             });
             const data = await res.json();

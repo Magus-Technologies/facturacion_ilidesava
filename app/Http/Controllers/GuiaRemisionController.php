@@ -21,10 +21,18 @@ class GuiaRemisionController extends Controller
     {
         $idEmpresa = $request->user()->id_empresa;
 
-        $guias = GuiaRemision::with(['venta.tipoDocumento', 'venta.cliente', 'detalles'])
-            ->where('id_empresa', $idEmpresa)
-            ->orderBy('id', 'desc')
-            ->paginate(15);
+        $query = GuiaRemision::with(['venta.tipoDocumento', 'venta.cliente', 'detalles'])
+            ->where('id_empresa', $idEmpresa);
+
+        if ($desde = $request->get('desde')) {
+            $query->whereDate('fecha_emision', '>=', $desde);
+        }
+        if ($hasta = $request->get('hasta')) {
+            $query->whereDate('fecha_emision', '<=', $hasta);
+        }
+
+        $guias = $query->orderBy('id', 'desc')
+            ->paginate(min((int) $request->get('per_page', 500), 1000));
 
         return response()->json($guias);
     }
