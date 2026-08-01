@@ -647,6 +647,7 @@ class VentasController extends Controller
                 'cliente_documento' => 'nullable|string|max:15',
                 'cliente_datos' => 'nullable|string|max:250',
                 'cliente_direccion' => 'nullable|string|max:500',
+                'id_tipo_pago' => 'nullable|integer|in:1,2',
                 'fecha_emision' => 'required|date',
                 'subtotal' => 'required|numeric|min:0',
                 'igv' => 'required|numeric|min:0',
@@ -674,6 +675,36 @@ class VentasController extends Controller
                 'pagos.*.banco' => 'nullable|string|max:100',
                 'pagos.*.voucher' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             ]);
+
+            // Venta a crédito de boleta/factura: validar cronograma de cuotas.
+            // SUNAT exige cuotas y que inicial + cuotas == total (regla 3319).
+            $tipoPagoFinal = $validated['id_tipo_pago'] ?? $venta->id_tipo_pago;
+            if ($tipoPagoFinal == 2 && in_array($venta->id_tido, [1, 2])) {
+                $cuotasInput = $request->input('cuotas', []);
+                if (empty($cuotasInput)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Una venta a CRÉDITO requiere al menos una cuota en el cronograma de pagos.',
+                    ], 422);
+                }
+
+                $sumaCuotas = round(array_sum(array_map(fn ($c) => (float) ($c['monto'] ?? 0), $cuotasInput)), 2);
+                $montoInicial = round((float) $request->input('monto_inicial', 0), 2);
+                $totalVenta = round((float) $validated['total'], 2);
+
+                if (abs(($sumaCuotas + $montoInicial) - $totalVenta) > 0.10) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => sprintf(
+                            'El cronograma no cuadra: inicial (%.2f) + cuotas (%.2f) = %.2f, pero el total es %.2f. SUNAT rechazará el comprobante (error 3319).',
+                            $montoInicial,
+                            $sumaCuotas,
+                            $montoInicial + $sumaCuotas,
+                            $totalVenta
+                        ),
+                    ], 422);
+                }
+            }
 
             // Snapshot antes de modificar
             $venta->load('productosVentas', 'cliente');
@@ -720,8 +751,10 @@ class VentasController extends Controller
                 }
 
                 // Actualizar venta
+                $nuevoTipoPago = $validated['id_tipo_pago'] ?? $venta->id_tipo_pago;
                 $venta->update([
                     'id_cliente' => $idCliente,
+                    'id_tipo_pago' => $nuevoTipoPago,
                     'fecha_emision' => $validated['fecha_emision'],
                     'subtotal' => $validated['subtotal'],
                     'igv' => $validated['igv'],
@@ -730,6 +763,46 @@ class VentasController extends Controller
                     'direccion' => $validated['cliente_direccion'] ?? $venta->direccion,
                     'observaciones' => $validated['observaciones'] ?? null,
                 ]);
+
+                // Sincronizar cronograma de cuotas con el tipo de pago
+                if ($nuevoTipoPago == 2 && !empty($request->input('cuotas', []))) {
+                    // Crédito: reemplazar el cronograma con el enviado
+                    \App\Models\DiaVenta::where('id_venta', $venta->id_venta)->delete();
+
+                    $cuotas = $request->input('cuotas', []);
+                    $fechaVencimiento = null;
+                    foreach ($cuotas as $i => $cuota) {
+                        \App\Models\DiaVenta::create([
+                            'id_venta' => $venta->id_venta,
+                            'numero_cuota' => $i + 1,
+                            'fecha_vencimiento' => $cuota['fecha'],
+                            'monto_cuota' => $cuota['monto'],
+                            'monto_pagado' => 0,
+                            'saldo' => $cuota['monto'],
+                            'estado' => 'P',
+                        ]);
+                        $fechaVencimiento = $cuota['fecha'];
+                    }
+
+                    $tieneInicial = filter_var($request->input('tiene_inicial', false), FILTER_VALIDATE_BOOLEAN);
+                    $venta->update([
+                        'fecha_vencimiento' => $fechaVencimiento ?? $venta->fecha_emision,
+                        'num_cuotas' => count($cuotas),
+                        'monto_cuota' => count($cuotas) > 0 ? $cuotas[0]['monto'] : 0,
+                        'tiene_inicial' => $tieneInicial,
+                        'monto_inicial' => $tieneInicial ? round((float) $request->input('monto_inicial', 0), 2) : 0,
+                    ]);
+                } elseif ($nuevoTipoPago == 1 && $venta->num_cuotas > 0) {
+                    // Cambió de crédito a contado: eliminar cronograma
+                    \App\Models\DiaVenta::where('id_venta', $venta->id_venta)->delete();
+                    $venta->update([
+                        'fecha_vencimiento' => null,
+                        'num_cuotas' => 0,
+                        'monto_cuota' => 0,
+                        'tiene_inicial' => false,
+                        'monto_inicial' => 0,
+                    ]);
+                }
 
                 // Capturar detalles viejos antes de reemplazar (necesarios para ajuste de stock)
                 $detallesViejos = $venta->productosVentas()->get();
