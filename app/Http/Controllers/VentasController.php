@@ -810,15 +810,48 @@ class VentasController extends Controller
                 // Reemplazar productos
                 $venta->productosVentas()->delete();
                 foreach ($validated['productos'] as $producto) {
+                    $idProducto = $producto['id_producto'] ?? null;
+                    $descripcionFinal = $producto['descripcion'] ?? null;
+                    $codigoFinal = $producto['codigo_producto'] ?? null;
+
+                    // Producto libre (sin id_producto): buscar o crear en catálogo
+                    // para que id_producto nunca quede null (columna NOT NULL).
+                    if (!$idProducto && !empty($producto['descripcion_libre'])) {
+                        $nombreLibre = trim($producto['descripcion_libre']);
+                        $productoLibre = \App\Models\Producto::where('nombre', $nombreLibre)
+                            ->where('id_empresa', $user->id_empresa)
+                            ->first();
+
+                        if (!$productoLibre) {
+                            $ultimoCodigo = \App\Models\Producto::where('id_empresa', $user->id_empresa)
+                                ->where('codigo', 'LIKE', 'LIB-%')
+                                ->count();
+                            $codigoAuto = 'LIB-' . str_pad($ultimoCodigo + 1, 4, '0', STR_PAD_LEFT);
+
+                            $productoLibre = \App\Models\Producto::create([
+                                'codigo' => $codigoAuto,
+                                'nombre' => $nombreLibre,
+                                'precio' => $producto['precio_unitario'],
+                                'costo' => 0,
+                                'cantidad' => 0,
+                                'id_empresa' => $user->id_empresa,
+                                'almacen' => '1',
+                            ]);
+                        }
+                        $idProducto = $productoLibre->id_producto;
+                        $descripcionFinal = $productoLibre->nombre;
+                        $codigoFinal = $productoLibre->codigo;
+                    }
+
                     $venta->productosVentas()->create([
-                        'id_producto' => $producto['id_producto'] ?? null,
+                        'id_producto' => $idProducto,
                         'cantidad' => $producto['cantidad'],
                         'precio_unitario' => $producto['precio_unitario'],
                         'subtotal' => $producto['subtotal'],
                         'igv' => $producto['igv'],
                         'total' => $producto['total'],
-                        'descripcion' => $producto['descripcion'] ?? null,
-                        'codigo_producto' => $producto['codigo_producto'] ?? null,
+                        'descripcion' => $descripcionFinal,
+                        'codigo_producto' => $codigoFinal,
                     ]);
                 }
 
@@ -1022,10 +1055,13 @@ class VentasController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            Log::error('Error al actualizar nota de venta: ' . $e->getMessage());
+            Log::error('Error al actualizar nota de venta: ' . $e->getMessage(), [
+                'venta_id' => $id,
+                'exception' => $e,
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar: ' . $e->getMessage(),
+                'message' => 'No se pudo actualizar la nota de venta. Verifique que todos los productos tengan una descripción válida e intente nuevamente.',
             ], 500);
         }
     }
