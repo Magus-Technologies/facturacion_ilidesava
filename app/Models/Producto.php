@@ -20,6 +20,7 @@ class Producto extends Model
         'precio_menor',
 
         'precio_unidad',
+        'unidades_por_caja',
         'cantidad',
         'stock_minimo',
         'stock_maximo',

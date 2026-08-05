@@ -169,6 +169,7 @@ class AlmacenMadreController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255',
             'precio' => 'required|numeric|min:0',
+            'unidades_por_caja' => 'nullable|integer|min:1',
             'imagen' => 'nullable|image|max:2048',
         ]);
 
@@ -181,7 +182,7 @@ class AlmacenMadreController extends Controller
                 $data = $request->only([
                     'nombre', 'descripcion', 'codigo', 'cod_barra',
                     'categoria_id', 'unidad_id',
-                    'precio', 'precio_mayor', 'precio_menor', 'precio_unidad',
+                    'precio', 'precio_mayor', 'precio_menor', 'precio_unidad', 'unidades_por_caja',
                     'costo', 'cantidad', 'stock_minimo', 'stock_maximo',
                     'moneda', 'codsunat', 'usar_barra', 'usar_multiprecio',
                 ]);
@@ -363,7 +364,7 @@ class AlmacenMadreController extends Controller
             $data = $request->only([
                 'nombre', 'descripcion', 'codigo', 'cod_barra',
                 'categoria_id', 'unidad_id',
-                'precio', 'precio_mayor', 'precio_menor', 'precio_unidad',
+                'precio', 'precio_mayor', 'precio_menor', 'precio_unidad', 'unidades_por_caja',
                 'costo', 'cantidad', 'stock_minimo', 'stock_maximo',
                 'moneda', 'codsunat',
             ]);

@@ -48,8 +48,29 @@ class VentaPdfController extends Controller
                     ->get(['id_empresa', 'comercial', 'razon_social', 'ruc', 'logo']);
             }
 
+            // Notas de venta: resolver "unidades por caja" por producto para que
+            // el almacén sepa cuántas cajas armar (columna CAJAS / UND.CAJA en el PDF).
+            $unidadesPorCaja = [];
+            if ($venta->id_tido == 6) {
+                $idsProductos = $venta->productosVentas->pluck('id_producto')->filter()->unique()->values();
+                if ($idsProductos->isNotEmpty()) {
+                    $unidadesPorCaja = \App\Models\ProductoMadre::whereIn('id_producto', $idsProductos)
+                        ->whereNotNull('unidades_por_caja')
+                        ->pluck('unidades_por_caja', 'id_producto')
+                        ->toArray();
+
+                    $faltantes = $idsProductos->diff(array_keys($unidadesPorCaja));
+                    if ($faltantes->isNotEmpty()) {
+                        $unidadesPorCaja += \App\Models\Producto::whereIn('id_producto', $faltantes)
+                            ->whereNotNull('unidades_por_caja')
+                            ->pluck('unidades_por_caja', 'id_producto')
+                            ->toArray();
+                    }
+                }
+            }
+
             // Renderizar vista Blade a HTML
-            $html = view("reportes.venta-a4", compact("venta", "qrBase64", "consultaUrl", "plantilla", "logosEmpresas"))->render();
+            $html = view("reportes.venta-a4", compact("venta", "qrBase64", "consultaUrl", "plantilla", "logosEmpresas", "unidadesPorCaja"))->render();
 
             // Crear PDF con Dompdf
             $options = new Options();

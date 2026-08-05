@@ -50,6 +50,7 @@ export default function ProductoModal({
         precio_mayor: "0.00",
         precio_menor: "0.00",
         usar_multiprecio: "0",
+        unidades_por_caja: "",
         imagen: null,
     });
 
@@ -83,6 +84,7 @@ export default function ProductoModal({
                     precio_mayor: producto.precio_mayor || "0.00",
                     precio_menor: producto.precio_menor || "0.00",
                     usar_multiprecio: producto.usar_multiprecio || "0",
+                    unidades_por_caja: producto.unidades_por_caja || "",
                     imagen: null,
                 });
 
@@ -110,6 +112,7 @@ export default function ProductoModal({
                     precio_mayor: "0.00",
                     precio_menor: "0.00",
                     usar_multiprecio: "0",
+                    unidades_por_caja: "",
                     imagen: null,
                 });
                 setImagePreview(null);
@@ -157,7 +160,18 @@ export default function ProductoModal({
 
     const handleChange = useCallback((e) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        setFormData((prev) => {
+            const next = { ...prev, [name]: value };
+            // Sugerir "unidades por caja" leyendo el patrón "X <N>" del nombre,
+            // solo si el usuario todavía no cargó un valor propio.
+            if (name === "nombre" && !prev.unidades_por_caja) {
+                const match = value.match(/\sX\s(\d+)(\s|$)/i);
+                if (match) {
+                    next.unidades_por_caja = match[1];
+                }
+            }
+            return next;
+        });
         setErrors((prev) => {
             if (prev[name]) {
                 const newErrors = { ...prev };
@@ -219,6 +233,9 @@ export default function ProductoModal({
                 "usar_multiprecio",
                 formData.usar_multiprecio,
             );
+            if (formData.unidades_por_caja) {
+                formDataToSend.append("unidades_por_caja", formData.unidades_por_caja);
+            }
 
             if (formData.categoria_id) {
                 formDataToSend.append("categoria_id", formData.categoria_id);
@@ -626,6 +643,25 @@ export default function ProductoModal({
                                 </Select>
                             </ModalField>
                         </div>
+
+                        {/* Fila 2.5: Unidades por caja */}
+                        <ModalField
+                            label="Unidades por caja (opcional)"
+                            error={errors.unidades_por_caja?.[0]}
+                        >
+                            <Input
+                                variant="outlined"
+                                type="number"
+                                min="1"
+                                name="unidades_por_caja"
+                                value={formData.unidades_por_caja}
+                                onChange={handleChange}
+                                placeholder="Ej: 12"
+                            />
+                            <p className="text-[10px] text-gray-500 mt-0.5">
+                                Se usa para mostrar "Cajas / Und. x caja" en el PDF de notas de venta y ayudar al almacén a armar el despacho.
+                            </p>
+                        </ModalField>
 
                         {/* Fila 3 eliminada (Cod Sunat y Afecto ICBP) */}
 

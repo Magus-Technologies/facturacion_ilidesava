@@ -19,6 +19,7 @@ class ProductoMadre extends Model
         'precio_mayor',
         'precio_menor',
         'precio_unidad',
+        'unidades_por_caja',
         'cantidad',
         'stock_minimo',
         'stock_maximo',

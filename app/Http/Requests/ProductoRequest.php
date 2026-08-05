@@ -25,6 +25,7 @@ class ProductoRequest extends FormRequest
             'precio_mayor' => 'nullable|numeric|min:0',
             'precio_menor' => 'nullable|numeric|min:0',
             'precio_unidad' => 'nullable|numeric|min:0',
+            'unidades_por_caja' => 'nullable|integer|min:1',
             'cantidad' => 'nullable|integer|min:0',
             'stock_minimo' => 'nullable|integer|min:0',
             'stock_maximo' => 'nullable|integer|min:0',

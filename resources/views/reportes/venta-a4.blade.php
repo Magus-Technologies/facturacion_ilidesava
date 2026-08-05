@@ -5,7 +5,7 @@
     <title>{{ $venta->tipoDocumento->nombre ?? 'Venta' }} - {{ $venta->serie }}-{{ str_pad($venta->numero, 6, '0', STR_PAD_LEFT) }}</title>
     <style>
         @page {
-            margin: 50px 40px 50px 40px;
+            margin: {{ $venta->id_tido == 6 ? '15px 40px 15px 40px' : '50px 40px 50px 40px' }};
         }
         body {
             font-family: 'Arial', sans-serif;
@@ -52,8 +52,29 @@
             border-right: 1px solid #999;
             vertical-align: top;
         }
+        /* Notas de venta suelen traer muchos ítems: compactar filas evita que
+           el comprobante salte a una segunda hoja. */
+        .products-table.compacta th {
+            padding: 2px 3px;
+            font-size: 6.5pt;
+            line-height: 1.1;
+        }
+        .products-table.compacta td {
+            padding: 1.5px 3px;
+            font-size: 6.5pt;
+            line-height: 1.1;
+        }
+        .cajas-info {
+            font-size: 6pt;
+            color: #555;
+            line-height: 1;
+        }
         .products-table tbody tr {
             border-bottom: none;
+            page-break-inside: avoid;
+        }
+        .products-table thead {
+            display: table-header-group;
         }
         .products-table tbody tr:last-child td {
             border-bottom: 1px solid #999;
@@ -87,9 +108,14 @@
     </style>
 </head>
 <body>
+    @php
+        // Notas de venta suelen traer más ítems que boletas/facturas: comprimir
+        // los márgenes verticales entre secciones ayuda a que quepa en una hoja.
+        $esNotaVenta = $venta->id_tido == 6;
+    @endphp
     <div class="container">
         <!-- Header -->
-        <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse;">
+        <table style="width: 100%; margin-bottom: {{ $esNotaVenta ? '10px' : '20px' }}; border-collapse: collapse;">
             <tr>
                 <td style="width: 63%; vertical-align: top; text-align: left; padding-right: 15px;">
                     <!-- Logo and Slogan Header -->
@@ -99,13 +125,14 @@
                             @php
                                 $hasExtras = !empty($logosEmpresas) && count($logosEmpresas) > 0;
                                 $totalLogos = ($hasExtras ? count($logosEmpresas) : 0) + 1; // +1 por el principal
-                                // Todos los logos en una fila: adaptar tamaño según cantidad total
+                                // Todos los logos en una fila: adaptar tamaño según cantidad total.
+                                // En notas de venta, el logo va más chico para dejar aire a la tabla de productos.
                                 if ($totalLogos <= 2) {
-                                    $mainH = 90; $extraH = 70;
+                                    $mainH = $esNotaVenta ? 65 : 90; $extraH = $esNotaVenta ? 50 : 70;
                                 } elseif ($totalLogos <= 3) {
-                                    $mainH = 75; $extraH = 60;
+                                    $mainH = $esNotaVenta ? 55 : 75; $extraH = $esNotaVenta ? 45 : 60;
                                 } else {
-                                    $mainH = 65; $extraH = 50;
+                                    $mainH = $esNotaVenta ? 48 : 65; $extraH = $esNotaVenta ? 38 : 50;
                                 }
                             @endphp
                             <td style="width: 45%; vertical-align: top; text-align: left; padding-right: 5px;">
@@ -117,7 +144,7 @@
                                             $logoData = base64_encode(file_get_contents($logoPath));
                                             $logoMime = mime_content_type($logoPath);
                                         @endphp
-                                        <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="height: 110px; width: auto;">
+                                        <img src="data:{{ $logoMime }};base64,{{ $logoData }}" alt="Logo" style="height: {{ $esNotaVenta ? '58px' : '110px' }}; width: auto;">
                                     @endif
                                 @else
                                     {{-- Con extras: logo principal + extras en grilla de 2 columnas --}}
@@ -196,7 +223,7 @@
         </table>
 
         <!-- Company Dynamic Details (Full Width) -->
-        <table style="width: 100%; border-collapse: collapse; margin-top: -5px; margin-bottom: 10px;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: -5px; margin-bottom: {{ $esNotaVenta ? '5px' : '10px' }};">
             <tr>
                 <td style="text-align: left; padding: 0;">
                     <div style="font-weight: bold; font-size: 9pt; color: #000; margin-bottom: 3px; text-transform: uppercase;">
@@ -220,9 +247,9 @@
             $todosLosPagos = $venta->pagos;
             $metodosPago = [1 => 'EFECTIVO', 2 => 'TARJETA', 4 => 'TRANSFERENCIA', 5 => 'YAPE / PLIN'];
         @endphp
-        <table style="width: 100%; border-collapse: separate; border-spacing: 10px 0; margin-bottom: 20px; margin-left: -10px;">
+        <table style="width: 100%; border-collapse: separate; border-spacing: 10px 0; margin-bottom: {{ $esNotaVenta ? '10px' : '20px' }}; margin-left: -10px;">
             <tr>
-                <td style="width: 48%; vertical-align: top; border: 1.2px solid #777; border-radius: 10px; padding: 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1.2px solid #777; border-radius: 10px; padding: {{ $esNotaVenta ? '6px 10px' : '10px' }};">
                     <span style="font-weight: bold; font-size: 8pt; color: #000;">CLIENTE: </span>
                     <span style="font-size: 8pt; color: #000;">{{ $venta->cliente->datos ?? '-' }}</span><br>
                     <span style="font-weight: bold; font-size: 8pt; color: #000;">{{ strlen($venta->cliente->documento ?? '') === 11 ? 'RUC' : (strlen($venta->cliente->documento ?? '') === 8 ? 'DNI' : 'CE') }}: </span>
@@ -238,7 +265,7 @@
                     <span style="font-size: 8pt; color: #000;">{{ $venta->observaciones }}</span>
                     @endif
                 </td>
-                <td style="width: 48%; vertical-align: top; border: 1.2px solid #777; border-radius: 10px; padding: 10px;">
+                <td style="width: 48%; vertical-align: top; border: 1.2px solid #777; border-radius: 10px; padding: {{ $esNotaVenta ? '6px 10px' : '10px' }};">
                     <span style="font-weight: bold; font-size: 8pt; color: #000;">FECHA EMISIÓN: </span>
                     <span style="font-size: 8pt; color: #000;">{{ $venta->fecha_emision ? $venta->fecha_emision->format('d/m/Y') : '-' }}</span><br>
                     <span style="font-weight: bold; font-size: 8pt; color: #000;">MONEDA: </span>
@@ -264,7 +291,7 @@
             $montosPagoConfiables = $todosLosPagos->count() <= 1
                 || round($todosLosPagos->sum('monto'), 2) <= round((float) $venta->total, 2) + 0.01;
         @endphp
-        <table class="products-table" style="margin-bottom: 8px;">
+        <table class="products-table {{ $esNotaVenta ? 'compacta' : '' }}" style="margin-bottom: {{ $esNotaVenta ? '4px' : '8px' }};">
             <thead>
                 <tr>
                     <th width="25%" class="text-center">MÉTODO</th>
@@ -291,19 +318,34 @@
         <!-- Products Table -->
         @php
             $simbolo = $venta->tipo_moneda === 'USD' ? '$' : 'S/';
+            $unidadesPorCaja = $unidadesPorCaja ?? [];
         @endphp
-        <table class="products-table">
+        <table class="products-table {{ $esNotaVenta ? 'compacta' : '' }}">
             <thead>
                 <tr>
-                    <th width="4%" class="text-center">N°</th>
-                    <th width="8%" class="text-center">CANT.</th>
-                    <th width="8%" class="text-center">UNIDAD</th>
-                    <th width="12%" class="text-center">CODIGO</th>
-                    <th width="35%" class="text-left" style="padding-left: 5px;">DESCRIPCIÓN</th>
-                    <th width="8%" class="text-right">V.UNIT.</th>
-                    <th width="7%" class="text-right">IGV.</th>
-                    <th width="8%" class="text-right">P.UNIT.</th>
-                    <th width="10%" class="text-right">TOTAL</th>
+                    @if($esNotaVenta)
+                        <th width="3%" class="text-center">N°</th>
+                        <th width="6%" class="text-center">CANT.</th>
+                        <th width="6%" class="text-center">CAJAS</th>
+                        <th width="6%" class="text-center">UND.<br>CAJA</th>
+                        <th width="6%" class="text-center">UNIDAD</th>
+                        <th width="10%" class="text-center">CODIGO</th>
+                        <th width="33%" class="text-left" style="padding-left: 5px;">DESCRIPCIÓN</th>
+                        <th width="7%" class="text-right">V.UNIT.</th>
+                        <th width="6%" class="text-right">IGV.</th>
+                        <th width="7%" class="text-right">P.UNIT.</th>
+                        <th width="10%" class="text-right">TOTAL</th>
+                    @else
+                        <th width="4%" class="text-center">N°</th>
+                        <th width="8%" class="text-center">CANT.</th>
+                        <th width="8%" class="text-center">UNIDAD</th>
+                        <th width="12%" class="text-center">CODIGO</th>
+                        <th width="35%" class="text-left" style="padding-left: 5px;">DESCRIPCIÓN</th>
+                        <th width="8%" class="text-right">V.UNIT.</th>
+                        <th width="7%" class="text-right">IGV.</th>
+                        <th width="8%" class="text-right">P.UNIT.</th>
+                        <th width="10%" class="text-right">TOTAL</th>
+                    @endif
                 </tr>
             </thead>
             <tbody>
@@ -314,10 +356,28 @@
                     $igvFila = $venta->igv > 0 ? ($item->total - ($item->total / 1.18)) : 0;
                     $descripcion = $item->descripcion ?: ($item->producto?->nombre ?: 'Sin descripción');
                     $codigo = $item->codigo_producto ?: ($item->producto?->codigo ?? '-');
+                    $undCaja = $unidadesPorCaja[$item->id_producto] ?? null;
+                    if ($undCaja) {
+                        $cajasCompletas = intdiv((int) $item->cantidad, $undCaja);
+                        $unidadesSueltas = ((int) $item->cantidad) % $undCaja;
+                    }
                 @endphp
                 <tr>
                     <td class="text-center">{{ $index + 1 }}</td>
                     <td class="text-center" style="font-size: 8.5pt;">{{ number_format($item->cantidad, 3) }}</td>
+                    @if($esNotaVenta)
+                        <td class="text-center">
+                            @if($undCaja)
+                                {{ $cajasCompletas }}
+                                @if($unidadesSueltas > 0)
+                                    <div class="cajas-info">+{{ $unidadesSueltas }}u</div>
+                                @endif
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td class="text-center">{{ $undCaja ?: '—' }}</td>
+                    @endif
                     <td class="text-center">{{ $item->producto?->unidad?->nombre ?? $item->unidad_medida ?? 'UNIDAD' }}</td>
                     <td class="text-center">{{ $codigo }}</td>
                     <td style="padding-left: 5px;">{{ $descripcion }}</td>
@@ -329,7 +389,10 @@
                 @endforeach
                 <!-- Fila vacía para estructura -->
                 <tr>
-                    <td style="color: transparent; border-bottom: 0;">-</td><td style="border-bottom: 0;"></td><td style="border-bottom: 0;"></td><td style="border-bottom: 0;"></td><td style="border-bottom: 0;"></td><td style="border-bottom: 0;"></td><td style="border-bottom: 0;"></td><td style="border-bottom: 0;"></td><td style="border-bottom: 0;"></td>
+                    <td style="color: transparent; border-bottom: 0; padding: {{ $esNotaVenta ? '2px' : '6px 4px' }};">-</td>
+                    @for ($i = 0; $i < ($esNotaVenta ? 10 : 8); $i++)
+                        <td style="border-bottom: 0;"></td>
+                    @endfor
                 </tr>
             </tbody>
         </table>
@@ -337,7 +400,7 @@
         <!-- Total Letters -->
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 5px; border: 2px solid #999; border-radius: 6px;">
             <tr>
-                <td style="padding: 6px 10px; font-size: 10pt; font-weight: bold; font-style: italic; text-align: center; text-transform: uppercase;">
+                <td style="padding: {{ $esNotaVenta ? '3px 10px' : '6px 10px' }}; font-size: 10pt; font-weight: bold; font-style: italic; text-align: center; text-transform: uppercase;">
                     SON: {{ number_format($venta->total, 2) }} {{ $venta->tipo_moneda === 'USD' ? 'DÓLARES AMERICANOS' : 'SOLES' }}
                 </td>
             </tr>
@@ -354,7 +417,7 @@
         @endif
 
         <!-- Bottom Section: Banks and Totals -->
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: {{ $esNotaVenta ? '5px' : '10px' }};">
             <tr>
                 <!-- Cuentas Bancarias (Left side) -->
                 <td style="width: 55%; vertical-align: top; padding-right: 10px;">
@@ -439,13 +502,13 @@
 
         <!-- QR Section -->
         @if(!empty($qrBase64))
-        <div style="margin-top: 15px; text-align: left;">
-            <img src="{{ $qrBase64 }}" style="width: 130px; height: 130px;" alt="QR">
+        <div style="margin-top: {{ $esNotaVenta ? '6px' : '15px' }}; text-align: left;">
+            <img src="{{ $qrBase64 }}" style="width: {{ $esNotaVenta ? '80px' : '130px' }}; height: {{ $esNotaVenta ? '80px' : '130px' }};" alt="QR">
         </div>
         @endif
 
         <!-- Footer -->
-        <div style="clear: both; margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd;">
+        <div style="clear: both; margin-top: {{ $esNotaVenta ? '10px' : '20px' }}; padding-top: 10px; border-top: 1px solid #ddd;">
             @if(!empty($plantilla) && $plantilla->despedida_activo && $plantilla->mensaje_despedida)
                 <div class="ql-output" style="font-size: 8pt; color: #333; margin-bottom: 3px; text-align: center; font-weight: bold;">{!! $plantilla->mensaje_despedida !!}</div>
             @else
