@@ -356,7 +356,7 @@
                     $igvFila = $venta->igv > 0 ? ($item->total - ($item->total / 1.18)) : 0;
                     $descripcion = $item->descripcion ?: ($item->producto?->nombre ?: 'Sin descripción');
                     $codigo = $item->codigo_producto ?: ($item->producto?->codigo ?? '-');
-                    $undCaja = $unidadesPorCaja[$item->id_producto] ?? null;
+                    $undCaja = $item->unidades_por_caja ?? ($unidadesPorCaja[$item->id_producto] ?? null);
                     if ($undCaja) {
                         $cajasCompletas = intdiv((int) $item->cantidad, $undCaja);
                         $unidadesSueltas = ((int) $item->cantidad) % $undCaja;

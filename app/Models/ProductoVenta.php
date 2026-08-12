@@ -27,6 +27,7 @@ class ProductoVenta extends Model
         'valor_unitario',
         'descripcion',
         'codigo_producto',
+        'unidades_por_caja',
     ];
 
     protected $casts = [

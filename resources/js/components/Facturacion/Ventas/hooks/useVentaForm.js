@@ -129,7 +129,7 @@ export const useVentaForm = (ventaId = null) => {
                                 precio_mostrado: detalle.precio_unitario,
                                 moneda: venta.tipo_moneda,
                                 tipo_precio: 'PV',
-                                unidades_por_caja: prod?.unidades_por_caja || null,
+                                unidades_por_caja: detalle.unidades_por_caja || prod?.unidades_por_caja || null,
                             };
                         })
                     );

@@ -128,6 +128,7 @@ class VentasController extends Controller
                 'productos.*.total' => 'required|numeric|min:0',
                 'productos.*.descripcion' => 'nullable|string|max:500',
                 'productos.*.codigo_producto' => 'nullable|string|max:50',
+                'productos.*.unidades_por_caja' => 'nullable|integer|min:1',
                 'pagos' => 'nullable|array',
                 'pagos.*.id_tipo_pago' => 'required_with:pagos|integer',
                 'pagos.*.monto' => 'nullable|numeric|min:0',
@@ -389,6 +390,7 @@ class VentasController extends Controller
                         'tipo_afectacion_igv' => $producto['tipo_afectacion_igv'] ?? '10',
                         'descripcion' => $descripcionFinal,
                         'codigo_producto' => $codigoFinal,
+                        'unidades_por_caja' => $producto['unidades_por_caja'] ?? null,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ];
@@ -671,6 +673,7 @@ class VentasController extends Controller
                 'productos.*.total' => 'required|numeric|min:0',
                 'productos.*.descripcion' => 'nullable|string|max:500',
                 'productos.*.codigo_producto' => 'nullable|string|max:50',
+                'productos.*.unidades_por_caja' => 'nullable|integer|min:1',
                 'pagos' => 'nullable|array',
                 'pagos.*.id_tipo_pago' => 'required_with:pagos|integer',
                 'pagos.*.monto' => 'nullable|numeric|min:0',
@@ -856,6 +859,7 @@ class VentasController extends Controller
                         'total' => $producto['total'],
                         'descripcion' => $descripcionFinal,
                         'codigo_producto' => $codigoFinal,
+                        'unidades_por_caja' => $producto['unidades_por_caja'] ?? null,
                     ]);
                 }
 

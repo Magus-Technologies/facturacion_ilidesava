@@ -140,23 +140,34 @@ export default function ProductosTable({
                                     )}
                                 </TableCell>
 
-                                {/* Cajas (según unidades_por_caja del producto) */}
+                                {/* Cajas (según unidades_por_caja del producto, editable solo para esta venta) */}
                                 {showCajas && (
                                     <TableCell className="text-center">
-                                        {(() => {
-                                            const info = calcularCajas(item);
-                                            if (!info) {
-                                                return <span className="text-gray-300">—</span>;
-                                            }
-                                            return (
-                                                <span className="text-sm">
-                                                    {info.cajas}
-                                                    {info.resto > 0 && (
-                                                        <span className="text-orange-500 text-xs"> +{info.resto}u</span>
-                                                    )}
-                                                </span>
-                                            );
-                                        })()}
+                                        <div className="flex flex-col items-center gap-0.5">
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                value={item.unidades_por_caja || ""}
+                                                onChange={(e) =>
+                                                    onUpdateField(index, "unidades_por_caja", e.target.value)
+                                                }
+                                                placeholder="u/caja"
+                                                className="w-16 h-7 text-center text-xs"
+                                                title="Unidades por caja (solo para esta venta)"
+                                            />
+                                            {(() => {
+                                                const info = calcularCajas(item);
+                                                if (!info) return null;
+                                                return (
+                                                    <span className="text-xs text-gray-500">
+                                                        {info.cajas}
+                                                        {info.resto > 0 && (
+                                                            <span className="text-orange-500"> +{info.resto}u</span>
+                                                        )}
+                                                    </span>
+                                                );
+                                            })()}
+                                        </div>
                                     </TableCell>
                                 )}
 

@@ -215,6 +215,7 @@ export const prepararDatosVenta = (cliente, formData, productos, totales) => {
                 total: lineaTotal,
                 unidad_medida: p.unidad_medida || 'NIU',
                 tipo_afectacion_igv: formData.aplicar_igv ? '10' : '20',
+                unidades_por_caja: p.unidades_por_caja || null,
             };
         }),
     };
