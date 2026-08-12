@@ -469,6 +469,27 @@
                             <td style="padding: 6px 10px; text-align: right; font-size: 13pt; font-weight: bold; width: 35%; color: #000;">{{ number_format($total, 2) }}</td>
                         </tr>
                     </table>
+
+                    {{-- Adelanto / Saldo pendiente (solo notas de venta con adelanto registrado) --}}
+                    @if($esNotaVenta && $venta->monto_adelanto > 0)
+                    @php
+                        $saldoPendiente = max(0, (float) $venta->total - (float) $venta->monto_adelanto);
+                    @endphp
+                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid #f59e0b; border-radius: 6px; margin-top: 5px; overflow: hidden;">
+                        <tr>
+                            <td style="padding: 3px 10px 1px 10px; text-align: right; font-size: 8pt; width: 65%; color: #92400e;">ADELANTO RECIBIDO: {{ $simbolo }}</td>
+                            <td style="padding: 3px 10px 1px 10px; text-align: right; font-size: 8pt; width: 35%; font-weight: bold; color: #92400e;">{{ number_format($venta->monto_adelanto, 2) }}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1px 10px 3px 10px; text-align: right; font-size: 9pt; font-weight: bold; color: {{ $saldoPendiente > 0 ? '#991b1b' : '#166534' }};">
+                                SALDO {{ $saldoPendiente > 0 ? 'PENDIENTE' : '' }}:
+                            </td>
+                            <td style="padding: 1px 10px 3px 10px; text-align: right; font-size: 9pt; font-weight: bold; color: {{ $saldoPendiente > 0 ? '#991b1b' : '#166534' }};">
+                                {{ $saldoPendiente > 0 ? $simbolo . ' ' . number_format($saldoPendiente, 2) : 'PAGADO' }}
+                            </td>
+                        </tr>
+                    </table>
+                    @endif
                 </td>
             </tr>
         </table>

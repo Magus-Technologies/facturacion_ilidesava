@@ -109,6 +109,7 @@ class VentasController extends Controller
                 'cotizacion_id' => 'nullable|integer|exists:cotizaciones,id',
                 'nota_venta_id' => 'nullable|integer|exists:ventas,id_venta',
                 'observaciones' => 'nullable|string|max:1000',
+                'monto_adelanto' => 'nullable|numeric|min:0',
                 'empresas_ids' => 'nullable|array',
                 'empresas_ids.*' => 'integer|exists:empresas,id_empresa',
                 'productos' => 'required|array|min:1',
@@ -304,6 +305,7 @@ class VentasController extends Controller
                     'cotizacion_id' => $validated['cotizacion_id'] ?? null,
                     'nota_venta_id' => $validated['nota_venta_id'] ?? null,
                     'observaciones' => $validated['observaciones'] ?? null,
+                    'monto_adelanto' => $validated['id_tido'] == 6 ? ($validated['monto_adelanto'] ?? null) : null,
                 ]);
 
                 $afectaStock = $validated['id_tido'] == 6 ? false : ($validated['afecta_stock'] ?? true);
@@ -654,6 +656,7 @@ class VentasController extends Controller
                 'total' => 'required|numeric|min:0',
                 'tipo_moneda' => 'required|in:PEN,USD',
                 'observaciones' => 'nullable|string|max:1000',
+                'monto_adelanto' => 'nullable|numeric|min:0',
                 'productos' => 'required|array|min:1',
                 'productos.*.id_producto' => ['nullable', 'integer', function ($attribute, $value, $fail) {
                     if ($value && !\App\Models\ProductoMadre::find($value) && !\App\Models\Producto::find($value)) {
@@ -762,6 +765,7 @@ class VentasController extends Controller
                     'tipo_moneda' => $validated['tipo_moneda'],
                     'direccion' => $validated['cliente_direccion'] ?? $venta->direccion,
                     'observaciones' => $validated['observaciones'] ?? null,
+                    'monto_adelanto' => $venta->id_tido == 6 ? ($validated['monto_adelanto'] ?? null) : $venta->monto_adelanto,
                 ]);
 
                 // Sincronizar cronograma de cuotas con el tipo de pago

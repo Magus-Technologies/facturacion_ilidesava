@@ -128,6 +128,36 @@ export default function FormSidebar({
                 </div>
             )}
 
+            {/* Adelanto recibido (solo notas de venta) */}
+            {formData.id_tido === "6" && (
+                <div>
+                    <Label className="block text-xs font-medium mb-1">
+                        Adelanto recibido (opcional)
+                    </Label>
+                    <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={formData.monto_adelanto || ""}
+                        onChange={(e) =>
+                            onFormDataChange({
+                                ...formData,
+                                monto_adelanto: e.target.value,
+                            })
+                        }
+                    />
+                    {formData.monto_adelanto > 0 && (
+                        <p className="text-xs mt-1">
+                            <span className="text-gray-500">Saldo pendiente: </span>
+                            <span className="font-semibold text-amber-700">
+                                {monedaSimbolo} {Math.max(0, (totales?.total || 0) - parseFloat(formData.monto_adelanto || 0)).toFixed(2)}
+                            </span>
+                        </p>
+                    )}
+                </div>
+            )}
+
             {/* Cuotas (solo para crédito) */}
             {showCuotas && formData.tipo_pago === "2" && (
                 <div>

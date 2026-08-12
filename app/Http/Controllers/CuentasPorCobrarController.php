@@ -105,6 +105,7 @@ class CuentasPorCobrarController extends Controller
             'numero_operacion' => 'nullable|string|max:50',
             'banco' => 'nullable|string|max:100',
             'observaciones' => 'nullable|string|max:500',
+            'voucher' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         try {
@@ -145,6 +146,14 @@ class CuentasPorCobrarController extends Controller
                     'observaciones' => $request->observaciones ?? $cuota->observaciones,
                 ]);
 
+                // Voucher / comprobante de pago (opcional)
+                $voucherPath = null;
+                if ($request->hasFile('voucher')) {
+                    $file = $request->file('voucher');
+                    $filename = 'voucher_cuota_' . $cuota->id_dia_venta . '_' . time() . '.' . $file->getClientOriginalExtension();
+                    $voucherPath = $file->storeAs('vouchers', $filename, 'public');
+                }
+
                 // Registrar en ventas_pagos
                 VentaPago::create([
                     'id_venta' => $venta->id_venta,
@@ -153,6 +162,7 @@ class CuentasPorCobrarController extends Controller
                     'fecha_pago' => now(),
                     'numero_operacion' => $request->numero_operacion,
                     'banco' => $request->banco,
+                    'voucher' => $voucherPath,
                     'tipo_moneda' => $venta->tipo_moneda,
                 ]);
 

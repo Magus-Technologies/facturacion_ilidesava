@@ -462,6 +462,7 @@ export default function VentaForm({ ventaId = null }) {
                                 onDelete={handleDeleteProduct}
                                 onUpdateField={handleUpdateProductField}
                                 subtotalLabel="Subtotal"
+                                showCajas={formData.id_tido === "6"}
                             />
                         </div>
                     </div>

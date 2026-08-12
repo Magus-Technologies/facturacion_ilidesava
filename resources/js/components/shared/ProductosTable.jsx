@@ -17,6 +17,7 @@ export default function ProductosTable({
     showPrecioEspecial = false,
     showDescuento = false,
     showCosto = false,
+    showCajas = false,
     // Labels personalizados
     subtotalLabel = "Subtotal",
 }) {
@@ -28,6 +29,16 @@ export default function ProductosTable({
         return cantidad * precio;
     };
 
+    const calcularCajas = (item) => {
+        const undCaja = parseInt(item.unidades_por_caja || 0);
+        if (!undCaja) return null;
+        const cantidad = parseInt(item.cantidad || 0);
+        return {
+            cajas: Math.floor(cantidad / undCaja),
+            resto: cantidad % undCaja,
+        };
+    };
+
     return (
         <div className="rounded-lg overflow-hidden">
             <Table>
@@ -37,6 +48,9 @@ export default function ProductosTable({
                         <TableHead>Código</TableHead>
                         <TableHead>Producto</TableHead>
                         <TableHead className="text-center w-24">Cant</TableHead>
+                        {showCajas && (
+                            <TableHead className="text-center w-20">Cajas</TableHead>
+                        )}
                         {showCosto && (
                             <TableHead className="text-right w-28">Costo</TableHead>
                         )}
@@ -59,7 +73,8 @@ export default function ProductosTable({
                                     6 +
                                     (showPrecioEspecial ? 1 : 0) +
                                     (showDescuento ? 1 : 0) +
-                                    (showCosto ? 1 : 0)
+                                    (showCosto ? 1 : 0) +
+                                    (showCajas ? 1 : 0)
                                 }
                                 className="h-32 text-center text-gray-500"
                             >
@@ -124,6 +139,26 @@ export default function ProductosTable({
                                         </span>
                                     )}
                                 </TableCell>
+
+                                {/* Cajas (según unidades_por_caja del producto) */}
+                                {showCajas && (
+                                    <TableCell className="text-center">
+                                        {(() => {
+                                            const info = calcularCajas(item);
+                                            if (!info) {
+                                                return <span className="text-gray-300">—</span>;
+                                            }
+                                            return (
+                                                <span className="text-sm">
+                                                    {info.cajas}
+                                                    {info.resto > 0 && (
+                                                        <span className="text-orange-500 text-xs"> +{info.resto}u</span>
+                                                    )}
+                                                </span>
+                                            );
+                                        })()}
+                                    </TableCell>
+                                )}
 
                                 {/* Costo (solo para compras) */}
                                 {showCosto && (

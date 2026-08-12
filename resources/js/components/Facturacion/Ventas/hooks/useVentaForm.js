@@ -43,6 +43,7 @@ export const useVentaForm = (ventaId = null) => {
         precio_mostrado: '',
         tipo_precio: '',
         moneda: 'PEN',
+        unidades_por_caja: null,
         costo: '',
     });
 
@@ -63,6 +64,7 @@ export const useVentaForm = (ventaId = null) => {
         observaciones: '',
         empresas_ids: [], // IDs de empresas seleccionadas
         almacen: '1', // Almacén por defecto
+        monto_adelanto: '', // Adelanto recibido (solo notas de venta)
     });
 
     useEffect(() => {
@@ -127,6 +129,7 @@ export const useVentaForm = (ventaId = null) => {
                                 precio_mostrado: detalle.precio_unitario,
                                 moneda: venta.tipo_moneda,
                                 tipo_precio: 'PV',
+                                unidades_por_caja: prod?.unidades_por_caja || null,
                             };
                         })
                     );
@@ -168,6 +171,7 @@ export const useVentaForm = (ventaId = null) => {
                     tipo_cambio: venta.tipo_cambio || '1.00',
                     aplicar_igv: true,
                     observaciones: venta.observaciones || '',
+                    monto_adelanto: venta.monto_adelanto || '',
                     cuotas,
                     fecha_vencimiento: cuotas.length > 0
                         ? cuotas[cuotas.length - 1].fecha
@@ -253,6 +257,7 @@ export const useVentaForm = (ventaId = null) => {
             moneda: product.moneda,
             costo: product.costo,
             unidad_medida: product.unidad?.codigo || 'NIU',
+            unidades_por_caja: product.unidades_por_caja || null,
         });
     };
 
@@ -333,6 +338,7 @@ export const useVentaForm = (ventaId = null) => {
             tipo_precio: '',
             moneda: 'PEN',
             costo: '',
+            unidades_por_caja: null,
         });
     };
 

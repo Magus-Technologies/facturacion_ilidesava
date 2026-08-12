@@ -146,6 +146,7 @@ export default function ProductMultipleSearch({
             tipo: p.tipo,
             almacen: almacen,
             editable: false,
+            unidades_por_caja: p.unidades_por_caja || null,
         }));
 
         onProductsSelect(productosParaAgregar);

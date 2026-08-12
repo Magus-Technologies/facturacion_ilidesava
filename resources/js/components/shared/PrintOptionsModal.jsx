@@ -42,7 +42,11 @@ export default function PrintOptionsModal({
                 ? `/${folder}/ticket.php?id=${ventaId}`
                 : `/${folder}/a4.php?id=${ventaId}`;
 
-        return download ? `${base}&download=1` : base;
+        if (download) return `${base}&download=1`;
+        // Fragment estándar del visor de PDF del navegador: oculta la barra de
+        // herramientas y el panel de miniaturas (gris oscuro, fuera de nuestro
+        // control de estilos) para que solo se vea el documento.
+        return `${base}#toolbar=0&navpanes=0`;
     }, [getFolder, formato, ventaId]);
 
     const getPdfUrlCompleta = useCallback((fmt = "a4") => {
@@ -180,7 +184,7 @@ export default function PrintOptionsModal({
 
                 {/* PDF Preview */}
                 <div
-                    className="w-full bg-gray-100 rounded-lg overflow-hidden"
+                    className="w-full rounded-lg overflow-hidden border border-gray-200"
                     style={{ height: "70vh" }}
                 >
                     <iframe

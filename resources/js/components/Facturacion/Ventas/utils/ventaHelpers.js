@@ -194,6 +194,7 @@ export const prepararDatosVenta = (cliente, formData, productos, totales) => {
         fecha_vencimiento: formData.fecha_vencimiento || null,
         tiene_inicial: formData.tiene_inicial ? 1 : 0,
         monto_inicial: formData.monto_inicial || 0,
+        monto_adelanto: formData.id_tido === '6' ? (formData.monto_adelanto || null) : null,
         cuotas: formData.cuotas || [],
         productos: productos.map((p) => {
             const cantidad = parseFloat(p.cantidad);

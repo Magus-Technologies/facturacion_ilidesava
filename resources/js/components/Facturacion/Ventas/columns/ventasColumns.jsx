@@ -220,6 +220,23 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
             ),
         },
         {
+            accessorKey: "condicion",
+            header: "Condición",
+            cell: ({ row }) => {
+                const tipo = row.original.id_tipo_pago;
+                const esCredito = tipo === 2 || tipo === "2";
+                return esCredito ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                        Crédito
+                    </span>
+                ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        Contado
+                    </span>
+                );
+            },
+        },
+        {
             accessorKey: "id_tipo_pago",
             header: "Pago",
             cell: ({ row }) => {
