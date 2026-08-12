@@ -84,7 +84,10 @@ export default function ProductoModal({
                     precio_mayor: producto.precio_mayor || "0.00",
                     precio_menor: producto.precio_menor || "0.00",
                     usar_multiprecio: producto.usar_multiprecio || "0",
-                    unidades_por_caja: producto.unidades_por_caja || "",
+                    unidades_por_caja:
+                        producto.unidades_por_caja ||
+                        producto.nombre?.match(/\sX\s(\d+)(\s|$)/i)?.[1] ||
+                        "",
                     imagen: null,
                 });
 

@@ -913,6 +913,25 @@ class SunatService
             ->setNumDoc($guia->destinatario_documento)
             ->setRznSocial($guia->destinatario_nombre);
 
+        // N° de bultos: no solicitado aún por el cliente, dejar comentado.
+        // Si lo piden, calcular como suma de cajas por producto (cantidad /
+        // unidades_por_caja, redondeado hacia arriba) y usar setNumBultos()
+        // más abajo, además de persistir 'num_bultos' en el update() final.
+        // $idsProductos = $guia->detalles->pluck('id_producto')->filter()->unique()->values();
+        // $unidadesPorCaja = $idsProductos->isNotEmpty()
+        //     ? \App\Models\Producto::whereIn('id_producto', $idsProductos)
+        //         ->whereNotNull('unidades_por_caja')
+        //         ->pluck('unidades_por_caja', 'id_producto')
+        //     : collect();
+        //
+        // $numBultos = 0;
+        // foreach ($guia->detalles as $item) {
+        //     $undCaja = $unidadesPorCaja[$item->id_producto] ?? null;
+        //     if ($undCaja) {
+        //         $numBultos += (int) ceil($item->cantidad / $undCaja);
+        //     }
+        // }
+
         $shipment = (new Shipment())
             ->setCodTraslado($guia->motivo_traslado)
             ->setDesTraslado($guia->descripcion_motivo)
@@ -922,6 +941,10 @@ class SunatService
             ->setUndPesoTotal($guia->und_peso_total ?? 'KGM')
             ->setPartida(new Direction($guia->ubigeo_partida, $guia->dir_partida))
             ->setLlegada(new Direction($guia->ubigeo_llegada, $guia->dir_llegada));
+
+        // if ($numBultos > 0) {
+        //     $shipment->setNumBultos($numBultos);
+        // }
 
         // Indicador M1/L aplica para ambas modalidades de transporte
         if ($guia->vehiculo_m1l) {
@@ -992,6 +1015,7 @@ class SunatService
             'hash_cpe' => $hash,
             'xml_url' => "sunat/xml/{$this->getRuc($empresa)}/{$nombreArchivo}.xml",
             'nombre_xml' => $nombreArchivo,
+            // 'num_bultos' => $numBultos > 0 ? $numBultos : null, // no solicitado aún, ver comentario arriba
         ]);
 
         return [

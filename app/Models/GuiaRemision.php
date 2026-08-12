@@ -26,6 +26,7 @@ class GuiaRemision extends Model
         'mod_transporte',
         'fecha_traslado',
         'peso_total',
+        'num_bultos',
         'und_peso_total',
         'ubigeo_partida',
         'dir_partida',

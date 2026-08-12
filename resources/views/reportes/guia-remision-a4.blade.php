@@ -324,6 +324,18 @@
                                 {{ number_format($guia->peso_total, 3) }}
                             </td>
                         </tr>
+                        {{-- N° de bultos: no solicitado aún por el cliente, dejar comentado.
+                        @if($guia->num_bultos)
+                        <tr>
+                            <td style="padding: 4px 15px 10px 15px; text-align: right; font-size: 10pt; font-weight: bold; border-top: 1px solid #999;">
+                                N° DE BULTOS:
+                            </td>
+                            <td style="padding: 4px 15px 10px 15px; text-align: right; font-size: 11pt; font-weight: bold; color: #000; border-top: 1px solid #999;">
+                                {{ $guia->num_bultos }}
+                            </td>
+                        </tr>
+                        @endif
+                        --}}
                     </table>
                 </td>
             </tr>
