@@ -24,6 +24,7 @@ import {
     TableHeader,
     TableRow,
 } from "../../ui/table";
+import { getEstadoNotaBadge } from "@/constants/sunat";
 
 const ESTADO = {
     1:       { text: "Activa",    cls: "bg-green-100 text-green-700",  Icon: CheckCircle2 },
@@ -285,6 +286,43 @@ export default function DetallesVentaModal({ venta, isOpen, onClose }) {
                         </div>
                     </div>
                 </div>
+
+                {/* Notas de crédito asociadas */}
+                {venta.notas_credito && venta.notas_credito.length > 0 && (
+                    <SectionCard
+                        title="Notas de Crédito"
+                        right={`${venta.notas_credito.length} nota(s)`}
+                    >
+                        <div className="space-y-2 py-1">
+                            {venta.notas_credito.map((nc) => {
+                                const badge = getEstadoNotaBadge(nc.estado);
+                                return (
+                                    <div
+                                        key={nc.id}
+                                        className="flex items-center justify-between gap-3 text-xs"
+                                    >
+                                        <div>
+                                            <p className="font-mono font-medium text-gray-800">
+                                                {nc.serie}-{String(nc.numero).padStart(6, "0")}
+                                            </p>
+                                            <p className="text-[10px] text-gray-400">
+                                                {nc.motivo?.codigo_sunat} - {nc.descripcion_motivo || nc.motivo?.descripcion}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono font-semibold text-gray-700">
+                                                {sym(nc.moneda)} {fmt(nc.monto_total)}
+                                            </span>
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${badge.color}`}>
+                                                {badge.text}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </SectionCard>
+                )}
 
                 {/* Edit history */}
                 {showHistorial && historial !== null && (

@@ -139,6 +139,10 @@ export default function VentasList() {
         window.location.href = `/guia-remision/add?venta_id=${venta.id_venta}`;
     };
 
+    const handleCrearNotaCredito = (venta) => {
+        window.location.href = `/nota-credito/add?venta_id=${venta.id_venta}`;
+    };
+
     const handleDescontarStock = (venta) => {
         setStockModalVenta(venta);
     };
@@ -194,6 +198,7 @@ export default function VentasList() {
             handleVerXml,
             handleDescargarCdr,
             handleGenerarGuia,
+            handleCrearNotaCredito,
             handleDescontarStock,
             handleVerStock,
             handleWhatsApp,

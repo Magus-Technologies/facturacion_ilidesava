@@ -10,6 +10,10 @@ import {
     FileText,
     MoreHorizontal,
     Loader2,
+    Trash2,
+    Pencil,
+    Ban,
+    RefreshCw,
 } from "lucide-react";
 import { Button } from "../../ui/button";
 import {
@@ -114,6 +118,9 @@ export const getNotaCreditoColumns = (handlers, enviandoId = null) => [
                 Pendiente: <Clock className="h-3 w-3" />,
                 Enviado: <CheckCircle className="h-3 w-3" />,
                 Rechazado: <XCircle className="h-3 w-3" />,
+                "Baja enviada": <Clock className="h-3 w-3" />,
+                Anulada: <Ban className="h-3 w-3" />,
+                "Baja rechazada": <XCircle className="h-3 w-3" />,
             };
             return (
                 <span
@@ -184,6 +191,38 @@ export const getNotaCreditoColumns = (handlers, enviandoId = null) => [
                                 >
                                     <Send className="mr-2 h-4 w-4" />
                                     Enviar a SUNAT
+                                </DropdownMenuItem>
+                            )}
+                            {["pendiente", "rechazado"].includes(nota.estado) && handlers.handleEditar && (
+                                <DropdownMenuItem
+                                    onClick={() => handlers.handleEditar(nota)}
+                                >
+                                    <Pencil className="mr-2 h-4 w-4 text-amber-600" />
+                                    Editar
+                                </DropdownMenuItem>
+                            )}
+                            {["pendiente", "rechazado"].includes(nota.estado) && handlers.handleEliminar && (
+                                <DropdownMenuItem
+                                    onClick={() => handlers.handleEliminar(nota)}
+                                    className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar
+                                </DropdownMenuItem>
+                            )}
+                            {nota.estado === "aceptado" && handlers.handleSolicitarBaja && (
+                                <DropdownMenuItem
+                                    onClick={() => handlers.handleSolicitarBaja(nota)}
+                                    className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                                >
+                                    <Ban className="mr-2 h-4 w-4" />
+                                    Dar de baja (anular)
+                                </DropdownMenuItem>
+                            )}
+                            {nota.estado === "baja_enviada" && handlers.handleConsultarBaja && (
+                                <DropdownMenuItem onClick={() => handlers.handleConsultarBaja(nota)}>
+                                    <RefreshCw className="mr-2 h-4 w-4 text-orange-600" />
+                                    Consultar estado de baja
                                 </DropdownMenuItem>
                             )}
                         </DropdownMenuContent>

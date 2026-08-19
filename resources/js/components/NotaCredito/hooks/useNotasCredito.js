@@ -97,6 +97,98 @@ export const useNotasCredito = () => {
         }
     };
 
+    const actualizarNota = async (id, payload) => {
+        try {
+            const res = await fetch(`/api/notas-credito/${id}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success('Nota de crédito actualizada');
+                fetchNotas();
+            } else {
+                toast.error(data.message || 'Error al actualizar nota de crédito');
+            }
+
+            return data;
+        } catch (err) {
+            toast.error('Error de conexión');
+            return { success: false, message: err.message };
+        }
+    };
+
+    const solicitarBaja = async (id, motivo) => {
+        try {
+            const res = await fetch(`/api/notas-credito/${id}/baja`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ motivo }),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success('Comunicación de baja enviada a SUNAT. Consulta el estado en unos segundos.');
+                fetchNotas();
+            } else {
+                toast.error(data.message || 'Error al dar de baja la nota de crédito');
+            }
+
+            return data;
+        } catch (err) {
+            toast.error('Error de conexión');
+            return { success: false, message: err.message };
+        }
+    };
+
+    const consultarBaja = async (id) => {
+        try {
+            const res = await fetch(`/api/notas-credito/${id}/consultar-baja`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await res.json();
+
+            if (data.en_proceso) {
+                toast.success('SUNAT todavía está procesando la baja, intenta consultar en unos segundos.');
+            } else if (data.success) {
+                toast.success('Baja aceptada por SUNAT.');
+                fetchNotas();
+            } else {
+                toast.error(data.message || 'SUNAT rechazó la comunicación de baja.');
+                fetchNotas();
+            }
+
+            return data;
+        } catch (err) {
+            toast.error('Error de conexión');
+            return { success: false, message: err.message };
+        }
+    };
+
+    const eliminarNota = async (id) => {
+        try {
+            const res = await fetch(`/api/notas-credito/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success('Nota de crédito eliminada');
+                fetchNotas();
+            } else {
+                toast.error(data.message || 'Error al eliminar nota de crédito');
+            }
+
+            return data;
+        } catch (err) {
+            toast.error('Error de conexión');
+            return { success: false, message: err.message };
+        }
+    };
+
     const buscarVenta = async (serie, numero) => {
         try {
             const params = new URLSearchParams({ serie, numero });
@@ -121,7 +213,11 @@ export const useNotasCredito = () => {
         motivos,
         fetchNotas,
         crearNota,
+        actualizarNota,
         enviarNota,
+        solicitarBaja,
+        consultarBaja,
+        eliminarNota,
         buscarVenta,
     };
 };

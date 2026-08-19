@@ -115,6 +115,11 @@ class Venta extends Model
         return $this->hasMany(ProductoVenta::class, 'id_venta', 'id_venta');
     }
 
+    public function notasCredito(): HasMany
+    {
+        return $this->hasMany(NotaCredito::class, 'id_venta', 'id_venta');
+    }
+
     public function serviciosVentas(): HasMany
     {
         return $this->hasMany(VentaServicio::class, 'id_venta', 'id_venta');

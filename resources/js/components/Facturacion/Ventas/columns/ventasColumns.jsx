@@ -20,6 +20,7 @@ import {
     Loader2,
     AlertTriangle,
     Copy,
+    FileMinus,
 } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -381,12 +382,23 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                     Pendiente: <Clock className="h-3 w-3" />,
                 };
                 return (
-                    <span
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
-                    >
-                        {iconos[badge.text]}
-                        {badge.text}
-                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                        <span
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
+                        >
+                            {iconos[badge.text]}
+                            {badge.text}
+                        </span>
+                        {row.original.tiene_nota_credito && (
+                            <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-700"
+                                title="Este comprobante tiene una nota de crédito asociada (puede ser total o parcial)"
+                            >
+                                <FileMinus className="h-2.5 w-2.5" />
+                                Con NC
+                            </span>
+                        )}
+                    </div>
                 );
             },
         },
@@ -527,6 +539,15 @@ export const getVentasColumns = (handlers, ocultarSunat = false, sunatLoadingId 
                                     >
                                         <FileDown className="mr-2 h-4 w-4" />
                                         Descargar CDR
+                                    </DropdownMenuItem>
+                                )}
+                                {!estaAnulada && esBoletaFactura && yaEnviado && !venta.tiene_nota_credito && handlers.handleCrearNotaCredito && (
+                                    <DropdownMenuItem
+                                        onClick={() => handlers.handleCrearNotaCredito(venta)}
+                                        className="text-rose-600 focus:bg-rose-50 focus:text-rose-700"
+                                    >
+                                        <FileMinus className="mr-2 h-4 w-4" />
+                                        Crear Nota de Crédito
                                     </DropdownMenuItem>
                                 )}
                                 {!estaAnulada && !ocultarSunatFila && handlers.handleGenerarGuia && (

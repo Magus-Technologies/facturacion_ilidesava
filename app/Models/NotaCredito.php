@@ -23,11 +23,13 @@ class NotaCredito extends Model
         'moneda',
         'fecha_emision',
         'estado',
+        'stock_madre_devuelto',
         'hash_cpe',
         'xml_url',
         'cdr_url',
         'codigo_sunat',
         'mensaje_sunat',
+        'ticket_baja',
         'nombre_xml',
         'id_empresa',
         'id_usuario',
@@ -39,6 +41,7 @@ class NotaCredito extends Model
         'monto_igv' => 'decimal:2',
         'monto_total' => 'decimal:2',
         'numero' => 'integer',
+        'stock_madre_devuelto' => 'boolean',
     ];
 
     public function venta(): BelongsTo
@@ -49,6 +52,11 @@ class NotaCredito extends Model
     public function motivo(): BelongsTo
     {
         return $this->belongsTo(MotivoNota::class, 'motivo_id');
+    }
+
+    public function detalles(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(NotaCreditoDetalle::class, 'id_nota_credito');
     }
 
     public function empresa(): BelongsTo

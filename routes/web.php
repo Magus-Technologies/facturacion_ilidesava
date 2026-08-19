@@ -173,6 +173,10 @@ Route::middleware('auth')->group(function () {
         return view('notaCredito.nota-credito-add');
     })->name('nota-credito.add');
 
+    Route::get('/nota-credito/{id}/editar', function ($id) {
+        return view('notaCredito.nota-credito-add')->with('nota_id', $id);
+    })->name('nota-credito.editar');
+
     // Exportaciones Excel/PDF (requieren auth)
     Route::get('compras/descargar-excel', [\App\Http\Controllers\Exports\CompraExportController::class, 'exportExcel']);
     Route::get('compras/descargar-pdf', [\App\Http\Controllers\Exports\CompraExportController::class, 'exportPdf']);

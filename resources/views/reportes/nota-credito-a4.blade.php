@@ -135,7 +135,13 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($nota->venta->productosVentas as $index => $item)
+            @php
+                // Ítems realmente acreditados (puede ser un subconjunto de la
+                // venta original). Si no hay detalle propio (NC legada),
+                // cae al 100% de la venta como comportamiento anterior.
+                $itemsNc = $nota->detalles->isNotEmpty() ? $nota->detalles : $nota->venta->productosVentas;
+            @endphp
+            @foreach($itemsNc as $index => $item)
             @php
                 $precioConIgv = $item->precio_unitario;
                 $valorUnitario = $nota->monto_igv > 0 ? ($precioConIgv / 1.18) : $precioConIgv;

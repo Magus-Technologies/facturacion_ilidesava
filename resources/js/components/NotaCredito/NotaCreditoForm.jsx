@@ -42,6 +42,7 @@ import {
     MapPin,
     CreditCard,
     Building2,
+    Trash2,
 } from "lucide-react";
 import { toast } from "@/lib/sweetalert";
 
@@ -54,7 +55,9 @@ const getAuthHeaders = () => {
     };
 };
 
-export default function NotaCreditoForm() {
+export default function NotaCreditoForm({ nota_id: initialNotaId = null }) {
+    const isEditing = !!initialNotaId;
+
     const [serie, setSerie] = useState("");
     const [numero, setNumero] = useState("");
     const [venta, setVenta] = useState(null);
@@ -63,11 +66,48 @@ export default function NotaCreditoForm() {
     const [motivos, setMotivos] = useState([]);
     const [buscando, setBuscando] = useState(false);
     const [guardando, setGuardando] = useState(false);
+    const [cargandoNota, setCargandoNota] = useState(isEditing);
     const [errorBusqueda, setErrorBusqueda] = useState(null);
+    // { [id_producto_venta]: { incluido: bool, cantidad: number } }
+    const [seleccion, setSeleccion] = useState({});
 
     useEffect(() => {
         fetchMotivos();
+        if (isEditing) {
+            cargarNota();
+        } else {
+            const ventaIdParam = new URLSearchParams(window.location.search).get("venta_id");
+            if (ventaIdParam) {
+                cargarVentaPorId(ventaIdParam);
+            }
+        }
     }, []);
+
+    // Acceso rápido desde la lista de Ventas ("Crear Nota de Crédito"):
+    // carga la venta directo por id, sin pedir que la busquen de nuevo.
+    const cargarVentaPorId = async (ventaId) => {
+        setBuscando(true);
+        try {
+            const res = await fetch(`/api/ventas/${ventaId}`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await res.json();
+            if (data.success && data.venta) {
+                const v = data.venta;
+                const ventaNormalizada = {
+                    ...v,
+                    productos_ventas: v.productos_ventas || v.productosVentas || [],
+                };
+                setVenta(ventaNormalizada);
+                inicializarSeleccionTotal(ventaNormalizada);
+            } else {
+                setErrorBusqueda(data.message || "No se pudo cargar la venta");
+            }
+        } catch {
+            setErrorBusqueda("Error al cargar la venta");
+        }
+        setBuscando(false);
+    };
 
     const fetchMotivos = async () => {
         try {
@@ -81,6 +121,60 @@ export default function NotaCreditoForm() {
         } catch (err) {
             console.error("Error cargando motivos:", err);
         }
+    };
+
+    const cargarNota = async () => {
+        setCargandoNota(true);
+        try {
+            const res = await fetch(`/api/notas-credito/${initialNotaId}`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await res.json();
+
+            if (data.success && data.data) {
+                const nota = data.data;
+                setVenta(nota.venta);
+                setMotivoId(String(nota.motivo_id));
+                setDescripcion(
+                    nota.descripcion_motivo === nota.motivo?.descripcion
+                        ? ""
+                        : nota.descripcion_motivo || "",
+                );
+
+                const inicial = {};
+                (nota.venta?.productos_ventas || []).forEach((item) => {
+                    inicial[item.id_producto_venta] = {
+                        incluido: false,
+                        cantidad: parseFloat(item.cantidad || 0),
+                    };
+                });
+                (nota.detalles || []).forEach((d) => {
+                    inicial[d.id_producto_venta] = {
+                        incluido: true,
+                        cantidad: parseFloat(d.cantidad),
+                    };
+                });
+                setSeleccion(inicial);
+            } else {
+                toast.error(data.message || "Nota de crédito no encontrada");
+                window.location.href = "/nota-credito";
+            }
+        } catch {
+            toast.error("Error al cargar la nota de crédito");
+            window.location.href = "/nota-credito";
+        }
+        setCargandoNota(false);
+    };
+
+    const inicializarSeleccionTotal = (ventaData) => {
+        const inicial = {};
+        (ventaData.productos_ventas || []).forEach((item) => {
+            inicial[item.id_producto_venta] = {
+                incluido: true,
+                cantidad: parseFloat(item.cantidad || 0),
+            };
+        });
+        setSeleccion(inicial);
     };
 
     const handleBuscar = async () => {
@@ -102,6 +196,7 @@ export default function NotaCreditoForm() {
 
             if (data.success && data.venta) {
                 setVenta(data.venta);
+                inicializarSeleccionTotal(data.venta);
             } else {
                 setErrorBusqueda(
                     data.message || "Venta no encontrada",
@@ -120,29 +215,83 @@ export default function NotaCreditoForm() {
         }
     };
 
+    const toggleIncluido = (idProductoVenta) => {
+        setSeleccion((prev) => ({
+            ...prev,
+            [idProductoVenta]: {
+                ...prev[idProductoVenta],
+                incluido: !prev[idProductoVenta]?.incluido,
+            },
+        }));
+    };
+
+    const cambiarCantidad = (idProductoVenta, cantidad, cantidadMaxima) => {
+        let valor = parseFloat(cantidad);
+        if (Number.isNaN(valor) || valor < 0) valor = 0;
+        if (valor > cantidadMaxima) valor = cantidadMaxima;
+        setSeleccion((prev) => ({
+            ...prev,
+            [idProductoVenta]: { ...prev[idProductoVenta], cantidad: valor },
+        }));
+    };
+
+    const productosSeleccionados = () =>
+        Object.entries(seleccion)
+            .filter(([, v]) => v.incluido && v.cantidad > 0)
+            .map(([id_producto_venta, v]) => ({
+                id_producto_venta: parseInt(id_producto_venta),
+                cantidad: v.cantidad,
+            }));
+
     const handleSubmit = async () => {
         if (!venta || !motivoId) return;
+
+        const productos = productosSeleccionados();
+        if (productos.length === 0) {
+            toast.error(
+                "Selecciona al menos un producto con cantidad mayor a 0 para acreditar.",
+            );
+            return;
+        }
+
         setGuardando(true);
 
         try {
-            const res = await fetch("/api/notas-credito", {
-                method: "POST",
+            const url = isEditing
+                ? `/api/notas-credito/${initialNotaId}`
+                : "/api/notas-credito";
+            const method = isEditing ? "PUT" : "POST";
+            const body = {
+                motivo_id: parseInt(motivoId),
+                descripcion_motivo: descripcion || undefined,
+                productos,
+            };
+            if (!isEditing) body.id_venta = venta.id_venta;
+
+            const res = await fetch(url, {
+                method,
                 headers: getAuthHeaders(),
-                body: JSON.stringify({
-                    id_venta: venta.id_venta,
-                    motivo_id: parseInt(motivoId),
-                    descripcion_motivo: descripcion || undefined,
-                }),
+                body: JSON.stringify(body),
             });
             const data = await res.json();
 
             if (data.success) {
-                toast.success("Nota de crédito creada y XML generado");
+                toast.success(
+                    isEditing
+                        ? "Nota de crédito actualizada"
+                        : "Nota de crédito creada y XML generado",
+                );
                 window.location.href = "/nota-credito";
             } else {
                 toast.error(
-                    data.message || "Error al crear nota de crédito",
+                    data.message ||
+                        (isEditing
+                            ? "Error al actualizar nota de crédito"
+                            : "Error al crear nota de crédito"),
                 );
+                if (data.errores?.length) {
+                    data.errores.forEach((e) => toast.error(e));
+                }
             }
         } catch {
             toast.error("Error de conexión");
@@ -165,6 +314,7 @@ export default function NotaCreditoForm() {
         setMotivoId("");
         setDescripcion("");
         setErrorBusqueda(null);
+        setSeleccion({});
     };
 
     const monedaSimbolo = venta?.tipo_moneda === "USD" ? "$" : "S/";
@@ -173,6 +323,30 @@ export default function NotaCreditoForm() {
     const docCompleto = venta
         ? `${tipoDoc} ${venta.serie}-${String(venta.numero).padStart(6, "0")}`
         : "";
+
+    // Totales calculados SOLO sobre lo seleccionado (crédito parcial real)
+    const igvRateAprox = venta && parseFloat(venta.igv) > 0
+        ? parseFloat(venta.igv) / parseFloat(venta.subtotal || 1)
+        : 0;
+    const resumenSubtotal = productos.reduce((acc, item) => {
+        const sel = seleccion[item.id_producto_venta];
+        if (!sel?.incluido || !sel.cantidad) return acc;
+        const precio = parseFloat(item.precio_unitario || 0);
+        const valorVenta = (precio / (1 + igvRateAprox)) * sel.cantidad;
+        return acc + valorVenta;
+    }, 0);
+    const resumenIgv = resumenSubtotal * igvRateAprox;
+    const resumenTotal = resumenSubtotal + resumenIgv;
+
+    if (cargandoNota) {
+        return (
+            <MainLayout>
+                <div className="flex items-center justify-center h-64">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+                </div>
+            </MainLayout>
+        );
+    }
 
     return (
         <MainLayout>
@@ -188,10 +362,14 @@ export default function NotaCreditoForm() {
                                 Notas de Crédito
                             </a>
                             <span className="mx-2">/</span>
-                            <span className="text-gray-900">Nueva</span>
+                            <span className="text-gray-900">
+                                {isEditing ? "Editar" : "Nueva"}
+                            </span>
                         </nav>
                         <h1 className="text-2xl font-bold text-gray-900">
-                            Nueva Nota de Crédito
+                            {isEditing
+                                ? "Editar Nota de Crédito"
+                                : "Nueva Nota de Crédito"}
                         </h1>
                     </div>
                     <div className="flex gap-3">
@@ -203,7 +381,9 @@ export default function NotaCreditoForm() {
                             {guardando && (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             )}
-                            Crear Nota de Crédito
+                            {isEditing
+                                ? "Guardar cambios"
+                                : "Crear Nota de Crédito"}
                         </Button>
                         <Button
                             variant="outline"
@@ -221,81 +401,83 @@ export default function NotaCreditoForm() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 {/* Columna principal */}
                 <div className="lg:col-span-8 space-y-4">
-                    {/* Card búsqueda */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Search className="h-4 w-4 text-primary-600" />
-                                Buscar Comprobante
-                            </CardTitle>
-                            <CardDescription>
-                                Ingresa la serie y número del documento a
-                                afectar
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-end gap-3">
-                                <div className="w-36">
-                                    <Label className="text-xs text-gray-500 mb-1 block">
-                                        Serie
-                                    </Label>
-                                    <Input
-                                        value={serie}
-                                        onChange={(e) =>
-                                            setSerie(
-                                                e.target.value
-                                                    .toUpperCase()
-                                                    .slice(0, 4),
-                                            )
+                    {/* Card búsqueda (solo al crear) */}
+                    {!isEditing && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <Search className="h-4 w-4 text-primary-600" />
+                                    Buscar Comprobante
+                                </CardTitle>
+                                <CardDescription>
+                                    Ingresa la serie y número del documento a
+                                    afectar
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex items-end gap-3">
+                                    <div className="w-36">
+                                        <Label className="text-xs text-gray-500 mb-1 block">
+                                            Serie
+                                        </Label>
+                                        <Input
+                                            value={serie}
+                                            onChange={(e) =>
+                                                setSerie(
+                                                    e.target.value
+                                                        .toUpperCase()
+                                                        .slice(0, 4),
+                                                )
+                                            }
+                                            onKeyDown={handleKeyDown}
+                                            placeholder="B001"
+                                            maxLength={4}
+                                        />
+                                    </div>
+                                    <div className="w-36">
+                                        <Label className="text-xs text-gray-500 mb-1 block">
+                                            Número
+                                        </Label>
+                                        <Input
+                                            value={numero}
+                                            onChange={(e) =>
+                                                setNumero(
+                                                    e.target.value.replace(
+                                                        /\D/g,
+                                                        "",
+                                                    ),
+                                                )
+                                            }
+                                            onKeyDown={handleKeyDown}
+                                            placeholder="1"
+                                        />
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        onClick={handleBuscar}
+                                        disabled={
+                                            buscando ||
+                                            !serie.trim() ||
+                                            !numero.trim()
                                         }
-                                        onKeyDown={handleKeyDown}
-                                        placeholder="B001"
-                                        maxLength={4}
-                                    />
+                                        className="gap-2"
+                                    >
+                                        {buscando ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Search className="h-4 w-4" />
+                                        )}
+                                        Buscar
+                                    </Button>
                                 </div>
-                                <div className="w-36">
-                                    <Label className="text-xs text-gray-500 mb-1 block">
-                                        Número
-                                    </Label>
-                                    <Input
-                                        value={numero}
-                                        onChange={(e) =>
-                                            setNumero(
-                                                e.target.value.replace(
-                                                    /\D/g,
-                                                    "",
-                                                ),
-                                            )
-                                        }
-                                        onKeyDown={handleKeyDown}
-                                        placeholder="1"
-                                    />
-                                </div>
-                                <Button
-                                    type="button"
-                                    onClick={handleBuscar}
-                                    disabled={
-                                        buscando ||
-                                        !serie.trim() ||
-                                        !numero.trim()
-                                    }
-                                    className="gap-2"
-                                >
-                                    {buscando ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Search className="h-4 w-4" />
-                                    )}
-                                    Buscar
-                                </Button>
-                            </div>
-                            {errorBusqueda && (
-                                <p className="text-sm text-red-500 mt-2">
-                                    {errorBusqueda}
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
+                                {errorBusqueda && (
+                                    <p className="text-sm text-red-500 mt-2">
+                                        {errorBusqueda}
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Card detalle del comprobante */}
                     {venta && (
@@ -326,14 +508,16 @@ export default function NotaCreditoForm() {
                                             <Printer className="h-4 w-4" />
                                             Ver PDF
                                         </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={limpiar}
-                                            className="text-gray-400 hover:text-red-500"
-                                        >
-                                            Cambiar
-                                        </Button>
+                                        {!isEditing && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={limpiar}
+                                                className="text-gray-400 hover:text-red-500"
+                                            >
+                                                Cambiar
+                                            </Button>
+                                        )}
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-5">
@@ -408,9 +592,9 @@ export default function NotaCreditoForm() {
                                                     {venta.tipo_moneda === "USD" ? "Dólares" : "Soles"}
                                                 </p>
                                             </div>
-                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                                                <p className="text-xs text-green-600">Total</p>
-                                                <p className="text-base font-bold text-green-700">
+                                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                                                <p className="text-xs text-gray-500">Total comprobante</p>
+                                                <p className="text-base font-bold text-gray-700">
                                                     {monedaSimbolo} {parseFloat(venta.total).toFixed(2)}
                                                 </p>
                                             </div>
@@ -419,56 +603,93 @@ export default function NotaCreditoForm() {
                                 </CardContent>
                             </Card>
 
-                            {/* Tabla de productos */}
+                            {/* Tabla de productos con selección */}
                             {productos.length > 0 && (
                                 <Card>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2 text-base">
                                             <Package className="h-4 w-4 text-primary-600" />
-                                            Productos del Comprobante
+                                            Productos a acreditar
                                             <Badge variant="outline" className="ml-2">
-                                                {productos.length} {productos.length === 1 ? "item" : "items"}
+                                                {productosSeleccionados().length} de {productos.length} seleccionados
                                             </Badge>
                                         </CardTitle>
+                                        <CardDescription>
+                                            Marca qué productos y qué cantidad de cada uno se va a acreditar. Por defecto vienen todos con la cantidad completa (nota de crédito total); desmarca o reduce la cantidad para un crédito parcial.
+                                        </CardDescription>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead className="w-[50px]">#</TableHead>
+                                                    <TableHead className="w-[40px]"></TableHead>
                                                     <TableHead>Producto</TableHead>
-                                                    <TableHead className="text-center w-[80px]">Cant.</TableHead>
-                                                    <TableHead className="text-right w-[120px]">P. Unit.</TableHead>
-                                                    <TableHead className="text-right w-[120px]">Subtotal</TableHead>
+                                                    <TableHead className="text-center w-[100px]">Vendido</TableHead>
+                                                    <TableHead className="text-center w-[110px]">A acreditar</TableHead>
+                                                    <TableHead className="text-right w-[100px]">P. Unit.</TableHead>
+                                                    <TableHead className="text-right w-[110px]">Subtotal</TableHead>
+                                                    <TableHead className="w-[40px]"></TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {productos.map((item, idx) => {
                                                     const precio = parseFloat(item.precio_unitario || 0);
-                                                    const cant = parseFloat(item.cantidad || 0);
+                                                    const cantVendida = parseFloat(item.cantidad || 0);
+                                                    const sel = seleccion[item.id_producto_venta] || { incluido: false, cantidad: 0 };
                                                     return (
-                                                        <TableRow key={idx}>
-                                                            <TableCell className="text-gray-400 font-mono text-xs">
-                                                                {String(idx + 1).padStart(2, "0")}
+                                                        <TableRow key={idx} className={!sel.incluido ? "opacity-50" : ""}>
+                                                            <TableCell>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={sel.incluido}
+                                                                    onChange={() => toggleIncluido(item.id_producto_venta)}
+                                                                    className="h-4 w-4 text-orange-600 rounded"
+                                                                />
                                                             </TableCell>
                                                             <TableCell>
                                                                 <p className="font-medium text-gray-900">
                                                                     {item.producto?.nombre || item.descripcion || "Producto"}
                                                                 </p>
-                                                                {item.producto?.codigo && (
+                                                                {(item.producto?.codigo || item.codigo_producto) && (
                                                                     <p className="text-xs text-gray-400">
-                                                                        COD: {item.producto.codigo}
+                                                                        COD: {item.producto?.codigo || item.codigo_producto}
                                                                     </p>
                                                                 )}
                                                             </TableCell>
-                                                            <TableCell className="text-center text-gray-700">
-                                                                {cant}
+                                                            <TableCell className="text-center text-gray-500">
+                                                                {cantVendida}
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max={cantVendida}
+                                                                    step="1"
+                                                                    disabled={!sel.incluido}
+                                                                    value={sel.cantidad}
+                                                                    onChange={(e) =>
+                                                                        cambiarCantidad(item.id_producto_venta, e.target.value, cantVendida)
+                                                                    }
+                                                                    className="w-20 text-center mx-auto"
+                                                                />
                                                             </TableCell>
                                                             <TableCell className="text-right text-gray-700">
                                                                 {monedaSimbolo} {precio.toFixed(2)}
                                                             </TableCell>
                                                             <TableCell className="text-right font-medium text-gray-900">
-                                                                {monedaSimbolo} {(precio * cant).toFixed(2)}
+                                                                {monedaSimbolo} {(sel.incluido ? precio * sel.cantidad : 0).toFixed(2)}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {sel.incluido && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => toggleIncluido(item.id_producto_venta)}
+                                                                        className="text-gray-300 hover:text-red-500"
+                                                                        title="Quitar de la nota de crédito"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </button>
+                                                                )}
                                                             </TableCell>
                                                         </TableRow>
                                                     );
@@ -476,27 +697,27 @@ export default function NotaCreditoForm() {
                                             </TableBody>
                                             <TableFooter>
                                                 <TableRow>
-                                                    <TableCell colSpan={4} className="text-right text-gray-600 font-medium">
-                                                        Subtotal
+                                                    <TableCell colSpan={5} className="text-right text-gray-600 font-medium">
+                                                        Subtotal a acreditar
                                                     </TableCell>
-                                                    <TableCell className="text-right font-medium">
-                                                        {monedaSimbolo} {parseFloat(venta.subtotal || 0).toFixed(2)}
+                                                    <TableCell colSpan={2} className="text-right font-medium">
+                                                        {monedaSimbolo} {resumenSubtotal.toFixed(2)}
                                                     </TableCell>
                                                 </TableRow>
                                                 <TableRow>
-                                                    <TableCell colSpan={4} className="text-right text-gray-600 font-medium">
-                                                        IGV (18%)
+                                                    <TableCell colSpan={5} className="text-right text-gray-600 font-medium">
+                                                        IGV a acreditar
                                                     </TableCell>
-                                                    <TableCell className="text-right font-medium">
-                                                        {monedaSimbolo} {parseFloat(venta.igv || 0).toFixed(2)}
+                                                    <TableCell colSpan={2} className="text-right font-medium">
+                                                        {monedaSimbolo} {resumenIgv.toFixed(2)}
                                                     </TableCell>
                                                 </TableRow>
                                                 <TableRow className="text-base">
-                                                    <TableCell colSpan={4} className="text-right font-bold text-gray-900">
-                                                        Total
+                                                    <TableCell colSpan={5} className="text-right font-bold text-gray-900">
+                                                        Total NC
                                                     </TableCell>
-                                                    <TableCell className="text-right font-bold text-primary-600">
-                                                        {monedaSimbolo} {parseFloat(venta.total).toFixed(2)}
+                                                    <TableCell colSpan={2} className="text-right font-bold text-primary-600">
+                                                        {monedaSimbolo} {resumenTotal.toFixed(2)}
                                                     </TableCell>
                                                 </TableRow>
                                             </TableFooter>
@@ -588,13 +809,11 @@ export default function NotaCreditoForm() {
                                         <div className="border-t border-dashed border-gray-200 pt-2 mt-2 space-y-1.5">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-gray-500">
-                                                    Subtotal
+                                                    Subtotal a acreditar
                                                 </span>
                                                 <span>
                                                     {monedaSimbolo}{" "}
-                                                    {parseFloat(
-                                                        venta.subtotal || 0,
-                                                    ).toFixed(2)}
+                                                    {resumenSubtotal.toFixed(2)}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-sm">
@@ -603,16 +822,14 @@ export default function NotaCreditoForm() {
                                                 </span>
                                                 <span>
                                                     {monedaSimbolo}{" "}
-                                                    {parseFloat(
-                                                        venta.igv || 0,
-                                                    ).toFixed(2)}
+                                                    {resumenIgv.toFixed(2)}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-sm font-bold pt-2 border-t border-gray-200">
                                                 <span>Total NC</span>
                                                 <span className="text-primary-600 text-base">
                                                     {monedaSimbolo}{" "}
-                                                    {parseFloat(venta.total).toFixed(2)}
+                                                    {resumenTotal.toFixed(2)}
                                                 </span>
                                             </div>
                                         </div>
@@ -631,7 +848,9 @@ export default function NotaCreditoForm() {
                                 {guardando && (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 )}
-                                Crear Nota de Crédito
+                                {isEditing
+                                    ? "Guardar cambios"
+                                    : "Crear Nota de Crédito"}
                             </Button>
                         </CardFooter>
                     </Card>

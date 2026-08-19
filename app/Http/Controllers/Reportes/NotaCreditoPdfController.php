@@ -20,6 +20,7 @@ class NotaCreditoPdfController extends Controller
                 'venta.empresa',
                 'venta.productosVentas.producto.unidad',
                 'venta.usuario',
+                'detalles.producto.unidad',
                 'motivo',
                 'empresa',
             ])->findOrFail($id);

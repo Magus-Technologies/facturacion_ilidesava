@@ -10,6 +10,7 @@ import MainLayout from "../Layout/MainLayout";
 import { useNotasCredito } from "./hooks/useNotasCredito";
 import { getNotaCreditoColumns } from "./columns/notaCreditoColumns";
 import DetallesNotaCreditoModal from "./DetallesNotaCreditoModal";
+import { confirmDelete, confirm, promptText } from "@/lib/sweetalert";
 
 export default function NotaCreditoPage() {
     const {
@@ -18,6 +19,9 @@ export default function NotaCreditoPage() {
         error,
         fetchNotas,
         enviarNota,
+        solicitarBaja,
+        consultarBaja,
+        eliminarNota,
     } = useNotasCredito();
 
     const [enviandoId, setEnviandoId] = useState(null);
@@ -81,12 +85,52 @@ export default function NotaCreditoPage() {
         window.open(`/reporteNC/a4.php?id=${nota.id}&token=${token}`, "_blank");
     };
 
+    const handleEliminar = (nota) => {
+        confirmDelete({
+            title: "¿Eliminar nota de crédito?",
+            message: `Se eliminará <b>${nota.serie}-${String(nota.numero).padStart(6, "0")}</b> y se devolverá el stock descontado. Esta acción no se puede deshacer.`,
+            onConfirm: () => eliminarNota(nota.id),
+        });
+    };
+
+    const handleEditar = (nota) => {
+        window.location.href = `/nota-credito/${nota.id}/editar`;
+    };
+
+    const handleSolicitarBaja = async (nota) => {
+        const doc = `${nota.serie}-${String(nota.numero).padStart(6, "0")}`;
+        const motivo = await promptText({
+            title: "Dar de baja esta nota de crédito",
+            message: `<b>${doc}</b> ya fue aceptada por SUNAT. La única forma de anularla es enviar una <b>Comunicación de Baja</b> — esto no la borra, queda registrada como anulada ante SUNAT y no se puede deshacer. Solo funciona si fue emitida hace 7 días o menos.<br><br>Escribe el motivo de la anulación:`,
+            placeholder: "Ej: Nota de crédito emitida por error",
+            confirmText: "Enviar a SUNAT",
+        });
+
+        if (!motivo) return;
+
+        confirm({
+            title: "¿Confirmar envío a SUNAT?",
+            message: `Se enviará la Comunicación de Baja de ${doc} a SUNAT con el motivo indicado. Esta acción no se puede deshacer.`,
+            confirmText: "Sí, enviar",
+            icon: "warning",
+            onConfirm: () => solicitarBaja(nota.id, motivo),
+        });
+    };
+
+    const handleConsultarBaja = (nota) => {
+        consultarBaja(nota.id);
+    };
+
     const handlers = {
         handleView,
         handleVerPdf,
         handleEnviar,
         handleVerXml,
         handleDescargarCdr,
+        handleEditar,
+        handleEliminar,
+        handleSolicitarBaja,
+        handleConsultarBaja,
     };
 
     const columns = getNotaCreditoColumns(handlers, enviandoId);

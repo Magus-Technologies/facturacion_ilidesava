@@ -560,7 +560,7 @@ class SunatService
 
     public function generarNotaCreditoXml(NotaCredito $nota): array
     {
-        $nota->load(['venta.cliente', 'venta.empresa', 'venta.productosVentas', 'motivo']);
+        $nota->load(['venta.cliente', 'venta.empresa', 'venta.productosVentas', 'motivo', 'detalles']);
         $empresa = $nota->venta->empresa;
         $cliente = $nota->venta->cliente;
         $igvRate = (float) ($empresa->igv ?? config('sunat.igv'));
@@ -573,7 +573,10 @@ class SunatService
         $montoGravada = round($total / ($igvRate + 1), 2);
         $igvMonto = round($impVenta - $montoGravada, 2);
 
-        $details = $this->buildSaleDetailsFromVenta($nota->venta, $igvRate);
+        // Ítems propios de la NC (permite crédito parcial por ítem). Si por
+        // algún motivo no hay detalle (dato legado), cae al 100% de la venta.
+        $itemsNc = $nota->detalles->isNotEmpty() ? $nota->detalles : $nota->venta->productosVentas;
+        $details = $this->buildSaleDetailsFromItems($itemsNc, $igvRate);
 
         if (count($details) > 0) {
             $sumaValorVenta = 0;
@@ -643,6 +646,38 @@ class SunatService
         ];
     }
 
+    /**
+     * Compara, línea por línea de la venta, cuánto se acreditó vía NC
+     * activas (pendiente/aceptado/baja_enviada) contra la cantidad vendida.
+     * Devuelve true solo si TODAS las líneas quedaron 100% cubiertas.
+     */
+    private function ventaTotalmenteCreditada(Venta $venta): bool
+    {
+        $venta->loadMissing('productosVentas');
+        $idsLineas = $venta->productosVentas->pluck('id_producto_venta');
+
+        if ($idsLineas->isEmpty()) {
+            return false;
+        }
+
+        $acreditadoPorLinea = \App\Models\NotaCreditoDetalle::whereIn('id_producto_venta', $idsLineas)
+            ->whereHas('notaCredito', function ($q) {
+                $q->whereIn('estado', ['pendiente', 'aceptado', 'baja_enviada']);
+            })
+            ->selectRaw('id_producto_venta, SUM(cantidad) as total')
+            ->groupBy('id_producto_venta')
+            ->pluck('total', 'id_producto_venta');
+
+        foreach ($venta->productosVentas as $linea) {
+            $acreditado = (float) ($acreditadoPorLinea[$linea->id_producto_venta] ?? 0);
+            if ($acreditado + 0.0001 < (float) $linea->cantidad) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function enviarNotaCredito(NotaCredito $nota): array
     {
         $nota->load(['venta.empresa']);
@@ -696,11 +731,17 @@ class SunatService
                 'mensaje_sunat' => $cdr->getDescription(),
             ]);
 
-            // Marcar la venta original como anulada
-            $nota->venta->update([
-                'estado' => '2',
-                'estado_sunat' => '2',
-            ]);
+            // Marcar la venta original como anulada SOLO si esta NC (sumada
+            // a otras NC activas) ya cubrió el 100% de lo vendido. Con
+            // crédito parcial por ítem (ej. motivo 05), el comprobante
+            // original sigue siendo válido por el resto — no corresponde
+            // mostrarlo como "Anulada".
+            if ($this->ventaTotalmenteCreditada($nota->venta)) {
+                $nota->venta->update([
+                    'estado' => '2',
+                    'estado_sunat' => '2',
+                ]);
+            }
 
             return [
                 'success' => true,
@@ -1268,14 +1309,28 @@ class SunatService
 
     private function buildSaleDetailsFromVenta(Venta $venta, float $igvRate): array
     {
+        return $this->buildSaleDetailsFromItems($venta->productosVentas, $igvRate);
+    }
+
+    /**
+     * Construye los SaleDetail de Greenter a partir de cualquier colección de
+     * ítems con precio_unitario/cantidad/descripcion/codigo_producto/
+     * unidad_medida/tipo_afectacion_igv (ProductoVenta o NotaCreditoDetalle).
+     */
+    private function buildSaleDetailsFromItems(iterable $items, float $igvRate): array
+    {
         $details = [];
 
-        foreach ($venta->productosVentas as $item) {
+        foreach ($items as $item) {
             $precio = (float) $item->precio_unitario;
             $cantidad = (float) $item->cantidad;
-            $valorUnitario = round($precio / ($igvRate + 1), 10);
-            $valorVenta = round($valorUnitario * $cantidad, 2);
-            $igvItem = round($valorVenta * $igvRate, 2);
+            // IGV = total - subtotal (no subtotal * tasa), igual que la
+            // venta original, para que la línea cierre exacto contra
+            // precio * cantidad sin quedar 1 céntimo corta por redondeo.
+            $totalLinea = round($precio * $cantidad, 2);
+            $valorVenta = round($totalLinea / ($igvRate + 1), 2);
+            $igvItem = round($totalLinea - $valorVenta, 2);
+            $valorUnitario = $cantidad > 0 ? round($valorVenta / $cantidad, 10) : 0;
 
             $detail = new SaleDetail();
             $detail->setCodProducto($item->codigo_producto ?? 'P001')

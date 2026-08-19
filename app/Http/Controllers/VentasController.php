@@ -25,12 +25,22 @@ class VentasController extends Controller
         try {
             $user = $request->user();
 
-            $ventas = Venta::with(['cliente', 'tipoDocumento', 'pagos', 'usuario:id,name'])
+            $ventasQuery = Venta::with(['cliente', 'tipoDocumento', 'pagos', 'usuario:id,name'])
                 ->where('id_empresa', $user->id_empresa)
                 ->orderBy('fecha_emision', 'desc')
                 ->orderBy('numero', 'desc')
-                ->get()
-                ->map(function ($venta) {
+                ->get();
+
+            // Ventas con una NC activa (no eliminada/rechazada/anulada), para
+            // bloquear el acceso rápido "Crear Nota de Crédito" en la lista.
+            $ventasConNcActiva = \App\Models\NotaCredito::whereIn('id_venta', $ventasQuery->pluck('id_venta'))
+                ->whereIn('estado', ['pendiente', 'aceptado', 'baja_enviada'])
+                ->pluck('id_venta')
+                ->unique()
+                ->flip();
+
+            $ventas = $ventasQuery
+                ->map(function ($venta) use ($ventasConNcActiva) {
                     $pagos = $venta->pagos;
                     $primerPago = $pagos->first();
                     return [
@@ -69,6 +79,7 @@ class VentasController extends Controller
                         'vendedor' => $venta->usuario?->name,
                         'afecta_stock' => $venta->afecta_stock,
                         'stock_real_descontado' => $venta->stock_real_descontado,
+                        'tiene_nota_credito' => $ventasConNcActiva->has($venta->id_venta),
                     ];
                 });
 
@@ -587,6 +598,7 @@ class VentasController extends Controller
                 'serviciosVentas',
                 'cuotas',
                 'pagos',
+                'notasCredito.motivo',
             ])
                 ->where('id_empresa', $user->id_empresa)
                 ->findOrFail($id);

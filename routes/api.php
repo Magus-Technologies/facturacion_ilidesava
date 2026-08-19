@@ -249,7 +249,11 @@ Route::middleware(['token.query', 'auth:sanctum'])->group(function () {
     Route::get('notas-credito', [\App\Http\Controllers\NotaCreditoController::class, 'index']);
     Route::post('notas-credito', [\App\Http\Controllers\NotaCreditoController::class, 'store']);
     Route::get('notas-credito/{id}', [\App\Http\Controllers\NotaCreditoController::class, 'show']);
+    Route::put('notas-credito/{id}', [\App\Http\Controllers\NotaCreditoController::class, 'update']);
+    Route::delete('notas-credito/{id}', [\App\Http\Controllers\NotaCreditoController::class, 'destroy']);
     Route::post('notas-credito/{id}/enviar', [\App\Http\Controllers\NotaCreditoController::class, 'enviar']);
+    Route::post('notas-credito/{id}/baja', [\App\Http\Controllers\NotaCreditoController::class, 'solicitarBaja']);
+    Route::get('notas-credito/{id}/consultar-baja', [\App\Http\Controllers\NotaCreditoController::class, 'consultarBaja']);
     Route::get('notas-credito/{id}/cdr', [\App\Http\Controllers\NotaCreditoController::class, 'cdr']);
     Route::get('notas-credito/xml/{nombre}', [\App\Http\Controllers\NotaCreditoController::class, 'xml'])->where('nombre', '.*');
 

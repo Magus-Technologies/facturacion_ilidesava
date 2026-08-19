@@ -24,6 +24,9 @@ export const ESTADOS_NOTA_BADGE = {
     enviado: { color: 'bg-blue-100 text-blue-700', text: 'Enviado' },
     aceptado: { color: 'bg-green-100 text-green-700', text: 'Aceptado' },
     rechazado: { color: 'bg-red-100 text-red-700', text: 'Rechazado' },
+    baja_enviada: { color: 'bg-orange-100 text-orange-700', text: 'Baja enviada' },
+    baja_aceptada: { color: 'bg-gray-200 text-gray-700', text: 'Anulada' },
+    baja_rechazada: { color: 'bg-red-100 text-red-700', text: 'Baja rechazada' },
 };
 
 export const getEstadoNotaBadge = (estado) => {

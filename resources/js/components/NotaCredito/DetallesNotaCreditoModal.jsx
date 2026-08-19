@@ -98,7 +98,12 @@ export default function DetallesNotaCreditoModal({ nota, isOpen, onClose }) {
         window.open(`/reporteNC/a4.php?id=${nota.id}&token=${token}`, "_blank");
     };
 
-    const items = nota.venta?.productos_ventas ?? nota.venta?.productosVentas ?? [];
+    // Ítems realmente acreditados por esta NC (puede ser un subconjunto de la
+    // venta original). Si no hay detalle propio (NC creada antes de esta
+    // función), cae al 100% de la venta como comportamiento legado.
+    const items = nota.detalles?.length
+        ? nota.detalles
+        : (nota.venta?.productos_ventas ?? nota.venta?.productosVentas ?? []);
 
     return (
         <Modal

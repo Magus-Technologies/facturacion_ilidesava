@@ -83,6 +83,37 @@ export const confirm = ({
     });
 };
 
+// Pide un texto obligatorio (ej: motivo de una comunicación de baja)
+export const promptText = async ({
+    title,
+    message,
+    placeholder = "",
+    confirmText = "Confirmar",
+    cancelText = "Cancelar",
+}) => {
+    const result = await Swal.fire({
+        ...defaultConfig,
+        icon: "warning",
+        title,
+        html: message,
+        input: "text",
+        inputPlaceholder: placeholder,
+        showCancelButton: true,
+        confirmButtonText: confirmText,
+        cancelButtonText: cancelText,
+        inputValidator: (value) => {
+            if (!value || !value.trim()) {
+                return "Este campo es obligatorio";
+            }
+        },
+    });
+
+    if (result.isConfirmed) {
+        return result.value.trim();
+    }
+    return null;
+};
+
 // Confirmación de eliminación
 export const confirmDelete = ({
     title = "Eliminar",
