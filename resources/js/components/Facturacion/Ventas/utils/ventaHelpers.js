@@ -134,6 +134,20 @@ export const validarProductos = (productos) => {
     if (productos.length === 0) {
         return { valid: false, message: 'Agregue al menos un producto' };
     }
+
+    for (const p of productos) {
+        const nombre = p.descripcion || p.nom_prod || p.codigo || 'un producto';
+        const precio = parseFloat(p.precioVenta ?? p.precio);
+        const cantidad = parseFloat(p.cantidad);
+
+        if (Number.isNaN(precio) || precio <= 0) {
+            return { valid: false, message: `"${nombre}" no tiene un precio válido. Corrígelo antes de guardar.` };
+        }
+        if (Number.isNaN(cantidad) || cantidad <= 0) {
+            return { valid: false, message: `"${nombre}" no tiene una cantidad válida. Corrígelo antes de guardar.` };
+        }
+    }
+
     return { valid: true };
 };
 

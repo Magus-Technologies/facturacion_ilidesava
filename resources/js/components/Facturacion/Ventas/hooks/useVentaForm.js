@@ -281,7 +281,7 @@ export const useVentaForm = (ventaId = null) => {
             toast.warning('Ingrese una cantidad válida');
             return;
         }
-        if (!esLibre && !productoActual.precioVenta && !productoActual.precio) {
+        if (!productoActual.precioVenta && !productoActual.precio) {
             toast.warning('Ingrese un precio');
             return;
         }
