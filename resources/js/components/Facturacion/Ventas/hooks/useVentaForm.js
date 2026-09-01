@@ -6,7 +6,8 @@ import {
     calcularTotal,
     validarProductos,
     validarCliente,
-    prepararDatosVenta
+    prepararDatosVenta,
+    fechaLocalHoy
 } from '../utils/ventaHelpers';
 
 /**
@@ -51,8 +52,8 @@ export const useVentaForm = (ventaId = null) => {
         id_tido: "",
         id_tipo_pago: "1",
         afecta_stock: true,
-        fecha_emision: new Date().toISOString().split("T")[0],
-        fecha_vencimiento: new Date().toISOString().split("T")[0],
+        fecha_emision: fechaLocalHoy(),
+        fecha_vencimiento: fechaLocalHoy(),
         serie: 'B001',
         numero: '',
         tipo_moneda: 'PEN',
@@ -152,7 +153,7 @@ export const useVentaForm = (ventaId = null) => {
                 // Parsear fecha ISO a YYYY-MM-DD
                 const fechaEmision = venta.fecha_emision
                     ? venta.fecha_emision.split('T')[0]
-                    : new Date().toISOString().split('T')[0];
+                    : fechaLocalHoy();
 
                 // Cargar cuotas si existen (BD usa fecha_vencimiento/monto_cuota)
                 const cuotas = (venta.cuotas || []).map((c) => ({

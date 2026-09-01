@@ -2,6 +2,9 @@
  * Funciones auxiliares para el módulo de Ventas
  */
 
+// Reexportado desde lib/utils.js: ver ahí el porqué (bug de toISOString/UTC).
+export { fechaLocalHoy } from "@/lib/utils";
+
 /**
  * Calcula el total bruto (precio con IGV × cantidad)
  * Los precios de los productos YA incluyen IGV

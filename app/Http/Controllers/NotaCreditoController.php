@@ -39,6 +39,11 @@ class NotaCreditoController extends Controller
             'id_venta' => 'required|exists:ventas,id_venta',
             'motivo_id' => 'required|exists:motivo_nota,id',
             'descripcion_motivo' => 'nullable|string|max:255',
+            // Opcional: por defecto es hoy. SUNAT exige que la NC no tenga
+            // fecha anterior al comprobante que afecta — a veces hace falta
+            // ajustarla a mano (ej: la factura quedó registrada con una
+            // fecha distinta a la real por algún desfase).
+            'fecha_emision' => 'nullable|date',
             'productos' => 'required|array|min:1',
             'productos.*.id_producto_venta' => 'required|integer|exists:productos_ventas,id_producto_venta',
             'productos.*.cantidad' => 'required|numeric|min:0.001',
@@ -115,7 +120,7 @@ class NotaCreditoController extends Controller
                     'monto_igv' => $igvTotal,
                     'monto_total' => $totalTotal,
                     'moneda' => $venta->tipo_moneda ?? 'PEN',
-                    'fecha_emision' => now()->toDateString(),
+                    'fecha_emision' => $request->fecha_emision ?? now()->toDateString(),
                     'estado' => 'pendiente',
                     'stock_madre_devuelto' => $stockMadreEstabaDescontado,
                     'id_empresa' => $empresa->id_empresa,
@@ -163,6 +168,7 @@ class NotaCreditoController extends Controller
         $request->validate([
             'motivo_id' => 'required|exists:motivo_nota,id',
             'descripcion_motivo' => 'nullable|string|max:255',
+            'fecha_emision' => 'nullable|date',
             'productos' => 'required|array|min:1',
             'productos.*.id_producto_venta' => 'required|integer|exists:productos_ventas,id_producto_venta',
             'productos.*.cantidad' => 'required|numeric|min:0.001',
@@ -213,6 +219,7 @@ class NotaCreditoController extends Controller
                 $nota->update([
                     'motivo_id' => $motivo->id,
                     'descripcion_motivo' => $request->descripcion_motivo ?? $motivo->descripcion,
+                    'fecha_emision' => $request->fecha_emision ?? $nota->getRawOriginal('fecha_emision'),
                     'monto_subtotal' => $subtotalTotal,
                     'monto_igv' => $igvTotal,
                     'monto_total' => $totalTotal,

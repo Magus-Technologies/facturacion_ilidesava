@@ -14,7 +14,7 @@ import PaymentSchedule from "../../shared/PaymentSchedule";
 
 // Hook personalizado
 import { useVentaForm } from "./hooks/useVentaForm";
-import { getSimboloMoneda } from "./utils/ventaHelpers";
+import { getSimboloMoneda, fechaLocalHoy } from "./utils/ventaHelpers";
 
 export default function VentaForm({ ventaId = null }) {
     const {
@@ -230,13 +230,13 @@ export default function VentaForm({ ventaId = null }) {
                             // Cuotas de la venta original (BD: fecha_vencimiento/monto_cuota).
                             // SUNAT exige fecha de cuota posterior a la emisión:
                             // si la fecha original ya pasó, moverla a 30 días desde hoy.
-                            const hoyStr = new Date().toISOString().split("T")[0];
+                            const hoyStr = fechaLocalHoy();
                             const cuotas = (venta.cuotas || []).map((c) => {
                                 let fecha = (c.fecha_vencimiento || c.fecha || "").split("T")[0];
                                 if (!fecha || fecha <= hoyStr) {
                                     const f = new Date();
                                     f.setDate(f.getDate() + 30);
-                                    fecha = f.toISOString().split("T")[0];
+                                    fecha = fechaLocalHoy(f);
                                 }
                                 return {
                                     fecha,

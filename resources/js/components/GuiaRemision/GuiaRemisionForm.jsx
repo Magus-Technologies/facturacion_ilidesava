@@ -44,6 +44,7 @@ import {
     PackageSearch,
 } from "lucide-react";
 import { toast } from "@/lib/sweetalert";
+import { fechaLocalHoy } from "@/lib/utils";
 import Swal from "sweetalert2";
 import ClienteAutocomplete from "../shared/ClienteAutocomplete";
 import ProductMultipleSearch from "../shared/ProductMultipleSearch";
@@ -97,7 +98,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
         motivo_traslado: "01",
         descripcion_motivo: "",
         mod_transporte: "01",
-        fecha_traslado: new Date().toISOString().split("T")[0],
+        fecha_traslado: fechaLocalHoy(),
         fecha_entrega_transportista: "",
         peso_total: "",
         und_peso_total: "KGM",
@@ -342,7 +343,7 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                     motivo_traslado: g.motivo_traslado || "01",
                     descripcion_motivo: g.descripcion_motivo || "",
                     mod_transporte: modTransporte,
-                    fecha_traslado: g.fecha_traslado ? g.fecha_traslado.split("T")[0] : new Date().toISOString().split("T")[0],
+                    fecha_traslado: g.fecha_traslado ? g.fecha_traslado.split("T")[0] : fechaLocalHoy(),
                     fecha_entrega_transportista: g.fecha_entrega_transportista ? g.fecha_entrega_transportista.split("T")[0] : "",
                     peso_total: String(g.peso_total || ""),
                     und_peso_total: g.und_peso_total || "KGM",

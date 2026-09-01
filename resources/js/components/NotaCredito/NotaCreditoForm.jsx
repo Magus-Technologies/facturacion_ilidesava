@@ -45,6 +45,7 @@ import {
     Trash2,
 } from "lucide-react";
 import { toast } from "@/lib/sweetalert";
+import { fechaLocalHoy } from "@/lib/utils";
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem("auth_token");
@@ -63,6 +64,7 @@ export default function NotaCreditoForm({ nota_id: initialNotaId = null }) {
     const [venta, setVenta] = useState(null);
     const [motivoId, setMotivoId] = useState("");
     const [descripcion, setDescripcion] = useState("");
+    const [fechaEmision, setFechaEmision] = useState(fechaLocalHoy());
     const [motivos, setMotivos] = useState([]);
     const [buscando, setBuscando] = useState(false);
     const [guardando, setGuardando] = useState(false);
@@ -140,6 +142,9 @@ export default function NotaCreditoForm({ nota_id: initialNotaId = null }) {
                         ? ""
                         : nota.descripcion_motivo || "",
                 );
+                if (nota.fecha_emision) {
+                    setFechaEmision(nota.fecha_emision.split("T")[0]);
+                }
 
                 const inicial = {};
                 (nota.venta?.productos_ventas || []).forEach((item) => {
@@ -264,6 +269,7 @@ export default function NotaCreditoForm({ nota_id: initialNotaId = null }) {
             const body = {
                 motivo_id: parseInt(motivoId),
                 descripcion_motivo: descripcion || undefined,
+                fecha_emision: fechaEmision,
                 productos,
             };
             if (!isEditing) body.id_venta = venta.id_venta;
@@ -781,6 +787,23 @@ export default function NotaCreditoForm({ nota_id: initialNotaId = null }) {
                                     }
                                     placeholder="Detalle del motivo"
                                 />
+                            </div>
+
+                            <div>
+                                <Label className="mb-1.5 block">
+                                    Fecha de emisión{" "}
+                                    <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                    type="date"
+                                    value={fechaEmision}
+                                    onChange={(e) =>
+                                        setFechaEmision(e.target.value)
+                                    }
+                                />
+                                <p className="text-[10px] text-gray-500 mt-0.5">
+                                    SUNAT no acepta una fecha anterior a la del comprobante que estás afectando.
+                                </p>
                             </div>
 
                             {/* Resumen */}

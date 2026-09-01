@@ -139,7 +139,7 @@ export const getNotaCreditoColumns = (handlers, enviandoId = null) => [
         cell: ({ row }) => {
             const nota = row.original;
             const puedeEnviar =
-                nota.estado === "pendiente" && nota.nombre_xml;
+                ["pendiente", "rechazado"].includes(nota.estado) && nota.nombre_xml;
             const isEnviando = enviandoId === nota.id;
 
             if (isEnviando) {
