@@ -519,6 +519,12 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
         if (!form.peso_total || parseFloat(form.peso_total) <= 0) {
             newErrors.peso_total = "Ingrese el peso total";
         }
+        if (form.motivo_traslado === "13" && !form.descripcion_motivo?.trim()) {
+            newErrors.descripcion_motivo = "Describa el motivo de traslado (SUNAT lo exige para 'Otros')";
+        }
+        if (form.fecha_traslado && form.fecha_traslado < fechaLocalHoy()) {
+            newErrors.fecha_traslado = "La fecha de traslado no puede ser anterior a hoy";
+        }
 
         // Validar datos de transporte según modalidad
         if (form.mod_transporte === "01") {
@@ -1604,7 +1610,11 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                                             e.target.value
                                         )
                                     }
+                                    className={errors.fecha_traslado ? "border-red-500" : ""}
                                 />
+                                {errors.fecha_traslado && (
+                                    <p className="text-red-500 text-xs mt-1">{errors.fecha_traslado}</p>
+                                )}
                             </div>
 
                             {form.mod_transporte === "01" && (
@@ -1681,9 +1691,13 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                             <div>
                                 <Label className="text-xs text-gray-500 mb-1.5 block">
                                     Descripción motivo{" "}
-                                    <span className="text-gray-400 font-normal">
-                                        (opcional)
-                                    </span>
+                                    {form.motivo_traslado === "13" ? (
+                                        <span className="text-red-500">*</span>
+                                    ) : (
+                                        <span className="text-gray-400 font-normal">
+                                            (opcional)
+                                        </span>
+                                    )}
                                 </Label>
                                 <Input
                                     value={form.descripcion_motivo}
@@ -1693,8 +1707,12 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                                             e.target.value
                                         )
                                     }
-                                    placeholder="Detalle adicional"
+                                    placeholder={form.motivo_traslado === "13" ? "SUNAT exige detallar el motivo 'Otros'" : "Detalle adicional"}
+                                    className={errors.descripcion_motivo ? "border-red-500" : ""}
                                 />
+                                {errors.descripcion_motivo && (
+                                    <p className="text-red-500 text-xs mt-1">{errors.descripcion_motivo}</p>
+                                )}
                             </div>
 
                             <div>

@@ -63,9 +63,9 @@ class GuiaRemisionController extends Controller
             'destinatario_direccion' => 'required|string|max:500',
             'destinatario_ubigeo' => 'required|string|size:6',
             'motivo_traslado' => 'required|string|max:2',
-            'descripcion_motivo' => 'nullable|string|max:255',
+            'descripcion_motivo' => 'nullable|string|max:255|required_if:motivo_traslado,13',
             'mod_transporte' => 'required|in:01,02',
-            'fecha_traslado' => 'required|date',
+            'fecha_traslado' => 'required|date|after_or_equal:today',
             'fecha_entrega_transportista' => 'nullable|date',
             'peso_total' => 'required|numeric|min:0.001',
             'und_peso_total' => 'nullable|string|max:3',
@@ -120,7 +120,10 @@ class GuiaRemisionController extends Controller
             $rules['vehiculo_placa'] = 'nullable|string|max:10';
         }
 
-        $request->validate($rules);
+        $request->validate($rules, [
+            'descripcion_motivo.required_if' => "Debe describir el motivo de traslado cuando selecciona 'Otros'.",
+            'fecha_traslado.after_or_equal' => 'La fecha de traslado no puede ser anterior a hoy.',
+        ]);
 
         try {
             return DB::transaction(function () use ($request) {
@@ -244,14 +247,21 @@ class GuiaRemisionController extends Controller
 
         try {
             if (!$guia->fecha_emision || !$guia->fecha_emision->isToday()) {
-                $guia->update([
+                $datos = [
                     'fecha_emision' => now()->toDateString(),
                     'estado' => 'pendiente',
                     'cdr_url' => null,
                     'ticket_sunat' => null,
                     'codigo_sunat' => null,
                     'mensaje_sunat' => null,
-                ]);
+                ];
+
+                // SUNAT exige fecha_traslado >= fecha_emision: si quedó en el pasado, se sube a hoy
+                if (!$guia->fecha_traslado || $guia->fecha_traslado->toDateString() < now()->toDateString()) {
+                    $datos['fecha_traslado'] = now()->toDateString();
+                }
+
+                $guia->update($datos);
             }
 
             $guia->refresh();
@@ -463,9 +473,9 @@ class GuiaRemisionController extends Controller
                     'destinatario_direccion' => 'required|string|max:500',
                     'destinatario_ubigeo' => 'required|string|size:6',
                     'motivo_traslado' => 'required|string|max:2',
-                    'descripcion_motivo' => 'nullable|string|max:255',
+                    'descripcion_motivo' => 'nullable|string|max:255|required_if:motivo_traslado,13',
                     'mod_transporte' => 'required|in:01,02',
-                    'fecha_traslado' => 'required|date',
+                    'fecha_traslado' => 'required|date|after_or_equal:today',
                     'fecha_entrega_transportista' => 'nullable|date',
                     'peso_total' => 'required|numeric|min:0.001',
                     'und_peso_total' => 'nullable|string|max:3',
@@ -478,6 +488,9 @@ class GuiaRemisionController extends Controller
                     'detalles.*.unidad' => 'nullable|string|max:5',
                     'detalles.*.codigo' => 'nullable|string|max:30',
                     'detalles.*.id_producto' => 'nullable|integer',
+                ], [
+                    'descripcion_motivo.required_if' => "Debe describir el motivo de traslado cuando selecciona 'Otros'.",
+                    'fecha_traslado.after_or_equal' => 'La fecha de traslado no puede ser anterior a hoy.',
                 ]);
 
                 if ($request->mod_transporte === '01') {
