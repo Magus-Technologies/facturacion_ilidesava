@@ -27,17 +27,7 @@ class NotaCreditoPdfController extends Controller
 
             $empresa = $nota->empresa ?? $nota->venta?->empresa;
 
-            $qrString = implode('|', [
-                $empresa->ruc ?? '',
-                '07',
-                $nota->serie . '-' . str_pad($nota->numero, 8, '0', STR_PAD_LEFT),
-                number_format($nota->monto_igv ?? 0, 2, '.', ''),
-                number_format($nota->monto_total ?? 0, 2, '.', ''),
-                $nota->fecha_emision ? $nota->fecha_emision->format('Y-m-d') : '',
-                $nota->venta?->cliente ? (strlen($nota->venta->cliente->documento ?? '') === 11 ? '6' : '1') : '1',
-                $nota->venta?->cliente?->documento ?? '',
-                $nota->hash_cpe ?? '',
-            ]);
+            $qrString = QrHelper::buildQrStringNotaCredito($nota);
             $qrBase64 = QrHelper::generarQrBase64($qrString);
 
             $plantilla = $empresa

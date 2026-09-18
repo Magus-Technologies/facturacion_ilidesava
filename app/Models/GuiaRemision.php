@@ -49,6 +49,7 @@ class GuiaRemision extends Model
         'xml_url',
         'cdr_url',
         'hash_cpe',
+        'qr_url',
         'codigo_sunat',
         'mensaje_sunat',
         'ticket_sunat',

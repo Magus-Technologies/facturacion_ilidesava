@@ -29,6 +29,8 @@ use Greenter\Model\Summary\SummaryDetail;
 use Greenter\Model\Voided\Voided;
 use Greenter\Model\Voided\VoidedDetail;
 use Greenter\See;
+use Greenter\Ws\Reader\DomCdrReader;
+use Greenter\Ws\Reader\XmlReader;
 use Greenter\Ws\Services\SunatEndpoints;
 use Greenter\Sunat\GRE\Api\AuthApi;
 use Greenter\Sunat\GRE\Api\CpeApi;
@@ -1197,11 +1199,16 @@ class SunatService
                 }
                 file_put_contents("{$cdrDir}/R-{$guia->nombre_xml}.zip", $cdrContent);
 
+                // El CDR de la GRE incluye la URL oficial del código QR
+                // (RS 123-2022, art. 35). Se guarda para la representación impresa.
+                $qrUrl = $this->extraerQrUrlDelCdr($cdrContent);
+
                 $guia->update([
                     'estado' => 'aceptado',
                     'cdr_url' => "sunat/cdr/{$ruc}/R-{$guia->nombre_xml}.zip",
                     'codigo_sunat' => $codRespuesta,
                     'mensaje_sunat' => 'Aceptado por SUNAT',
+                    'qr_url' => $qrUrl,
                 ]);
             } else {
                 $guia->update([
@@ -1259,6 +1266,51 @@ class SunatService
         $zipContent = file_get_contents($tmpFile);
         unlink($tmpFile);
         return $zipContent;
+    }
+
+    /**
+     * Extrae la URL oficial del código QR incluida en el CDR de la GRE
+     * (cac:DocumentResponse/cac:DocumentReference/cbc:DocumentDescription).
+     */
+    private function extraerQrUrlDelCdr(string $zipContent): ?string
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'cdr');
+
+        try {
+            file_put_contents($tmpFile, $zipContent);
+
+            $zip = new \ZipArchive();
+            if ($zip->open($tmpFile) !== true) {
+                return null;
+            }
+
+            $xml = null;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $nombre = $zip->getNameIndex($i);
+                if (strtolower(pathinfo($nombre, PATHINFO_EXTENSION)) === 'xml') {
+                    $xml = $zip->getFromIndex($i);
+                    break;
+                }
+            }
+            $zip->close();
+
+            if (!$xml) {
+                return null;
+            }
+
+            $reader = new DomCdrReader(new XmlReader());
+            $cdr = $reader->getCdrResponse($xml);
+            $qrUrl = $cdr?->getReference();
+
+            return $qrUrl ?: null;
+        } catch (\Exception $e) {
+            Log::warning('SUNAT - No se pudo extraer la URL del QR desde el CDR: ' . $e->getMessage());
+            return null;
+        } finally {
+            if (file_exists($tmpFile)) {
+                unlink($tmpFile);
+            }
+        }
     }
 
     private function buildSaleDetails(Venta $venta, float $igvRate, bool $apliIgv): array
