@@ -206,14 +206,27 @@ class AlmacenMadreController extends Controller
                         $data['codigo'] = $prefijo . str_pad($numero, 5, '0', STR_PAD_LEFT);
                     }
 
-                    $producto = Producto::create([
+                    $datosPropio = [
                         ...$data,
                         'id_empresa' => $user->id_empresa,
                         'almacen' => '2',
                         'estado' => '1',
                         'codsunat' => $data['codsunat'] ?? '51121703',
                         'fecha_registro' => now(),
-                    ]);
+                    ];
+
+                    // Si hay un producto eliminado con el mismo código, reactivarlo en vez de
+                    // duplicar el código (las búsquedas por código tomarían el eliminado).
+                    $producto = Producto::where('id_empresa', $user->id_empresa)
+                        ->where('almacen', '2')
+                        ->where('codigo', $data['codigo'])
+                        ->where('estado', '0')
+                        ->first();
+                    if ($producto) {
+                        $producto->update($datosPropio);
+                    } else {
+                        $producto = Producto::create($datosPropio);
+                    }
 
                     // Registrar ingreso de stock inicial (si se creó con cantidad)
                     MovimientoStock::registrarAjuste(
@@ -255,7 +268,17 @@ class AlmacenMadreController extends Controller
                 }
 
                 $data['fecha_registro'] = now();
-                $productoMadre = ProductoMadre::create($data);
+
+                // Si hay un producto eliminado con el mismo código, reactivarlo en vez de
+                // duplicar el código (las búsquedas por código tomarían el eliminado).
+                $productoMadre = ProductoMadre::where('codigo', $data['codigo'])
+                    ->where('estado', '0')
+                    ->first();
+                if ($productoMadre) {
+                    $productoMadre->update([...$data, 'estado' => '1']);
+                } else {
+                    $productoMadre = ProductoMadre::create($data);
+                }
 
                 // Registrar ingreso de stock inicial (si se creó con cantidad)
                 MovimientoStock::registrarAjuste(
@@ -448,6 +471,55 @@ class AlmacenMadreController extends Controller
                 'stock_anterior' => $stockAnterior,
                 'stock_nuevo' => (int) $request->cantidad,
             ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Eliminar producto del almacén madre (soft delete: estado = '0').
+     * El registro se conserva para no romper el historial de ventas y movimientos.
+     * Si tenía stock, se registra la salida para que el kardex cuadre.
+     */
+    public function eliminarProducto(Request $request, int $id): JsonResponse
+    {
+        try {
+            return DB::transaction(function () use ($request, $id) {
+                $user = $request->user();
+                $empresa = Empresa::find($user->id_empresa);
+                $usaPropio = $empresa && $empresa->usa_almacen_propio;
+
+                if ($usaPropio) {
+                    $producto = Producto::where('id_empresa', $user->id_empresa)
+                        ->where('almacen', '2')
+                        ->where('estado', '1')
+                        ->findOrFail($id);
+                } else {
+                    $producto = ProductoMadre::where('estado', '1')->findOrFail($id);
+                }
+
+                $stockAnterior = (float) $producto->cantidad;
+                $producto->update(['cantidad' => 0, 'estado' => '0']);
+
+                MovimientoStock::registrarAjuste(
+                    $producto,
+                    $stockAnterior,
+                    0,
+                    'ajuste_madre',
+                    'Producto eliminado del almacén',
+                    [
+                        'id_almacen' => $usaPropio ? 2 : 0,
+                        'id_empresa' => $user->id_empresa,
+                        'id_usuario' => $user->id,
+                        'documento_referencia' => 'ELIMINACION',
+                    ]
+                );
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Producto eliminado',
+                ]);
+            });
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
@@ -874,7 +946,8 @@ class AlmacenMadreController extends Controller
                         }
 
                         if ($existente) {
-                            $existente->update($datos);
+                            // Reactivar si estaba eliminado
+                            $existente->update([...$datos, 'estado' => '1']);
                             $actualizados++;
                         } else {
                             Producto::create([
@@ -899,7 +972,8 @@ class AlmacenMadreController extends Controller
                         }
 
                         if ($existente) {
-                            $existente->update($datos);
+                            // Reactivar si estaba eliminado
+                            $existente->update([...$datos, 'estado' => '1']);
                             $actualizados++;
                         } else {
                             $datos['codigo'] = $codigo ?: null;

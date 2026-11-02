@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
-import { toast } from "@/lib/sweetalert";
+import { toast, confirmDelete } from "@/lib/sweetalert";
 import MainLayout from "../Layout/MainLayout";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -27,6 +27,7 @@ import {
     History,
     Pencil,
     PackagePlus,
+    Trash2,
 } from "lucide-react";
 
 const getToken = () => localStorage.getItem("auth_token");
@@ -185,6 +186,35 @@ export default function AlmacenMadreProductos() {
         }
     };
 
+    const handleDelete = (producto) => {
+        const stock = producto.cantidad || 0;
+        confirmDelete({
+            title: "Eliminar Producto",
+            message:
+                `¿Estás seguro de eliminar el producto <strong>"${producto.nombre}"</strong>?` +
+                (stock > 0
+                    ? `<br><br>Tiene <strong>${stock}</strong> unidad(es) en stock; quedarán en 0.`
+                    : ""),
+            confirmText: "Sí, eliminar",
+            cancelText: "Cancelar",
+            onConfirm: async () => {
+                try {
+                    const data = await apiFetch(`/api/almacen-madre/productos/${producto.id_producto}`, {
+                        method: "DELETE",
+                    });
+                    if (data.success) {
+                        toast.success("Producto eliminado");
+                        fetchProductos();
+                    } else {
+                        toast.error(data.message || "Error al eliminar producto");
+                    }
+                } catch {
+                    toast.error("Error de conexión al servidor");
+                }
+            },
+        });
+    };
+
     const columns = [
         {
             accessorKey: "codigo",
@@ -273,6 +303,13 @@ export default function AlmacenMadreProductos() {
                         title="Ver historial de movimientos"
                     >
                         <History className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={() => handleDelete(row.original)}
+                        className="p-1.5 rounded-md hover:bg-red-100 text-gray-500 hover:text-red-700 transition-colors"
+                        title="Eliminar producto"
+                    >
+                        <Trash2 className="h-4 w-4" />
                     </button>
                 </div>
             ),
