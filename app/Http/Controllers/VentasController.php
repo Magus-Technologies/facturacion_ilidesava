@@ -380,8 +380,10 @@ class VentasController extends Controller
                             ]);
                         }
                         $idProducto = $productoLibre->id_producto;
-                        $descripcionFinal = $productoLibre->nombre;
-                        $codigoFinal = $productoLibre->codigo;
+                        // Respetar el código/descripción que el usuario escribió en la fila;
+                        // el del catálogo (LIB-xxxx) solo se usa si lo dejó vacío.
+                        $descripcionFinal = $descripcionFinal ?: $productoLibre->nombre;
+                        $codigoFinal = $codigoFinal ?: $productoLibre->codigo;
                     } elseif ($idProducto && !$descripcionFinal) {
                         // Producto del catálogo: usar precarga para snapshot
                         $productoModel = $productosMap->get($idProducto);
@@ -858,8 +860,10 @@ class VentasController extends Controller
                             ]);
                         }
                         $idProducto = $productoLibre->id_producto;
-                        $descripcionFinal = $productoLibre->nombre;
-                        $codigoFinal = $productoLibre->codigo;
+                        // Respetar el código/descripción que el usuario escribió en la fila;
+                        // el del catálogo (LIB-xxxx) solo se usa si lo dejó vacío.
+                        $descripcionFinal = $descripcionFinal ?: $productoLibre->nombre;
+                        $codigoFinal = $codigoFinal ?: $productoLibre->codigo;
                     }
 
                     $venta->productosVentas()->create([
