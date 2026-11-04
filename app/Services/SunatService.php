@@ -115,6 +115,16 @@ class SunatService
         return new \DateTime("{$fechaStr} {$hora}", $peruTz);
     }
 
+    /**
+     * Escapa texto para los campos que Greenter imprime fuera de CDATA (su Twig usa
+     * autoescape=false). Sin esto un "&" (ej. "INT. 317& URB.") deja el XML inválido
+     * y la firma falla con "xmlParseEntityRef: no name".
+     */
+    private function xmlTexto(?string $texto): ?string
+    {
+        return $texto === null ? null : htmlspecialchars($texto, ENT_XML1 | ENT_NOQUOTES, 'UTF-8');
+    }
+
     public function buildCompany(Empresa $empresa): Company
     {
         $company = new Company();
@@ -610,7 +620,7 @@ class SunatService
             ->setTipDocAfectado($nota->tipo_doc_afectado)
             ->setNumDocfectado($nota->serie_num_afectado)
             ->setCodMotivo($nota->motivo->codigo_sunat)
-            ->setDesMotivo($nota->descripcion_motivo ?? $nota->motivo->descripcion)
+            ->setDesMotivo($this->xmlTexto($nota->descripcion_motivo ?? $nota->motivo->descripcion))
             ->setTipoMoneda($nota->moneda ?? 'PEN')
             ->setCompany($company)
             ->setClient($client)
@@ -819,7 +829,7 @@ class SunatService
             ->setTipDocAfectado($nota->tipo_doc_afectado)
             ->setNumDocfectado($nota->serie_num_afectado)
             ->setCodMotivo($nota->motivo->codigo_sunat)
-            ->setDesMotivo($nota->descripcion_motivo ?? $nota->motivo->descripcion)
+            ->setDesMotivo($this->xmlTexto($nota->descripcion_motivo ?? $nota->motivo->descripcion))
             ->setTipoMoneda($nota->moneda ?? 'PEN')
             ->setCompany($company)
             ->setClient($client)
@@ -977,13 +987,13 @@ class SunatService
 
         $shipment = (new Shipment())
             ->setCodTraslado($guia->motivo_traslado)
-            ->setDesTraslado($guia->descripcion_motivo)
+            ->setDesTraslado($this->xmlTexto($guia->descripcion_motivo))
             ->setModTraslado($guia->mod_transporte)
             ->setFecTraslado($fechaTraslado)
             ->setPesoTotal((float) $guia->peso_total)
             ->setUndPesoTotal($guia->und_peso_total ?? 'KGM')
-            ->setPartida(new Direction($guia->ubigeo_partida, $guia->dir_partida))
-            ->setLlegada(new Direction($guia->ubigeo_llegada, $guia->dir_llegada));
+            ->setPartida(new Direction($guia->ubigeo_partida, $this->xmlTexto($guia->dir_partida)))
+            ->setLlegada(new Direction($guia->ubigeo_llegada, $this->xmlTexto($guia->dir_llegada)));
 
         // if ($numBultos > 0) {
         //     $shipment->setNumBultos($numBultos);
@@ -1001,7 +1011,7 @@ class SunatService
                     ->setTipoDoc($guia->transportista_tipo_doc)
                     ->setNumDoc($guia->transportista_documento)
                     ->setRznSocial($guia->transportista_nombre)
-                    ->setNroMtc($guia->transportista_nro_mtc);
+                    ->setNroMtc($this->xmlTexto($guia->transportista_nro_mtc));
                 $shipment->setTransportista($transportista);
             }
         }
@@ -1012,20 +1022,20 @@ class SunatService
                     ->setTipo('Principal')
                     ->setTipoDoc($guia->conductor_tipo_doc)
                     ->setNroDoc($guia->conductor_documento)
-                    ->setNombres($guia->conductor_nombres)
-                    ->setApellidos($guia->conductor_apellidos)
-                    ->setLicencia($guia->conductor_licencia);
+                    ->setNombres($this->xmlTexto($guia->conductor_nombres))
+                    ->setApellidos($this->xmlTexto($guia->conductor_apellidos))
+                    ->setLicencia($this->xmlTexto($guia->conductor_licencia));
                 $shipment->setChoferes([$driver]);
             }
             if ($guia->vehiculo_placa) {
-                $shipment->setVehiculo((new Vehicle())->setPlaca($guia->vehiculo_placa));
+                $shipment->setVehiculo((new Vehicle())->setPlaca($this->xmlTexto($guia->vehiculo_placa)));
             }
         }
 
         $details = [];
         foreach ($guia->detalles as $item) {
             $details[] = (new DespatchDetail())
-                ->setCodigo($item->codigo ?? 'P001')
+                ->setCodigo($this->xmlTexto($item->codigo ?? 'P001'))
                 ->setDescripcion($item->descripcion)
                 ->setUnidad($item->unidad ?? 'NIU')
                 ->setCantidad((float) $item->cantidad);
@@ -1322,7 +1332,7 @@ class SunatService
             $cantidad = (float) $item->cantidad;
 
             $detail = new SaleDetail();
-            $detail->setCodProducto($item->codigo_producto ?? 'P001')
+            $detail->setCodProducto($this->xmlTexto($item->codigo_producto ?? 'P001'))
                 ->setCodProdSunat('10000000')
                 ->setUnidad($item->unidad_medida ?? 'NIU')
                 ->setDescripcion($item->descripcion ?? 'Producto')
@@ -1385,7 +1395,7 @@ class SunatService
             $valorUnitario = $cantidad > 0 ? round($valorVenta / $cantidad, 10) : 0;
 
             $detail = new SaleDetail();
-            $detail->setCodProducto($item->codigo_producto ?? 'P001')
+            $detail->setCodProducto($this->xmlTexto($item->codigo_producto ?? 'P001'))
                 ->setCodProdSunat('10000000')
                 ->setUnidad($item->unidad_medida ?? 'NIU')
                 ->setDescripcion($item->descripcion ?? 'Producto')
