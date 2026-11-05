@@ -17,8 +17,8 @@ class GuiaRemisionPdfController extends Controller
     }
 
     /**
-     * Destino del QR de respaldo: muestra la guía en pantalla, sin login y sin
-     * depender de SUNAT. El código aleatorio evita que se pueda adivinar otra guía.
+     * Destino del QR de respaldo que traen los PDF ya descargados. Los PDF nuevos
+     * solo llevan el QR de SUNAT: esto se mantiene para que esos enlaces sigan abriendo.
      */
     public function verPublico(string $token)
     {
@@ -39,9 +39,6 @@ class GuiaRemisionPdfController extends Controller
             $qrBase64 = $aceptada
                 ? QrHelper::generarQrBase64(QrHelper::buildQrStringGuia($guia))
                 : null;
-            $qrRespaldoBase64 = $aceptada
-                ? QrHelper::generarQrBase64(route('guia.publica', $guia->tokenPublico()))
-                : null;
             $consultaUrl = config('app.consulta_url');
 
             // Cargar plantilla de impresión
@@ -50,7 +47,7 @@ class GuiaRemisionPdfController extends Controller
                 : null;
 
             // Renderizar vista Blade a HTML
-            $html = view('reportes.guia-remision-a4', compact('guia', 'qrBase64', 'qrRespaldoBase64', 'consultaUrl', 'plantilla'))->render();
+            $html = view('reportes.guia-remision-a4', compact('guia', 'qrBase64', 'consultaUrl', 'plantilla'))->render();
 
             // Crear PDF con Dompdf
             $options = new Options();

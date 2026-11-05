@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Str;
 
 class GuiaRemision extends Model
 {
@@ -90,19 +89,6 @@ class GuiaRemision extends Model
     public function motivoTraslado(): BelongsTo
     {
         return $this->belongsTo(MotivoTraslado::class, 'motivo_traslado', 'codigo');
-    }
-
-    /**
-     * Código del enlace público de la guía (QR de respaldo). Se crea la primera
-     * vez que se necesita, así también funciona para guías ya existentes.
-     */
-    public function tokenPublico(): string
-    {
-        if (! $this->token_publico) {
-            $this->update(['token_publico' => Str::random(32)]);
-        }
-
-        return $this->token_publico;
     }
 
     public function getNumeroCompletoAttribute(): string

@@ -188,14 +188,16 @@ class GuiaRemisionEnvioTest extends TestCase
         $this->assertDatabaseHas('guia_remision', ['id' => $guia->id, 'estado' => 'enviado']);
     }
 
-    public function test_el_qr_de_respaldo_muestra_el_pdf_en_pantalla_sin_login(): void
+    public function test_el_enlace_de_pdfs_ya_descargados_sigue_abriendo_en_pantalla(): void
     {
-        $guia = $this->crearGuia([
+        $token = Str::random(32);
+        $this->crearGuia([
             'estado' => 'aceptado',
             'qr_url' => 'https://e-factura.sunat.gob.pe/v1/contribuyente/gre/comprobantes/descargaqr?hashqr=abc',
+            'token_publico' => $token,
         ]);
 
-        $respuesta = $this->get('/guia/' . $guia->tokenPublico());
+        $respuesta = $this->get('/guia/' . $token);
 
         $respuesta->assertOk();
         $this->assertStringStartsWith('application/pdf', $respuesta->headers->get('Content-Type'));
@@ -220,16 +222,13 @@ class GuiaRemisionEnvioTest extends TestCase
         $this->assertStringStartsWith('attachment', $respuesta->headers->get('Content-Disposition'));
     }
 
-    public function test_el_codigo_solo_se_crea_para_guias_aceptadas(): void
+    public function test_los_pdf_nuevos_ya_no_crean_codigo_de_respaldo(): void
     {
-        $pendiente = $this->crearGuia();
         $aceptada = $this->crearGuia(['estado' => 'aceptado']);
 
-        $this->get('/reporteGR/a4.php?id=' . $pendiente->id)->assertOk();
         $this->get('/reporteGR/a4.php?id=' . $aceptada->id)->assertOk();
 
-        $this->assertNull($pendiente->fresh()->token_publico);
-        $this->assertNotNull($aceptada->fresh()->token_publico);
+        $this->assertNull($aceptada->fresh()->token_publico);
     }
 
     public function test_el_codigo_no_se_expone_en_la_api(): void
@@ -322,7 +321,7 @@ class GuiaRemisionEnvioTest extends TestCase
 
     public function test_el_pdf_avisa_que_no_se_despache_una_guia_sin_aceptar(): void
     {
-        $datos = ['qrBase64' => null, 'qrRespaldoBase64' => null, 'consultaUrl' => '', 'plantilla' => null];
+        $datos = ['qrBase64' => null, 'consultaUrl' => '', 'plantilla' => null];
 
         $pendiente = view('reportes.guia-remision-a4', ['guia' => $this->crearGuia()] + $datos)->render();
         $rechazada = view('reportes.guia-remision-a4', ['guia' => $this->crearGuia(['estado' => 'rechazado'])] + $datos)->render();

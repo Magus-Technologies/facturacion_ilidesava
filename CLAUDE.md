@@ -41,7 +41,7 @@ Local development uses MySQL via Laragon (DB: `factura_sava`, user: `root`, no p
 - **`PlantillaImpresion`** model stores per-empresa customizable header/footer/farewell messages for PDF reports. Managed via `/configuracion/plantilla-impresion` and API at `/api/plantilla-impresion`.
 - **SUNAT submission flows differ by document type:**
   - Facturas/Boletas/Notas: Synchronous via SOAP — `sendXml()` returns CDR immediately
-  - Guías de Remisión: Async via REST (GRE API) — `enviar()` returns a ticket, then `consultarTicket()` polls for CDR. New guías are sent on creation in production (`EnviarGuiaSunatJob`) because SUNAT requires an accepted CDR before the transfer starts; the 03:30 command is only a backup. Their PDF has the official QR from the CDR plus a backup QR to `/guia/{token}`
+  - Guías de Remisión: Async via REST (GRE API) — `enviar()` returns a ticket, then `consultarTicket()` polls for CDR. New guías are sent on creation in production (`EnviarGuiaSunatJob`) because SUNAT requires an accepted CDR before the transfer starts; the 03:30 command is only a backup. Their PDF only carries the official QR from the CDR; `/guia/{token}` remains for PDFs already downloaded with the former backup QR
   - Boletas also require Resumen Diario for SUNAT acceptance
   - Annulment uses Comunicación de Baja (async with tickets)
 - **Permission middleware** `CheckPermission` uses format `resource.action` (e.g., `ventas.create`, `productos.view`). Admin (rol_id=1) bypasses all checks.

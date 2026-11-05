@@ -315,21 +315,14 @@
         <!-- QR + Peso Total -->
         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
             <tr>
-                <td style="width: 24%; vertical-align: top; text-align: center;">
+                <td style="width: 30%; vertical-align: top; text-align: center;">
                     @if(!empty($qrBase64))
-                        <img src="{{ $qrBase64 }}" style="width: 130px; height: 130px;" alt="QR SUNAT">
-                        <div style="font-size: 7pt; font-weight: bold; margin-top: 2px;">QR SUNAT</div>
+                        <img src="{{ $qrBase64 }}" style="width: 130px; height: 130px;" alt="QR">
                     @else
                         <div style="font-size: 8pt; color: #b91c1c; padding: 10px 5px;">El QR de SUNAT aparecerá cuando la guía sea aceptada. Vuelva a descargar este PDF.</div>
                     @endif
                 </td>
-                @if(!empty($qrRespaldoBase64))
-                    <td style="width: 24%; vertical-align: top; text-align: center;">
-                        <img src="{{ $qrRespaldoBase64 }}" style="width: 130px; height: 130px;" alt="QR de respaldo">
-                        <div style="font-size: 7pt; font-weight: bold; margin-top: 2px;">Si el QR de SUNAT no carga, escanee este</div>
-                    </td>
-                @endif
-                <td style="vertical-align: middle;">
+                <td style="width: 70%; vertical-align: middle;">
                     <table style="width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid #999; border-radius: 10px; background-color: #bfc4cc;">
                         <tr>
                             <td style="padding: 10px 15px; text-align: right; font-size: 12pt; font-weight: bold; width: 65%;">
