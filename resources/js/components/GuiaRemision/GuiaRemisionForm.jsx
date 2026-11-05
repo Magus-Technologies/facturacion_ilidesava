@@ -675,6 +675,11 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
                     ${form.observaciones ? `<div class="${form.descripcion_motivo ? "mt-1" : ""}"><span class="text-gray-500">Observaciones:</span> ${escape(form.observaciones)}</div>` : ""}
                 </div>
                 ` : ""}
+                ${!isEditing ? `
+                <div class="bg-orange-50 border border-orange-300 rounded-lg p-3 text-xs font-medium text-orange-800">
+                    Al crearla, la guía se enviará a SUNAT automáticamente. Una vez aceptada ya no se podrá editar ni eliminar.
+                </div>
+                ` : ""}
             </div>
         `;
 
@@ -731,7 +736,11 @@ export default function GuiaRemisionForm({ guia_id: initialGuiaId = null }) {
             const data = await res.json();
 
             if (data.success) {
-                toast.success("Guía de remisión creada exitosamente");
+                toast.success(
+                    data.envio_automatico
+                        ? "Guía creada. Se está enviando a SUNAT"
+                        : "Guía de remisión guardada exitosamente"
+                );
                 window.location.href = "/guia-remision";
             } else {
                 toast.error(data.message || "Error al crear la guía");

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\EnviarGuiaSunatJob;
 use App\Models\Empresa;
 use App\Models\GuiaRemision;
 use App\Models\GuiaRemisionDetalle;
@@ -215,10 +216,18 @@ class GuiaRemisionController extends Controller
                 $guia->refresh();
                 $guia->load(['detalles']);
 
+                // Solo en producción, igual que los envíos programados: una copia
+                // local con datos reales no debe enviar nada a SUNAT.
+                $envioAutomatico = app()->environment('production');
+                if ($envioAutomatico) {
+                    EnviarGuiaSunatJob::dispatch($guia)->afterCommit();
+                }
+
                 return response()->json([
                     'success' => true,
                     'data' => $guia,
                     'xml' => $resultado,
+                    'envio_automatico' => $envioAutomatico,
                 ], 201);
             });
         } catch (\Exception $e) {
@@ -242,6 +251,14 @@ class GuiaRemisionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'La guía ya fue aceptada por SUNAT.',
+            ], 400);
+        }
+
+        // Reenviarla haría que SUNAT responda con error y se marque como rechazada
+        if ($guia->estado === 'enviado') {
+            return response()->json([
+                'success' => false,
+                'message' => 'La guía ya fue enviada a SUNAT. Consulte el ticket para ver el resultado.',
             ], 400);
         }
 
@@ -319,6 +336,13 @@ class GuiaRemisionController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'No se puede eliminar una guía aceptada por SUNAT',
+                ], 422);
+            }
+
+            if ($guia->estado === 'enviado') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede eliminar una guía enviada a SUNAT mientras espera respuesta',
                 ], 422);
             }
 
@@ -461,6 +485,13 @@ class GuiaRemisionController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'No se puede editar una guía aceptada por SUNAT',
+            ], 422);
+        }
+
+        if ($guia->estado === 'enviado') {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se puede editar una guía enviada a SUNAT mientras espera respuesta',
             ], 422);
         }
 

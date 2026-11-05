@@ -63,6 +63,12 @@
     @endphp
 
     <div class="container">
+        @if(in_array($guia->estado, ['pendiente', 'enviado', 'rechazado']))
+            <div style="border: 2px solid #dc2626; background-color: #fee2e2; color: #b91c1c; text-align: center; font-size: 11pt; font-weight: bold; padding: 8px; margin-bottom: 12px;">
+                {{ $guia->estado === 'rechazado' ? 'GUÍA RECHAZADA POR SUNAT: NO VÁLIDA PARA EL TRASLADO' : 'GUÍA PENDIENTE DE ACEPTACIÓN POR SUNAT: NO DESPACHAR' }}
+            </div>
+        @endif
+
         <!-- Header -->
         <table style="width: 100%; margin-bottom: 15px; border-collapse: collapse;">
             <tr>
@@ -309,12 +315,21 @@
         <!-- QR + Peso Total -->
         <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
             <tr>
-                <td style="width: 30%; vertical-align: top; text-align: center;">
+                <td style="width: 24%; vertical-align: top; text-align: center;">
                     @if(!empty($qrBase64))
-                        <img src="{{ $qrBase64 }}" style="width: 130px; height: 130px;" alt="QR">
+                        <img src="{{ $qrBase64 }}" style="width: 130px; height: 130px;" alt="QR SUNAT">
+                        <div style="font-size: 7pt; font-weight: bold; margin-top: 2px;">QR SUNAT</div>
+                    @else
+                        <div style="font-size: 8pt; color: #b91c1c; padding: 10px 5px;">El QR de SUNAT aparecerá cuando la guía sea aceptada. Vuelva a descargar este PDF.</div>
                     @endif
                 </td>
-                <td style="width: 70%; vertical-align: middle;">
+                @if(!empty($qrRespaldoBase64))
+                    <td style="width: 24%; vertical-align: top; text-align: center;">
+                        <img src="{{ $qrRespaldoBase64 }}" style="width: 130px; height: 130px;" alt="QR de respaldo">
+                        <div style="font-size: 7pt; font-weight: bold; margin-top: 2px;">Si el QR de SUNAT no carga, escanee este</div>
+                    </td>
+                @endif
+                <td style="vertical-align: middle;">
                     <table style="width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid #999; border-radius: 10px; background-color: #bfc4cc;">
                         <tr>
                             <td style="padding: 10px 15px; text-align: right; font-size: 12pt; font-weight: bold; width: 65%;">

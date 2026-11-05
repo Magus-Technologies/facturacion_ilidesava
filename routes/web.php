@@ -214,6 +214,11 @@ Route::get('/reporteCOT/a4.php', function (Request $request) {
 Route::get('/reporteGR/a4.php', function (Request $request) {
     return app(\App\Http\Controllers\Reportes\GuiaRemisionPdfController::class)->generarA4($request->get('id'));
 });
+// QR de respaldo: abre la guía en pantalla cuando el enlace de SUNAT no carga
+Route::get('/guia/{token}', [\App\Http\Controllers\Reportes\GuiaRemisionPdfController::class, 'verPublico'])
+    ->where('token', '[A-Za-z0-9]{32}')
+    ->middleware('throttle:30,1')
+    ->name('guia.publica');
 
 // PDFs de notas de crédito
 Route::get('/reporteNC/a4.php', function (Request $request) {

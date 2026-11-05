@@ -17,6 +17,7 @@ use Greenter\Model\Sale\SaleDetail;
 use Greenter\Model\Sale\FormaPagos\FormaPagoContado;
 use Greenter\Model\Sale\FormaPagos\FormaPagoCredito;
 use Greenter\Model\Sale\Cuota;
+use Greenter\Model\Despatch\AdditionalDoc;
 use Greenter\Model\Despatch\Despatch;
 use Greenter\Model\Despatch\DespatchDetail;
 use Greenter\Model\Despatch\Direction;
@@ -949,7 +950,7 @@ class SunatService
 
     public function generarGuiaRemisionXml(GuiaRemision $guia): array
     {
-        $guia->load(['empresa', 'detalles']);
+        $guia->load(['empresa', 'detalles', 'venta.tipoDocumento']);
         $empresa = $guia->empresa;
 
         $company = $this->buildCompany($empresa);
@@ -1056,6 +1057,11 @@ class SunatService
             $despatch->setObservacion($guia->observaciones);
         }
 
+        $documentoRelacionado = $this->documentoRelacionadoGuia($guia);
+        if ($documentoRelacionado) {
+            $despatch->setAddDocs([$documentoRelacionado]);
+        }
+
         $see = $this->getSee($empresa, 'guia');
         $xmlContent = $see->getXmlSigned($despatch);
         $nombreArchivo = $despatch->getName();
@@ -1076,6 +1082,32 @@ class SunatService
             'nombre_archivo' => $nombreArchivo,
             'hash' => $hash,
         ];
+    }
+
+    /**
+     * Factura o boleta de origen como documento relacionado de la GRE: sin esto no
+     * figura en el XML ni en el PDF que entrega SUNAT. Descripciones del catálogo 61
+     * (RS 123-2022, anexo III). La nota de venta no es comprobante: no se informa.
+     */
+    private function documentoRelacionadoGuia(GuiaRemision $guia): ?AdditionalDoc
+    {
+        $descripciones = [
+            '01' => 'Factura electrónica',
+            '03' => 'Boleta de venta electrónica',
+        ];
+
+        $venta = $guia->venta;
+        $tipo = $venta?->tipoDocumento?->cod_sunat;
+
+        if (! isset($descripciones[$tipo])) {
+            return null;
+        }
+
+        return (new AdditionalDoc())
+            ->setTipoDesc($descripciones[$tipo])
+            ->setTipo($tipo)
+            ->setNro("{$venta->serie}-{$venta->numero}")
+            ->setEmisor($this->getRuc($guia->empresa));
     }
 
     public function enviarGuiaRemision(GuiaRemision $guia): array

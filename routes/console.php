@@ -34,8 +34,9 @@ Schedule::command('sunat:enviar-boletas-pendientes')
     ->runInBackground()
     ->appendOutputTo($cronLog);
 
-// Enviar automáticamente guías pendientes a SUNAT a las 03:30 (solo producción)
-// Va al final porque la guía depende de que la factura/boleta de origen ya esté enviada
+// Respaldo de las guías que quedaron pendientes a las 03:30 (solo producción): las guías
+// nuevas se envían al crearse con EnviarGuiaSunatJob, sin esperar a su factura/boleta.
+// Va al final porque aquí la guía depende de que la factura/boleta de origen ya esté enviada
 Schedule::command('sunat:enviar-guias-pendientes')
     ->dailyAt('3:30')
     ->when(fn () => app()->environment('production'))
